@@ -12,6 +12,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.dto.request.IntrospectRequest;
+import com.example.demo.dto.respone.IntrospectRespone;
 import com.example.demo.entity.User;
 import com.example.demo.mapper.IChapterMapper;
 import com.example.demo.repository.IChapterRepository;
@@ -46,21 +48,21 @@ public class AuthenticationService {
 	@Value("${app.security.singer-key}")
 	protected String SIGNER_KEY;
 
-//	public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
-//		var token = request.getToken();
-//
-//		JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
-//
-//		SignedJWT signedJWT = SignedJWT.parse(token);
-//
-//		Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-//
-//		var verified = signedJWT.verify(verifier);
-//
-//		return IntrospectResponse.builder()
-//							.vaild(verified && expiryTime.after(new Date()))
-//							.build();
-//	}
+	public IntrospectRespone introspect(IntrospectRequest request) throws JOSEException, ParseException {
+		var token = request.getToken();
+
+		JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
+
+		SignedJWT signedJWT = SignedJWT.parse(token);
+
+		Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+		var verified = signedJWT.verify(verifier);
+
+		return IntrospectRespone.builder()
+							.Valid(verified && expiryTime.after(new Date()))
+							.build();
+	}
 
 //	public AuthenticationResponse authenticate(LoginRequest request) {
 //		PasswordEncoder passwordEncoder=new BCryptPasswordEncoder(10);

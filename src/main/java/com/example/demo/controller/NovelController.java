@@ -3,6 +3,9 @@ package com.example.demo.controller;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +23,7 @@ import com.example.demo.dto.request.NovelAddCategoryRequest;
 import com.example.demo.dto.request.NovelCreatationRequest;
 import com.example.demo.dto.request.NovelRemoveAuthorRequest;
 import com.example.demo.dto.request.NovelRemoveCategoryRequest;
+import com.example.demo.dto.request.NovelSearchCriteriaRequest;
 import com.example.demo.dto.request.NovelUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.NovelRespone;
@@ -48,6 +52,16 @@ public class NovelController {
 		return ApiRespone.<List<NovelRespone>>builder().result(novelService.getAll()).build();
 	}
 
+	@PostMapping("/search")
+	@Operation(summary = "Lấy novel theo điều kiện truyền vào", description = "Thì có vậy hoi á truyền điều kiện lấy Novel")
+    public ResponseEntity<Page<NovelRespone>> searchNovels(
+            @RequestBody NovelSearchCriteriaRequest criteria,
+            Pageable pageable) {
+        
+        Page<NovelRespone> results = novelService.searchNovels(criteria, pageable);
+        return ResponseEntity.ok(results);
+    }
+	
 	@GetMapping(value = "/{idNovel}")
 	@Operation(summary = "Lấy thông tin chi tiết tiểu thuyết", description = "Lấy dữ liệu của một tiểu thuyết dựa theo ID.")
 	public ApiRespone<NovelRespone> getNovelRespone(@PathVariable String idNovel) {

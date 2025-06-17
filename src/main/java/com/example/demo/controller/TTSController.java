@@ -49,7 +49,6 @@ public class TTSController {
 	private static final Logger logger = LoggerFactory.getLogger(TTSController.class);
 
 	TextService service;
-	ObjectMapper objectMapper;
 	HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
 	@Autowired

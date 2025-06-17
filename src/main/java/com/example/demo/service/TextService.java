@@ -9,7 +9,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -240,4 +244,68 @@ public class TextService {
 			throw new RuntimeException("Error creating resource: " + e.getMessage(), e);
 		}
 	}
+	
+	private List<String> splitText(String text, int maxLength) {
+	    if (text == null || text.isBlank()) {
+	        return new ArrayList<>();
+	    }
+
+	    List<String> chunks = new ArrayList<>();
+	    StringBuilder currentChunk = new StringBuilder();
+
+	    // Tách văn bản thành các câu dựa trên các dấu câu phổ biến
+	    // Pattern này sẽ giữ lại dấu câu ở cuối mỗi câu
+	    Pattern sentencePattern = Pattern.compile("([^.?!]+[.?!])");
+	    Matcher matcher = sentencePattern.matcher(text);
+
+	    while (matcher.find()) {
+	        String sentence = matcher.group(1).trim();
+	        if (sentence.isEmpty()) {
+	            continue;
+	        }
+
+	        // Nếu thêm câu mới vào sẽ vượt quá độ dài tối đa
+	        if (currentChunk.length() + sentence.length() + 1 > maxLength && currentChunk.length() > 0) {
+	            // Hoàn thành chunk hiện tại và thêm vào danh sách
+	            chunks.add(currentChunk.toString());
+	            // Bắt đầu một chunk mới với câu hiện tại
+	            currentChunk = new StringBuilder(sentence);
+	        } else {
+	            // Nếu chưa vượt quá, tiếp tục thêm vào chunk hiện tại
+	            if (currentChunk.length() > 0) {
+	                currentChunk.append(" "); // Thêm khoảng trắng giữa các câu
+	            }
+	            currentChunk.append(sentence);
+	        }
+	    }
+	    
+	    // Xử lý phần còn lại của văn bản không kết thúc bằng dấu câu
+	    int lastMatchEnd = 0;
+	    matcher.reset();
+	    while (matcher.find()) {
+	        lastMatchEnd = matcher.end();
+	    }
+	    if (lastMatchEnd < text.length()) {
+	        String remainingText = text.substring(lastMatchEnd).trim();
+	        if (!remainingText.isEmpty()) {
+	             if (currentChunk.length() + remainingText.length() + 1 > maxLength && currentChunk.length() > 0) {
+	                 chunks.add(currentChunk.toString());
+	                 chunks.add(remainingText);
+	             } else {
+	                 if (currentChunk.length() > 0) {
+	                    currentChunk.append(" ");
+	                 }
+	                 currentChunk.append(remainingText);
+	             }
+	        }
+	    }
+
+	    // Thêm chunk cuối cùng nếu nó không rỗng
+	    if (currentChunk.length() > 0) {
+	        chunks.add(currentChunk.toString());
+	    }
+
+	    return chunks;
+	}
+
 }

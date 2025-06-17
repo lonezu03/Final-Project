@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.ParseException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.ChapterCreationRequest;
 import com.example.demo.dto.request.ChapterUpdateRequest;
+import com.example.demo.dto.request.IntrospectRequest;
 import com.example.demo.dto.respone.ChapterRespone;
+import com.example.demo.dto.respone.IntrospectRespone;
 import com.example.demo.entity.Chapter;
 import com.example.demo.entity.Novel;
 import com.example.demo.exception.AppException;
@@ -21,6 +25,7 @@ import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.IChapterMapper;
 import com.example.demo.repository.IChapterRepository;
 import com.example.demo.repository.INovelRepository;
+import com.nimbusds.jose.JOSEException;
 
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
@@ -37,18 +42,39 @@ public class ChapterService {
 	IChapterRepository chapterRepository;
 	INovelRepository novelRepository;
 	TextService textService;
+	AuthenticationService authenticationService;
 	
 	private static final Logger logger = LoggerFactory.getLogger(ChapterService.class);
 
-	
 	// public List<ChapterRespone> getAll(){
-	// 	return chapterRepository.getAll().stream().map(t -> chapterMapper.toChapterRespone(t)).toList();
+	// return chapterRepository.getAll().stream().map(t ->
+	// chapterMapper.toChapterRespone(t)).toList();
 	// }
 
-	public List<ChapterRespone> getAllChapter(String idNovel) {
+	public List<ChapterRespone> getAllChapter(String idNovel, String token) throws JOSEException, ParseException {
+		if (token!=null) {
+			
+			
+			IntrospectRespone introspectRespone= authenticationService.introspect(IntrospectRequest.builder().token(token).build());
+			
+			if (introspectRespone.isValid()) {
+				return chapterRepository.findByNovel_IdNovel(idNovel).stream().map(t -> chapterMapper.toChapterRespone(t))
+						.toList();
+			}else {
+				throw new AppException(ErrorCode.UNAUTHENTICATION);
+			}
+			
+			
+		} else {
+			return chapterRepository.findByNovel_IdNovel(idNovel).stream()
+					.map(t -> {
 
-		return chapterRepository.findByNovel_IdNovel(idNovel).stream().map(t -> chapterMapper.toChapterRespone(t))
-				.toList();
+				ChapterRespone chapterRespone = new ChapterRespone();
+				chapterRespone.setTitleChapter(t.getTitleChapter());
+				return chapterRespone;
+			})
+			.collect(Collectors.toList());
+		}
 	}
 
 	public ChapterRespone getChapterById(Integer idChapter) {
@@ -56,12 +82,13 @@ public class ChapterService {
 	}
 
 	@Transactional
-	public ChapterRespone createChapter(ChapterCreationRequest request, MultipartFile textFile) throws IOException, InterruptedException {
+	public ChapterRespone createChapter(ChapterCreationRequest request, MultipartFile textFile)
+			throws IOException, InterruptedException {
 		if (chapterRepository.existsByTitleChapter(request.getTitleChapter())) {
 			throw new AppException(ErrorCode.CHAPTER_EXISTSED);
 		}
 		Chapter chapter = chapterMapper.toChapter(request);
-		
+
 		Novel novel = novelRepository.findById(request.getNovel()).get();
 
 		chapter.setNovel(novel);
@@ -77,34 +104,34 @@ public class ChapterService {
 		}
 
 		chapter = chapterRepository.save(chapter);
-			
-		Path audioFilePath= textService.convert(chapter.getContentChapter());
-		
-		 if (audioFilePath != null) {
-		        logger.info("Audio file generated at: {}", audioFilePath);
-		        try {
-		            // Đọc file thành byte[]
-		            byte[] audioBytes = Files.readAllBytes(audioFilePath);
-		            chapter.setAudioFile(audioBytes);
-		            
-		            // Cập nhật chapter với dữ liệu audio
-		            chapterRepository.save(chapter);
-		            logger.info("Successfully saved audio file to database for chapter ID: {}", chapter.getIdChapter());
 
-		        } catch (IOException e) {
-		            logger.error("Failed to read audio file from path: {}", audioFilePath, e);
-		            throw new AppException(ErrorCode.CANNOT_READ_AUDIO_FILE);
+		Path audioFilePath = textService.convert(chapter.getContentChapter());
+
+		if (audioFilePath != null) {
+			logger.info("Audio file generated at: {}", audioFilePath);
+			try {
+				// Đọc file thành byte[]
+				byte[] audioBytes = Files.readAllBytes(audioFilePath);
+				chapter.setAudioFile(audioBytes);
+
+				// Cập nhật chapter với dữ liệu audio
+				chapterRepository.save(chapter);
+				logger.info("Successfully saved audio file to database for chapter ID: {}", chapter.getIdChapter());
+
+			} catch (IOException e) {
+				logger.error("Failed to read audio file from path: {}", audioFilePath, e);
+				throw new AppException(ErrorCode.CANNOT_READ_AUDIO_FILE);
 //		        } finally {
 //		            // Dọn dẹp file tạm
 //		            Files.deleteIfExists(audioFilePath);
 //		            logger.info("Deleted temporary audio file: {}", audioFilePath);
-		        }
-		    } else {
-		        // Xử lý khi service không thể tạo được file audio
-		        logger.error("Failed to generate audio for chapter ID: {}", chapter.getIdChapter());
-		        // Ở đây bạn có thể không làm gì cả, hoặc ném lỗi tùy theo yêu cầu nghiệp vụ
-		    }
-		
+			}
+		} else {
+			// Xử lý khi service không thể tạo được file audio
+			logger.error("Failed to generate audio for chapter ID: {}", chapter.getIdChapter());
+			// Ở đây bạn có thể không làm gì cả, hoặc ném lỗi tùy theo yêu cầu nghiệp vụ
+		}
+
 		return chapterMapper.toChapterRespone(chapter);
 	}
 
@@ -121,18 +148,18 @@ public class ChapterService {
 		return idChapter;
 	}
 
-	public Integer increaseView(Integer idChapter){
-		Chapter chapter=chapterRepository.findById(idChapter).get();
-		chapter.setViewChapter(chapter.getViewChapter()+1);
+	public Integer increaseView(Integer idChapter) {
+		Chapter chapter = chapterRepository.findById(idChapter).get();
+		chapter.setViewChapter(chapter.getViewChapter() + 1);
 		chapterRepository.save(chapter);
 		return chapter.getViewChapter();
 	}
 
 	public ChapterRespone updateChapter(ChapterUpdateRequest request, MultipartFile textFile) throws IOException {
-		Chapter chapterOgirin=chapterRepository.findById(request.getIdChapter()).get();
+		Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter()).get();
 		Chapter chapter = chapterMapper.toChapterUpdate(request);
-		
-		chapterOgirin=chapterMapper.toChapterbyChapter(chapter);
+
+		chapterOgirin = chapterMapper.toChapterbyChapter(chapter);
 		if (!chapterRepository.existsById(request.getIdChapter())) {
 			throw new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
 		}
@@ -153,8 +180,7 @@ public class ChapterService {
 			chapterOgirin = chapterRepository.save(chapterOgirin);
 		} catch (Exception e) {
 			e.printStackTrace();
-		}	
-		
+		}
 
 		return chapterMapper.toChapterRespone(chapterOgirin);
 	}

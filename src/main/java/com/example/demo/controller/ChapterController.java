@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import com.example.demo.dto.request.ChapterUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.ChapterRespone;
 import com.example.demo.service.ChapterService;
+import com.nimbusds.jose.JOSEException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,8 +41,8 @@ public class ChapterController {
 
 	@GetMapping(value = "/getAll/{idNovel}")
 	@Operation(summary = "Lấy danh sách chương theo truyện", description = "Trả về danh sách tất cả các chương thuộc truyện có ID tương ứng.")
-	public ApiRespone<List<ChapterRespone>> getAll(@PathVariable String idNovel) {
-		return ApiRespone.<List<ChapterRespone>>builder().result(chapterService.getAllChapter(idNovel)).build();
+	public ApiRespone<List<ChapterRespone>> getAll(@PathVariable String idNovel,@RequestParam(required = false) String token) throws JOSEException, ParseException {
+		return ApiRespone.<List<ChapterRespone>>builder().result(chapterService.getAllChapter(idNovel,token)).build();
 	}
 
 	@GetMapping(value = "/{idChapter}")

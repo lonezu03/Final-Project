@@ -1,6 +1,5 @@
 package com.example.demo.dto.respone;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -10,19 +9,10 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 @Data
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ChapterRespone {
-	Integer idChapter;
-
-	String titleChapter;
-
-	String contentChapter;
-
-	Integer viewChapter;
-
-	String novel;
+public class IntrospectRespone {
+	boolean Valid;
 }
