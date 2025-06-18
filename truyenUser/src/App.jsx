@@ -19,6 +19,7 @@ import NotFoundPage from './component/NotFoundPage';
 import DepositPage from './component/page/DepositPage';
 import ReadingHistoryPage from './component/page/ReadingHistoryPage';
 import TransactionHistoryPage from './component/page/TransactionHistoryPage';
+import SearchResultsPage from './component/SearchResultsPage'; // Đường dẫn đến trang kết quả tìm kiếm
 
 // Component trung gian để xử lý việc fetch dữ liệu
 const AppContent = () => {
@@ -74,6 +75,8 @@ const AppContent = () => {
           <Route path="/deposit" element={<DepositPage />} />
           <Route path="/user/reading-history" element={<ReadingHistoryPage />} />
           <Route path="/user/transaction-history" element={<TransactionHistoryPage />} />
+          <Route path="/search-results" element={<SearchResultsPage />} />
+
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         {/* Footer có thể đặt ở đây */}

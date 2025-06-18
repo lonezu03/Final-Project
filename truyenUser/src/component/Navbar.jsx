@@ -1,32 +1,37 @@
 // Navbar.js
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // THÊM Link VÀ useNavigate
-import { Search, UserCircle2, Settings, BookOpen, LogOut, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, UserCircle2, Settings, BookOpen, LogOut } from "lucide-react";
 import AuthModal from './AuthModal';
 import SettingsSidebar from './SettingsSidebar';
-import { auth } from '../firebase-config';
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth as firebaseAuthInstance } from '../firebase-config'; // Đổi tên để rõ ràng hơn
+import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 
-// Hàm helper để tạo slug (ví dụ đơn giản)
+// *** THÊM IMPORT CHO REDUX ***
+import { useDispatch, useSelector } // Thêm useSelector nếu cần lấy state từ Redux (ví dụ: để đồng bộ currentUser)
+from "react-redux";
+import { searchNovels, clearSearchedNovels } from "../redux/novelSlice"; // Đường dẫn đến novelSlice
+import { logoutUser, loadUserFromStorage, selectCurrentUser } from "../redux/userSlice"; // Import action logout và selector
+
+// Hàm helper để tạo slug (giữ nguyên)
 const createSlug = (text) => {
   if (!text) return "";
   return text
     .toString()
     .toLowerCase()
-    .normalize("NFD") // Chuẩn hóa Unicode (tách dấu)
-    .replace(/[\u0300-\u036f]/g, "") // Loại bỏ dấu
-    .replace(/\s+/g, '-') // Thay khoảng trắng bằng gạch ngang
-    .replace(/[^\w-]+/g, '') // Loại bỏ các ký tự không phải chữ, số, gạch ngang
-    .replace(/--+/g, '-') // Loại bỏ nhiều gạch ngang liên tiếp
-    .replace(/^-+/, '') // Loại bỏ gạch ngang ở đầu
-    .replace(/-+$/, ''); // Loại bỏ gạch ngang ở cuối
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
 };
-
 
 const menuItems = [
   {
     label: "Thể loại",
-    basePath: "/category", // Thêm basePath cho từng loại menu
+    basePath: "/category",
     subItems: ["Tiên Hiệp", "Huyền Huyễn", "Khoa Huyễn", "Đô Thị", "Đồng Nhân", "Dã Sử", "Kỳ Ảo", "Truyện Teen"]
   },
   {
@@ -52,43 +57,92 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isSettingsSidebarOpen, setSettingsSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const navigate = useNavigate(); // SỬ DỤNG useNavigate cho tìm kiếm
+  // const [currentUser, setCurrentUser] = useState(null); // Sẽ lấy từ Redux store
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // Lấy currentUser từ Redux store
+  const reduxCurrentUser = useSelector(selectCurrentUser);
+  // Nếu bạn vẫn muốn dùng Firebase Auth để quản lý trạng thái đăng nhập ở Navbar thì có thể giữ lại
+  const [firebaseUser, setFirebaseUser] = useState(null);
+
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user ? user : null);
+    // Đồng bộ trạng thái từ Firebase Auth (nếu bạn vẫn dùng song song)
+    const unsubscribeFirebase = onAuthStateChanged(firebaseAuthInstance, (user) => {
+      setFirebaseUser(user ? user : null);
+      // Nếu bạn muốn Redux state được cập nhật dựa trên Firebase Auth khi tải trang
+      // (ví dụ: khi người dùng đã login Firebase từ phiên trước)
+      // bạn có thể dispatch action login/load user ở đây.
+      // Tuy nhiên, logic loadUserFromStorage trong userSlice đã làm việc này với localStorage.
     });
-    return () => unsubscribe();
-  }, []);
+
+    // Load user từ localStorage khi component mount (nếu chưa có trong Redux state)
+    // Điều này quan trọng nếu Redux state bị reset khi refresh trang.
+    if (!reduxCurrentUser) {
+      dispatch(loadUserFromStorage());
+    }
+
+    return () => {
+      unsubscribeFirebase();
+    };
+  }, [dispatch, reduxCurrentUser]); // Thêm reduxCurrentUser để tránh vòng lặp nếu logic phức tạp hơn
+
+  // Quyết định currentUser để hiển thị dựa trên Redux hoặc Firebase (tùy theo logic chính của bạn)
+  // Ưu tiên Redux currentUser nếu nó có giá trị, nếu không thì có thể dùng firebaseUser
+  const displayUser = reduxCurrentUser || firebaseUser;
+
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      // Điều hướng đến trang kết quả tìm kiếm, ví dụ: /search?q=ten_truyen
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery(""); // Xóa nội dung tìm kiếm sau khi điều hướng
-      setIsSearchActive(false); // Có thể ẩn thanh tìm kiếm
+    const query = searchQuery.trim();
+    if (query) {
+      const searchCriteria = {
+        nameNovel: query,
+        nameOperator: "CONTAINS",
+      };
+      const paginationAndSortParams = {
+        page: 0,
+        size: 20,
+      };
+      dispatch(clearSearchedNovels());
+      dispatch(searchNovels({ searchCriteria, paginationAndSortParams }));
+      navigate(`/search-results?q=${encodeURIComponent(query)}`);
+      setSearchQuery("");
+      setIsSearchActive(false);
     }
   };
 
-  const handleAuthSuccess = (user) => {
-    console.log("Authentication successful in Navbar for user:", user.email);
+  const handleAuthSuccess = (userFromAuthModal) => { // userFromAuthModal là user từ Firebase hoặc API của bạn
+    console.log("Authentication successful in Navbar for user:", userFromAuthModal);
+    // Redux state sẽ được cập nhật bởi action loginUser... trong AuthModal hoặc userSlice
+    // Chỉ cần đóng modal ở đây
     setAuthModalOpen(false);
   };
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      setSettingsSidebarOpen(false);
+      // Logout khỏi Firebase (nếu đang đăng nhập bằng Firebase)
+      if (firebaseAuthInstance.currentUser) {
+        await firebaseSignOut(firebaseAuthInstance);
+        console.log("Firebase user signed out successfully.");
+      }
+
+      // Dispatch action logout của Redux để xóa token và currentUser trong Redux state và localStorage
+      dispatch(logoutUser());
+      console.log("Redux logout action dispatched.");
+
+      setSettingsSidebarOpen(false); // Đóng sidebar cài đặt nếu đang mở
+      navigate('/'); // Điều hướng về trang chủ sau khi logout
     } catch (error) {
-      console.error("Error signing out: ", error);
+      console.error("Error during logout: ", error);
     }
   };
 
   return (
     <div className="bg-blue-900 text-white">
       <div className="container mx-auto flex items-center justify-between py-4 px-6 relative">
-        {/* Logo - THÊM Link ĐỂ VỀ TRANG CHỦ */}
+        {/* Logo */}
         <Link to="/" className="flex items-center">
           <BookOpen className="text-2xl font-bold mr-2" size={28} />
           <span className="text-2xl font-bold">TRUYỆN CHỮ</span>
@@ -105,13 +159,13 @@ const Navbar = () => {
             >
               <button className="hover:text-gray-300">{menu.label}</button>
               {activeMenu === index && (
-                <div className="absolute top-full left-0 bg-blue-900 shadow-lg py-4 px-6 w-max z-20 grid grid-cols-2 gap-x-8 gap-y-3"> {/* Điều chỉnh gap */}
+                <div className="absolute top-full left-0 bg-blue-900 shadow-lg py-4 px-6 w-max z-20 grid grid-cols-2 gap-x-8 gap-y-3">
                   {menu.subItems.map((subItem, subIndex) => (
-                    <Link // SỬ DỤNG Link THAY CHO a
+                    <Link
                       key={subIndex}
-                      to={`${menu.basePath}/${createSlug(subItem)}`} // TẠO ĐƯỜNG DẪN ĐỘNG
+                      to={`${menu.basePath}/${createSlug(subItem)}`}
                       className="whitespace-nowrap hover:underline text-white"
-                      onClick={() => setActiveMenu(null)} // Đóng menu khi click
+                      onClick={() => setActiveMenu(null)}
                     >
                       {subItem}
                     </Link>
@@ -123,9 +177,7 @@ const Navbar = () => {
         </div>
 
         {/* Search Bar & Icons */}
-        {/* ... (Phần tìm kiếm và icon user/settings giữ nguyên cách xử lý sự kiện, chỉ thay đổi điều hướng tìm kiếm) ... */}
-         <div className="flex space-x-3 sm:space-x-4 items-center">
-          {/* Tìm kiếm */}
+        <div className="flex space-x-3 sm:space-x-4 items-center">
           <div className="flex items-center w-32 sm:w-40 md:w-64 relative">
             {isSearchActive && (
               <input
@@ -150,11 +202,11 @@ const Navbar = () => {
             />
           </div>
 
-          {/* User & Settings Icons */}
-          {currentUser ? (
+          {/* User & Settings Icons - Sử dụng displayUser (ưu tiên Redux currentUser) */}
+          {displayUser ? (
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <span className="text-xs sm:text-sm hidden sm:block max-w-[100px] truncate" title={currentUser.displayName || currentUser.email}>
-                {currentUser.displayName || currentUser.email?.split('@')[0]}
+              <span className="text-xs sm:text-sm hidden sm:block max-w-[100px] truncate" title={displayUser.displayName || displayUser.emailUser || displayUser.email}>
+                {displayUser.displayName || displayUser.emailUser?.split('@')[0] || displayUser.email?.split('@')[0]}
               </span>
               <button onClick={handleLogout} title="Đăng xuất" className="hover:text-red-400 transition-colors">
                 <LogOut size={18} />
@@ -186,8 +238,8 @@ const Navbar = () => {
       <SettingsSidebar
         isOpen={isSettingsSidebarOpen}
         onClose={() => setSettingsSidebarOpen(false)}
-        userLoggedIn={!!currentUser}
-        username={currentUser?.displayName || currentUser?.email}
+        userLoggedIn={!!displayUser} // Dùng displayUser
+        username={displayUser?.displayName || displayUser?.emailUser || displayUser?.email} // Dùng displayUser
         onLogoutClick={handleLogout}
       />
     </div>

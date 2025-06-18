@@ -1,11 +1,11 @@
 // src/redux/chapterSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 // Bỏ axios gốc nếu không còn API nào dùng nó trong slice này
-// import axios from 'axios';
+ import axios from 'axios';
 import apiClient from '../services/api'; // Import apiClient cho tất cả các request
 
 // Không cần API_BASE_URL_CHAPTERS nữa vì apiClient đã có baseURL
-// const API_BASE_URL_CHAPTERS = "https://truongthaiduongphanthanhvu.onrender.com/chapter";
+ const API_BASE_URL_CHAPTERS = "https://truongthaiduongphanthanhvu.onrender.com/chapter";
 
 // Action để lấy danh sách chương cho DetailPage
 export const getAllChapters = createAsyncThunk(
@@ -34,25 +34,32 @@ export const getAllChapters = createAsyncThunk(
 // Action để lấy danh sách chương đã được map cho dropdown của ReadingPage
 export const getNovelChaptersList = createAsyncThunk(
   'chapters/getNovelChaptersList',
-  async (novelId, { rejectWithValue, dispatch }) => {
+  async (novelId, { rejectWithValue }) => { // Bỏ dispatch nếu không dùng đến
     try {
-      const response = await apiClient.get(`/chapter/getAll/${novelId}`);
+      // SỬ DỤNG axios thay vì apiClient vì API này đã được whitelist
+      const response = await axios.get(`${API_BASE_URL_CHAPTERS}/getAll/${novelId}`);
+
       if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
         const chapters = response.data.result;
-        const sortedChapters = chapters.sort((a, b) => (a.chapterNumber || a.idChapter) - (b.chapterNumber || b.idChapter));
+        // Sắp xếp các chương theo chapterNumber hoặc idChapter nếu chapterNumber không có
+        const sortedChapters = chapters.sort((a, b) => {
+          const numA = a.chapterNumber !== null && a.chapterNumber !== undefined ? a.chapterNumber : parseInt(a.idChapter, 10) || 0;
+          const numB = b.chapterNumber !== null && b.chapterNumber !== undefined ? b.chapterNumber : parseInt(b.idChapter, 10) || 0;
+          return numA - numB;
+        });
+        // Chỉ lấy các trường cần thiết cho dropdown
         return sortedChapters.map(chap => ({
           idChapter: chap.idChapter,
-          chapterNumber: chap.chapterNumber || chap.idChapter,
-          titleChapter: chap.titleChapter
+          chapterNumber: chap.chapterNumber !== null && chap.chapterNumber !== undefined ? chap.chapterNumber : `ID: ${chap.idChapter}`, // Fallback nếu không có chapterNumber
+          titleChapter: chap.titleChapter || "Chưa có tiêu đề" // Fallback nếu không có titleChapter
         }));
       }
-      return rejectWithValue(response.data?.message || 'Failed to fetch chapters list for reading dropdown');
+      // Nếu code không phải 1000 hoặc result không phải array
+      return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương.');
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        return rejectWithValue('Unauthorized. Please login again.');
-      }
-      console.error(`Error fetching chapter list for ReadingPage (novelId: ${novelId}):`, error.response?.data || error.message);
-      return rejectWithValue(error.response?.data?.message || error.message || 'Error fetching chapters list for reading dropdown');
+      // Không cần kiểm tra lỗi 401 cụ thể ở đây nữa vì API là public
+      console.error(`Lỗi khi tải danh sách chương cho ReadingPage (novelId: ${novelId}):`, error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách chương.');
     }
   }
 );

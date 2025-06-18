@@ -142,18 +142,42 @@ export const uploadAvatar = createAsyncThunk(
 // 7. API CREATE HISTORY - Sử dụng apiClient
 export const createHistory = createAsyncThunk(
   'user/createHistory',
-  async ({ idNovel, email, titleChapter }, { rejectWithValue }) => {
+  // Payload giờ sẽ là một object chứa các thông tin cần thiết
+  async ({ idNovel, email, idChapter, readPlace, titleChapter }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.post(
-        `/user/createHistory?idNovel=${encodeURIComponent(idNovel)}&email=${encodeURIComponent(email)}&titleChapter=${encodeURIComponent(titleChapter)}`
-      );
-      if (response.data && (response.data.code === "1000" || response.data.code === 1000)) {
-        return response.data;
+      // Tạo payload JSON như trong Postman
+      const payload = {
+        idNovel,
+        email,
+        idChapter,
+        readPlace, // Vị trí đọc
+        titleChapter
+      };
+      console.log("Attempting to create/update history with payload:", JSON.stringify(payload, null, 2)); // Log payload
+
+      // Sử dụng apiClient để tự động gửi token
+      // Endpoint là /user/createHistory và method là POST
+      const response = await apiClient.post(`/user/createHistory`, payload, {
+        headers: {
+          'Content-Type': 'application/json', // Đảm bảo header này được đặt nếu backend yêu cầu
+        }
+      });
+
+      // Kiểm tra response từ backend
+      if (response.data && (response.data.code === 1000 || response.data.code === "1000")) {
+        // Backend có thể trả về thông tin lịch sử đã được tạo/cập nhật
+        // hoặc chỉ một thông báo thành công.
+        // Nếu response.data.result chứa dữ liệu lịch sử, bạn có thể muốn trả về nó.
+        // Ở đây, chúng ta trả về response.data để có thể lấy message.
+        console.log("Create/update history successful:", response.data);
+        return response.data; // Hoặc response.data.result nếu bạn chỉ muốn phần result
       } else {
-        return rejectWithValue(response.data?.message || 'Create history failed: Invalid response.');
+        console.error("Create/update history failed with backend response:", response.data);
+        return rejectWithValue(response.data?.message || 'Create/update history failed: Invalid response from server.');
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Create history API error.';
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Create/update history API error.';
+      console.error("Create/update history API error:", errorMsg, error.response || error);
       return rejectWithValue(errorMsg);
     }
   }
@@ -199,17 +223,30 @@ export const getAllHistoryByUser = createAsyncThunk(
 
 
 // --- SLICE DEFINITION ---
+// const initialState = {
+//   currentUser: null, // Sẽ lưu thông tin user (không bao gồm token)
+//   token: localStorage.getItem('authToken') || null, // Chỉ lưu token
+//   usersList: [],
+//   userHistory: [],
+//   loading: false,
+//   isOtpSending: false,
+//   isHistoryLoading: false,
+//   error: null,
+//   otpMessage: null,
+//   historyActionStatus: null,
+// };
 const initialState = {
-  currentUser: null, // Sẽ lưu thông tin user (không bao gồm token)
-  token: localStorage.getItem('authToken') || null, // Chỉ lưu token
+  currentUser: null,
+  token: localStorage.getItem('authToken') || null,
   usersList: [],
-  userHistory: [],
-  loading: false,
+  userHistory: [], // Sẽ được cập nhật bởi getAllHistoryByUser
+  loading: false, // Loading chung
+  historyLoading: false, // Loading cho các thao tác liên quan đến history (create, delete, get)
   isOtpSending: false,
-  isHistoryLoading: false,
+  isUserHistoryLoading: false, // Đổi tên từ isHistoryLoading để rõ ràng hơn
   error: null,
   otpMessage: null,
-  historyActionStatus: null,
+  historyActionStatus: null, // Lưu message từ create/delete history
 };
 
 const userSlice = createSlice({
@@ -317,30 +354,67 @@ const userSlice = createSlice({
       .addCase(uploadAvatar.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
 
       // Create History
-      .addCase(createHistory.pending, (state) => { state.loading = true; state.error = null; state.historyActionStatus = null; })
-      .addCase(createHistory.fulfilled, (state, action) => {
-        state.loading = false;
-        state.historyActionStatus = action.payload.message || 'History created successfully.';
+       .addCase(createHistory.pending, (state) => {
+        state.historyLoading = true; // Sử dụng loading state riêng cho history
+        state.error = null;
+        state.historyActionStatus = null;
       })
-      .addCase(createHistory.rejected, (state, action) => { state.loading = false; state.error = action.payload; state.historyActionStatus = null; })
+      .addCase(createHistory.fulfilled, (state, action) => {
+        state.historyLoading = false;
+        state.historyActionStatus = action.payload.message || 'Lịch sử đọc đã được cập nhật.';
+        // Tùy chọn: Nếu API trả về danh sách lịch sử đã cập nhật, bạn có thể cập nhật state.userHistory ở đây.
+        // Hoặc, bạn có thể dispatch lại getAllHistoryByUser sau khi hành động này thành công
+        // để đảm bảo danh sách lịch sử luôn mới nhất.
+        // Ví dụ: nếu action.payload.result là một history item mới/đã cập nhật:
+        // const updatedHistoryItem = action.payload.result;
+        // const index = state.userHistory.findIndex(item => item.id?.idNovel === updatedHistoryItem.id?.idNovel && item.id?.idChapter === updatedHistoryItem.id?.idChapter);
+        // if (index !== -1) {
+        //   state.userHistory[index] = updatedHistoryItem;
+        // } else {
+        //   state.userHistory.unshift(updatedHistoryItem);
+        // }
+      })
+      .addCase(createHistory.rejected, (state, action) => {
+        state.historyLoading = false;
+        state.error = action.payload; // Lưu lỗi
+        state.historyActionStatus = `Lỗi cập nhật lịch sử: ${action.payload}`;
+      })
 
       // Delete History
-      .addCase(deleteHistory.pending, (state) => { state.loading = true; state.error = null; state.historyActionStatus = null; })
-      .addCase(deleteHistory.fulfilled, (state, action) => {
-        state.loading = false;
-        state.historyActionStatus = action.payload.message || 'History deleted successfully.';
-        // Cân nhắc reload lại history ở đây hoặc để component tự gọi lại getAllHistoryByUser
+      .addCase(deleteHistory.pending, (state) => {
+        state.historyLoading = true;
+        state.error = null;
+        state.historyActionStatus = null;
       })
-      .addCase(deleteHistory.rejected, (state, action) => { state.loading = false; state.error = action.payload; state.historyActionStatus = null; })
+      .addCase(deleteHistory.fulfilled, (state, action) => {
+        state.historyLoading = false;
+        state.historyActionStatus = action.payload.message || 'Lịch sử đã được xóa.';
+        // Sau khi xóa, bạn có thể muốn lọc state.userHistory
+        // Giả sử action.meta.arg là historyData đã gửi đi (chứa idUser, idNovel, idChapter)
+        if (action.meta.arg) {
+            const { idUser, idNovel, idChapter } = action.meta.arg;
+            state.userHistory = state.userHistory.filter(item =>
+                !(item.id.idUser === idUser && item.id.idNovel === idNovel /* && item.id.idChapter === idChapter nếu có */)
+            );
+        }
+      })
+      .addCase(deleteHistory.rejected, (state, action) => {
+        state.historyLoading = false;
+        state.error = action.payload;
+        state.historyActionStatus = `Lỗi xóa lịch sử: ${action.payload}`;
+      })
 
       // Get All History By User
-      .addCase(getAllHistoryByUser.pending, (state) => { state.isHistoryLoading = true; state.error = null; })
+      .addCase(getAllHistoryByUser.pending, (state) => {
+        state.isUserHistoryLoading = true; // Sử dụng cờ loading riêng
+        state.error = null;
+      })
       .addCase(getAllHistoryByUser.fulfilled, (state, action) => {
-        state.isHistoryLoading = false;
+        state.isUserHistoryLoading = false;
         state.userHistory = action.payload;
       })
       .addCase(getAllHistoryByUser.rejected, (state, action) => {
-        state.isHistoryLoading = false;
+        state.isUserHistoryLoading = false;
         state.error = action.payload;
         state.userHistory = [];
       })
