@@ -21,6 +21,7 @@ public interface ICommentMapper {
 	Comment toCommentUpdate(CommentUpdateRequest request);
 
 	@Mapping(source = "user.userNameUser", target = "userName")
+	@Mapping(source = "replies", target = "replyComments")
 	CommentRespone toCommentRespone(Comment comment);
 	
 	@Mapping(target = "titleChapter", source = "chapter.titleChapter")

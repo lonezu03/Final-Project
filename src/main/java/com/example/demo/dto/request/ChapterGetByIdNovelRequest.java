@@ -1,6 +1,4 @@
-package com.example.demo.dto.respone;
-
-import java.util.List;
+package com.example.demo.dto.request;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -14,16 +12,8 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CommentRespone {
-	String idComment;
+public class ChapterGetByIdNovelRequest {
 
-	String contentComment;
-
-	Integer likeComment;
-
-	Integer dislikeComment;
-	
-	String userName;
-	
-	List<CommentRespone> replyComments;
+	String idNovel;
+	String token;
 }

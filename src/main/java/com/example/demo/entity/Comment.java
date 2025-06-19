@@ -1,17 +1,21 @@
 package com.example.demo.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.example.demo.enums.Role;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,19 +36,27 @@ public class Comment {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	Integer idComment;
-    
+
 	@Column(name = "content_comment", length = 1024, nullable = false, columnDefinition = "NVARCHAR(1024)")
 	String contentComment;
 
 	Integer likeComment;
 
 	Integer dislikeComment;
-	
+
 	@ManyToOne
-	@JoinColumn(name = "idUser",nullable = false)
+	@JoinColumn(name = "idUser", nullable = false)
 	User user;
-	
+
 	@ManyToOne
-	@JoinColumn(name = "idChapter",nullable = false)
+	@JoinColumn(name = "idChapter")
 	Chapter chapter;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "parent_comment_id") 
+	private Comment parent; 
+
+
+	@OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Comment> replies = new ArrayList<>();
 }

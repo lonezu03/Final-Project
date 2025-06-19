@@ -69,7 +69,7 @@ public class CommentController {
 	@PostMapping("/create")
 	@Operation(summary = "Tạo bình luận mới", description = "Tạo mới một bình luận cho chương truyện.")
 	public ApiRespone<CommentRespone> createChapter(@RequestBody CommentCreationRequest request) {
-		log.info(request.getChapter() + "");
+//		log.info(request.getChapter() + "");
 		return ApiRespone.<CommentRespone>builder()
 				.result(commentService.createComment(request))
 				.build();

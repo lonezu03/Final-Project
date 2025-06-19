@@ -19,7 +19,6 @@ public enum ErrorCode {
 	CHAPTER_EXISTSED(1022,"Chapter existsed"),FILE_MUST_TXT(1023,"File must be txt type"),ERRO_WHEN_DELETE_COMMENT(1024,"Delete when delete comment"),
 	CANNOT_READ_AUDIO_FILE(1025,"Cant not read audio file"),
 	UNAUTHENTICATION(1026,"Unauthentication"),
-	
 	UNKNOW_ERROR(9999, "Unknow error") ;
 
 	private int code;

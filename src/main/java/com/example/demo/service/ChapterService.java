@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.ChapterCreationRequest;
+import com.example.demo.dto.request.ChapterGetByIdNovelRequest;
 import com.example.demo.dto.request.ChapterUpdateRequest;
 import com.example.demo.dto.request.IntrospectRequest;
 import com.example.demo.dto.respone.ChapterRespone;
@@ -51,14 +52,14 @@ public class ChapterService {
 	// chapterMapper.toChapterRespone(t)).toList();
 	// }
 
-	public List<ChapterRespone> getAllChapter(String idNovel, String token) throws JOSEException, ParseException {
-		if (token!=null) {
+	public List<ChapterRespone> getAllChapter(ChapterGetByIdNovelRequest request) throws JOSEException, ParseException {
+		if (request.getToken()!=null) {
 			
 			
-			IntrospectRespone introspectRespone= authenticationService.introspect(IntrospectRequest.builder().token(token).build());
+			IntrospectRespone introspectRespone= authenticationService.introspect(IntrospectRequest.builder().token(request.getToken()).build());
 			
 			if (introspectRespone.isValid()) {
-				return chapterRepository.findByNovel_IdNovel(idNovel).stream().map(t -> chapterMapper.toChapterRespone(t))
+				return chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream().map(t -> chapterMapper.toChapterRespone(t))
 						.toList();
 			}else {
 				throw new AppException(ErrorCode.UNAUTHENTICATION);
@@ -66,7 +67,7 @@ public class ChapterService {
 			
 			
 		} else {
-			return chapterRepository.findByNovel_IdNovel(idNovel).stream()
+			return chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream()
 					.map(t -> {
 
 				ChapterRespone chapterRespone = new ChapterRespone();

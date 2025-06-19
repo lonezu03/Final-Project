@@ -20,4 +20,5 @@ public class CommentCreationRequest {
 	
 	Integer chapter;
 
+	Integer idParent;
 }

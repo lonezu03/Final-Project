@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.ChapterCreationRequest;
+import com.example.demo.dto.request.ChapterGetByIdNovelRequest;
 import com.example.demo.dto.request.ChapterUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.ChapterRespone;
@@ -39,10 +41,10 @@ public class ChapterController {
 	ChapterService chapterService;
 
 
-	@GetMapping(value = "/getAll/{idNovel}")
+	@PostMapping("/getAll")
 	@Operation(summary = "Lấy danh sách chương theo truyện", description = "Trả về danh sách tất cả các chương thuộc truyện có ID tương ứng.")
-	public ApiRespone<List<ChapterRespone>> getAll(@PathVariable String idNovel,@RequestParam(required = false) String token) throws JOSEException, ParseException {
-		return ApiRespone.<List<ChapterRespone>>builder().result(chapterService.getAllChapter(idNovel,token)).build();
+	public ApiRespone<List<ChapterRespone>> getAll(@RequestBody ChapterGetByIdNovelRequest request) throws JOSEException, ParseException {
+		return ApiRespone.<List<ChapterRespone>>builder().result(chapterService.getAllChapter(request)).build();
 	}
 
 	@GetMapping(value = "/{idChapter}")
