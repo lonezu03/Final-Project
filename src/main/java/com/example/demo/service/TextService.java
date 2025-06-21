@@ -3,6 +3,8 @@ package com.example.demo.service;
 import com.example.demo.entity.TtsSubJob;
 import com.example.demo.repository.ITtsSubJobRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -52,26 +54,47 @@ public class TextService {
     
     private void sendToFptAi(String text, String callbackUrl) {
         String cleanText = text.replaceAll("\\s+", " ").trim();
-        
-        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+
+        // 1. ĐỊNH NGHĨA CẤU HÌNH TIMEOUT
+        // Đặt thời gian chờ là 30 giây (30000 milliseconds).
+        // Đây là khoảng thời gian đủ an toàn cho các kết nối mạng có độ trễ cao.
+        final int timeoutMillis = 30000; 
+        RequestConfig config = RequestConfig.custom()
+            .setConnectTimeout(timeoutMillis)        // Timeout để thiết lập kết nối ban đầu.
+            .setConnectionRequestTimeout(timeoutMillis) // Timeout để lấy kết nối từ connection pool.
+            .setSocketTimeout(timeoutMillis)         // Timeout chờ dữ liệu sau khi kết nối thành công.
+            .build();
+
+        // 2. TẠO HTTP CLIENT VỚI CẤU HÌNH TIMEOUT TÙY CHỈNH
+        // Dùng try-with-resources để đảm bảo client được đóng đúng cách.
+        try (CloseableHttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(config).build()) {
+            
             HttpPost request = new HttpPost(API_URL);
+            
+            // 3. SET CÁC HEADER NHƯ CŨ
             request.setHeader("api-key", API_KEY);
             request.setHeader("voice", "banmai");
             request.setHeader("callback_url", callbackUrl);
 
+            // 4. SET BODY REQUEST NHƯ CŨ
             StringEntity entity = new StringEntity(cleanText, "UTF-8");
             request.setEntity(entity);
 
-            logger.info("Sending request to FPT.AI for sub-job via callback: {}", callbackUrl);
+            logger.info("Sending request to FPT.AI with a {}ms timeout...", timeoutMillis);
+            logger.info("Callback URL: {}", callbackUrl);
+
+            // 5. THỰC THI REQUEST
             try (CloseableHttpResponse response = httpClient.execute(request)) {
                  String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
                  logger.info("FPT.AI initial response: {}", responseBody);
             }
+            
         } catch (Exception e) {
-            throw new RuntimeException("Error sending request to FPT.AI", e);
+            // Các lỗi timeout (như ConnectTimeoutException, SocketTimeoutException) sẽ được bắt ở đây.
+            logger.error("Error sending request to FPT.AI (possible timeout)", e);
+            throw new RuntimeException("Error sending request to FPT.AI: " + e.getMessage(), e);
         }
     }
-
     public List<String> ultimateTextSplitter(String originalText, int maxChunkLength, int maxCharsWithoutBreak) {
         if (originalText == null || originalText.isBlank()) {
             return new ArrayList<>();
