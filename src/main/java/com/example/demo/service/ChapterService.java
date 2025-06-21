@@ -106,32 +106,32 @@ public class ChapterService {
 
 		chapter = chapterRepository.save(chapter);
 
-		Path audioFilePath = textService.convert(chapter.getContentChapter());
-
-		if (audioFilePath != null) {
-			logger.info("Audio file generated at: {}", audioFilePath);
-			try {
-				// Đọc file thành byte[]
-				byte[] audioBytes = Files.readAllBytes(audioFilePath);
-				chapter.setAudioFile(audioBytes);
-
-				// Cập nhật chapter với dữ liệu audio
-				chapterRepository.save(chapter);
-				logger.info("Successfully saved audio file to database for chapter ID: {}", chapter.getIdChapter());
-
-			} catch (IOException e) {
-				logger.error("Failed to read audio file from path: {}", audioFilePath, e);
-				throw new AppException(ErrorCode.CANNOT_READ_AUDIO_FILE);
-//		        } finally {
-//		            // Dọn dẹp file tạm
-//		            Files.deleteIfExists(audioFilePath);
-//		            logger.info("Deleted temporary audio file: {}", audioFilePath);
-			}
-		} else {
-			// Xử lý khi service không thể tạo được file audio
-			logger.error("Failed to generate audio for chapter ID: {}", chapter.getIdChapter());
-			// Ở đây bạn có thể không làm gì cả, hoặc ném lỗi tùy theo yêu cầu nghiệp vụ
-		}
+//		Path audioFilePath = textService.convert(chapter.getContentChapter());
+//
+//		if (audioFilePath != null) {
+//			logger.info("Audio file generated at: {}", audioFilePath);
+//			try {
+//				// Đọc file thành byte[]
+//				byte[] audioBytes = Files.readAllBytes(audioFilePath);
+//				chapter.setAudioFile(audioBytes);
+//
+//				// Cập nhật chapter với dữ liệu audio
+//				chapterRepository.save(chapter);
+//				logger.info("Successfully saved audio file to database for chapter ID: {}", chapter.getIdChapter());
+//
+//			} catch (IOException e) {
+//				logger.error("Failed to read audio file from path: {}", audioFilePath, e);
+//				throw new AppException(ErrorCode.CANNOT_READ_AUDIO_FILE);
+////		        } finally {
+////		            // Dọn dẹp file tạm
+////		            Files.deleteIfExists(audioFilePath);
+////		            logger.info("Deleted temporary audio file: {}", audioFilePath);
+//			}
+//		} else {
+//			// Xử lý khi service không thể tạo được file audio
+//			logger.error("Failed to generate audio for chapter ID: {}", chapter.getIdChapter());
+//			// Ở đây bạn có thể không làm gì cả, hoặc ném lỗi tùy theo yêu cầu nghiệp vụ
+//		}
 
 		return chapterMapper.toChapterRespone(chapter);
 	}

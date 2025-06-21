@@ -1,311 +1,206 @@
 package com.example.demo.service;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.http.client.config.RequestConfig;
+import com.example.demo.entity.TtsSubJob;
+import com.example.demo.repository.ITtsSubJobRepository;
+import lombok.RequiredArgsConstructor;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.experimental.NonFinal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class TextService {
-	private final ObjectMapper objectMapper;
-	private final HttpClient httpClient;
 
-//	HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    private static final Logger logger = LoggerFactory.getLogger(TextService.class);
+    private final ITtsSubJobRepository ttsSubJobRepository;
 
-	@NonFinal
-	@Value("${tts.output.directory}")
-	String outputDirectory;
-	private static final Logger logger = LoggerFactory.getLogger(TextService.class);
+    private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj"; // Nên đưa vào application.properties
+    private static final String API_URL = "https://api.fpt.ai/hmi/tts/v5";
 
-	private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj";
-	private static final String API_URL = "https://api.fpt.ai/hmi/tts/v5";
-
-	@Autowired
-	public TextService(ObjectMapper objectMapper) {
-		this.objectMapper = objectMapper;
-		this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-	}
-	
-	public void sendToFptAi(String text, String callbackUrl) {
-	    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-	        HttpPost request = new HttpPost(API_URL);
-	        request.setHeader("api-key", API_KEY);
-	        request.setHeader("voice", "banmai");
-	        // Quan trọng: Thêm callback_url và truyền vào một body JSON
-	        request.setHeader("callback_url", callbackUrl);
-	        
-	        
-	        logger.info("Text length: {} characters", text.length());
-
-	        if (text.length() > 5000) {
-	            logger.error("Text length exceeds the 5000 character limit!");
-	            // Bạn có thể ném ra một exception ở đây để không gửi request đi
-	            throw new IllegalArgumentException("Text exceeds 5000 character limit.");
-	        }
-	        
-	        String cleanText = text
-	                .replaceAll("<[^>]*>", "") // Xóa các thẻ HTML
-	                .replaceAll("\\s+", " ")   // Thay thế nhiều khoảng trắng bằng một
-	                .trim();                   // Xóa khoảng trắng đầu cuối
-	        
-	     // --- THAY ĐỔI QUAN TRỌNG: GỬI TEXT THÔ ---
-	        // Không dùng JSON body nữa, mà dùng text thô như tài liệu
-	        StringEntity entity = new StringEntity(cleanText, "UTF-8");
-	        request.setEntity(entity);
-
-	       
-
-	        logger.info("Sending request to FPT.AI with callback: {}", callbackUrl);
-	        try (CloseableHttpResponse response = httpClient.execute(request)) {
-	             String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-	             logger.info("FPT.AI initial response: {}", responseBody);
-	        }
-	    } catch (Exception e) {
-	        throw new RuntimeException("Error sending request to FPT.AI", e);
-	    }
-	}
-	
-	
-
-	public String convertTextToSpeech(String text) {
-		
-//		int timeoutMillis = 30000; // 30 giây
-//        RequestConfig config = RequestConfig.custom()
-//            .setConnectTimeout(timeoutMillis)        // Timeout để thiết lập kết nối
-//            .setConnectionRequestTimeout(timeoutMillis) // Timeout để lấy kết nối từ connection pool
-//            .setSocketTimeout(timeoutMillis)         // Timeout chờ dữ liệu (quan trọng nhất)
-//            .build();
-		
-		try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-			HttpPost request = new HttpPost(API_URL);
-//			request.setConfig(config);
-			request.setHeader("api-key", API_KEY);
-			request.setHeader("voice", "banmai");
-			request.setHeader("speed", "0");
-
-			StringEntity entity = new StringEntity(text, "UTF-8");
-			request.setEntity(entity);
-
-//			logger.info("Sending TTS request to FPT.AI with a {}ms timeout...", timeoutMillis);
-			try (CloseableHttpResponse response = httpClient.execute(request)) {
-				int statusCode = response.getStatusLine().getStatusCode();
-                String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-                if (statusCode >= 200 && statusCode < 300) {
-                    logger.info("Received successful response from FPT.AI: {}", responseBody);
-                    return responseBody;
-                } else {
-                    logger.error("FPT.AI API returned an error. Status: {}, Body: {}", statusCode, responseBody);
-                    // Trả về một JSON rỗng để không gây lỗi ObjectMapper, nhưng vẫn báo lỗi
-                    return "{}"; 
+    public void processSubJobs(List<TtsSubJob> subJobs, String serverBaseUrl) {
+        subJobs.forEach(subJob -> {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String callbackUrl = serverBaseUrl + "/api/tts/sub-callback?subJobId=" + subJob.getId();
+                    sendToFptAi(subJob.getTextChunk(), callbackUrl);
+                    
+                    subJob.setStatus("PROCESSING");
+                    ttsSubJobRepository.save(subJob);
+                } catch (Exception e) {
+                    logger.error("Failed to send sub-job {} to FPT.AI", subJob.getId(), e);
+                    subJob.setStatus("FAILED");
+                    ttsSubJobRepository.save(subJob);
+                    // Cân nhắc cập nhật job cha là FAILED
                 }
-			}
-		} catch (Exception e) {
-			logger.error("Exception occurred while calling FPT.AI TTS API.", e);
-			// Trả về một JSON rỗng khi có lỗi mạng hoặc timeout
-            return "{}"; 
-		}
-	}
+            });
+        });
+    }
+    
+    private void sendToFptAi(String text, String callbackUrl) {
+        String cleanText = text.replaceAll("\\s+", " ").trim();
+        
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpPost request = new HttpPost(API_URL);
+            request.setHeader("api-key", API_KEY);
+            request.setHeader("voice", "banmai");
+            request.setHeader("callback_url", callbackUrl);
 
-	public Path convert(String text)
-			throws JsonMappingException, JsonProcessingException, IOException, InterruptedException {
+            StringEntity entity = new StringEntity(cleanText, "UTF-8");
+            request.setEntity(entity);
 
-		String fptApiResponse = convertTextToSpeech(text);
-
-		 // KIỂM TRA PHÒNG THỦ
-        if (fptApiResponse == null || fptApiResponse.trim().isEmpty() || fptApiResponse.equals("{}")) {
-            logger.error("Aborting conversion because the initial response from FPT.AI was invalid.");
-            return null;
+            logger.info("Sending request to FPT.AI for sub-job via callback: {}", callbackUrl);
+            try (CloseableHttpResponse response = httpClient.execute(request)) {
+                 String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                 logger.info("FPT.AI initial response: {}", responseBody);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error sending request to FPT.AI", e);
         }
-		
-		Map<String, Object> response = objectMapper.readValue(fptApiResponse, Map.class);
-		String asyncUrl = (String) response.get("async");
+    }
 
-		if (asyncUrl == null || asyncUrl.isEmpty()) {
-			logger.error("API did not return an async URL. Response: {}", fptApiResponse);
-			return null; // Rõ ràng: không có URL thì trả về null
-		}
+    public List<String> ultimateTextSplitter(String originalText, int maxChunkLength, int maxWordsWithoutBreak) {
+        if (originalText == null || originalText.isBlank()) {
+            return new ArrayList<>();
+        }
 
-		// --- PHẦN THAY ĐỔI QUAN TRỌNG ---
-		// Chờ cho đến khi file sẵn sàng trước khi tải về
-		if (!waitForFileReady(asyncUrl)) {
-			logger.error("File was not ready at {} after multiple retries.", asyncUrl);
-			return null; // Rõ ràng: chờ không được thì trả về null
-		}
-		// --- KẾT THÚC THAY ĐỔI ---
+        // 1. Dọn dẹp văn bản thô (loại bỏ các lỗi định dạng nhỏ)
+        String cleanedText = sanitizeText(originalText);
 
-		// Tải file audio từ URL sau khi đã xác nhận nó tồn tại
-		String fileName = extractFileName(asyncUrl);
-		Path filePath = Paths.get(outputDirectory, fileName);
+        // 2. Tách văn bản thành các câu
+        List<String> initialSentences = splitIntoSentences(cleanedText);
 
-		boolean isDownloaded = downloadFile(asyncUrl, filePath);
+        // 3. Xử lý các câu dài bằng cách chèn dấu phẩy
+        List<String> safeSentences = new ArrayList<>();
+        for (String sentence : initialSentences) {
+            safeSentences.add(addCommasToLongSentence(sentence, maxWordsWithoutBreak));
+        }
 
-		if (isDownloaded) {
-			return filePath; // Rõ ràng: thành công thì trả về đối tượng Path
-		} else {
-			return null; // Rõ ràng: tải lỗi thì trả về null
-		}
-	}
+        // 4. Ghép các câu an toàn lại thành các chunk
+        return assembleChunks(safeSentences, maxChunkLength);
+    }
 
-	private boolean waitForFileReady(String url) throws InterruptedException {
-		int maxRetries = 45; // Thử lại tối đa 45 lần
-		long retryDelayMillis = 3000; // Chờ 3 giây giữa mỗi lần thử
+    /**
+     * Dọn dẹp các lỗi cú pháp và khoảng trắng phổ biến.
+     */
+    private String sanitizeText(String text) {
+        return text.replaceAll("\\s+", " ").trim() // Chuẩn hóa khoảng trắng
+                   .replaceAll(" ,", ",")          // Xóa khoảng trắng trước dấu phẩy
+                   .replaceAll(" \\.", ".")         // Xóa khoảng trắng trước dấu chấm
+                   .replaceAll(",\\.", ".");        // Thay thế ",." bằng "."
+    }
 
-		logger.info("Polling for file at URL: {}", url);
-		for (int i = 0; i < maxRetries; i++) {
-			try {
-				HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url))
-						.method("HEAD", HttpRequest.BodyPublishers.noBody()) // Dùng HEAD để không tải body
-						.build();
+    /**
+     * Tách một đoạn văn bản thành một danh sách các câu.
+     */
+    private List<String> splitIntoSentences(String text) {
+        // Biểu thức chính quy này tốt hơn, nó xử lý được nhiều trường hợp hơn
+        return Arrays.stream(text.split("(?<=[.?!])\\s*"))
+                     .map(String::trim)
+                     .filter(s -> !s.isEmpty())
+                     .collect(Collectors.toList());
+    }
 
-				HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+    /**
+     * Tự động chèn dấu phẩy vào những câu dài không có điểm ngắt nghỉ.
+     *
+     * @param sentence Câu cần xử lý.
+     * @param maxWordsWithoutBreak Số từ tối đa cho phép giữa hai dấu câu.
+     * @return Câu đã được chèn dấu phẩy (nếu cần).
+     */
+    private String addCommasToLongSentence(String sentence, int maxWordsWithoutBreak) {
+        // Nếu câu đã có dấu phẩy hoặc ngắn thì không cần xử lý
+        if (sentence.contains(",") || sentence.split("\\s+").length <= maxWordsWithoutBreak) {
+            return sentence;
+        }
 
-				if (response.statusCode() == 200) {
-					logger.info("File is ready! (Status 200 OK)");
-					return true;
-				} else {
-					logger.warn("Attempt {}/{}: File not ready yet. Status code: {}", (i + 1), maxRetries,
-							response.statusCode());
-				}
+        List<String> words = new ArrayList<>(Arrays.asList(sentence.split("\\s+")));
+        StringBuilder result = new StringBuilder();
+        
+        int wordCount = 0;
+        for (int i = 0; i < words.size(); i++) {
+            result.append(words.get(i)).append(" ");
+            wordCount++;
+            
+            // Nếu đã đủ số từ và đây không phải là từ cuối cùng của câu
+            if (wordCount >= maxWordsWithoutBreak && i < words.size() - 1) {
+                // Lấy từ tiếp theo để xem nó có phải dấu kết thúc câu không
+                String nextWord = words.get(i + 1);
+                if (!nextWord.endsWith(".") && !nextWord.endsWith("?") && !nextWord.endsWith("!")) {
+                    result.append(", "); // Chèn dấu phẩy và khoảng trắng
+                    wordCount = 0; // Reset bộ đếm
+                }
+            }
+        }
+        
+        return result.toString().trim();
+    }
 
-			} catch (IOException e) {
-				logger.error("Attempt {}/{}: IOException while polling: {}", (i + 1), maxRetries, e.getMessage());
-			}
 
-			// Chờ trước khi thử lại
-			Thread.sleep(retryDelayMillis);
-		}
-		return false; // Hết số lần thử mà file vẫn chưa sẵn sàng
-	}
+    /**
+     * Ghép một danh sách các câu "an toàn" thành các chunk lớn hơn.
+     */
+    private List<String> assembleChunks(List<String> sentences, int maxChunkLength) {
+        List<String> chunks = new ArrayList<>();
+        StringBuilder currentChunk = new StringBuilder();
 
-	private String extractFileName(String url) {
-		return url.substring(url.lastIndexOf('/') + 1);
-	}
+        for (String sentence : sentences) {
+            // Nếu một câu đơn đã dài hơn cả chunk, hãy chia nhỏ nó ra trước
+            if (sentence.length() > maxChunkLength) {
+                // Hoàn thành chunk hiện tại trước khi xử lý câu dài
+                if (currentChunk.length() > 0) {
+                    chunks.add(currentChunk.toString().trim());
+                    currentChunk = new StringBuilder();
+                }
+                
+                // Chia nhỏ câu quá dài này thành nhiều phần
+                int offset = 0;
+                while (offset < sentence.length()) {
+                    int end = Math.min(offset + maxChunkLength, sentence.length());
+                    // Cố gắng tìm khoảng trắng gần nhất để cắt cho đẹp
+                    int lastSpace = sentence.substring(offset, end).lastIndexOf(' ');
+                    if (end < sentence.length() && lastSpace > 0) {
+                        end = offset + lastSpace;
+                    }
+                    chunks.add(sentence.substring(offset, end).trim());
+                    offset = end;
+                }
+                continue; // Chuyển sang câu tiếp theo
+            }
+            
+            // Nếu thêm câu mới sẽ làm chunk vượt quá giới hạn
+            if (currentChunk.length() + sentence.length() + 1 > maxChunkLength) {
+                chunks.add(currentChunk.toString().trim());
+                currentChunk = new StringBuilder(sentence);
+            } else {
+                // Nếu chưa vượt quá, tiếp tục thêm vào
+                if (currentChunk.length() > 0) {
+                    currentChunk.append(" ");
+                }
+                currentChunk.append(sentence);
+            }
+        }
 
-	private boolean downloadFile(String url, Path filePath) {
-		try {
-			HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).build();
+        // Thêm chunk cuối cùng vào danh sách
+        if (currentChunk.length() > 0) {
+            chunks.add(currentChunk.toString().trim());
+        }
 
-			HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-			if (response.statusCode() == 200) {
-				Files.createDirectories(filePath.getParent()); // Đảm bảo thư mục tồn tại
-				Files.write(filePath, response.body());
-				logger.info("File downloaded successfully to: {}", filePath);
-				return true;
-			} else {
-				logger.error("Failed to download file from URL: {}, status code: {}", url, response.statusCode());
-				return false;
-			}
-		} catch (IOException | InterruptedException e) {
-			logger.error("Exception during file download: {}", e.getMessage());
-			Thread.currentThread().interrupt(); // Restore the interrupted status
-			return false;
-		}
-	}
-
-	private Resource getAudioResource(Path filePath) {
-		try {
-			return new UrlResource(filePath.toUri());
-		} catch (Exception e) {
-			throw new RuntimeException("Error creating resource: " + e.getMessage(), e);
-		}
-	}
-	
-	private List<String> splitText(String text, int maxLength) {
-	    if (text == null || text.isBlank()) {
-	        return new ArrayList<>();
-	    }
-
-	    List<String> chunks = new ArrayList<>();
-	    StringBuilder currentChunk = new StringBuilder();
-
-	    // Tách văn bản thành các câu dựa trên các dấu câu phổ biến
-	    // Pattern này sẽ giữ lại dấu câu ở cuối mỗi câu
-	    Pattern sentencePattern = Pattern.compile("([^.?!]+[.?!])");
-	    Matcher matcher = sentencePattern.matcher(text);
-
-	    while (matcher.find()) {
-	        String sentence = matcher.group(1).trim();
-	        if (sentence.isEmpty()) {
-	            continue;
-	        }
-
-	        // Nếu thêm câu mới vào sẽ vượt quá độ dài tối đa
-	        if (currentChunk.length() + sentence.length() + 1 > maxLength && currentChunk.length() > 0) {
-	            // Hoàn thành chunk hiện tại và thêm vào danh sách
-	            chunks.add(currentChunk.toString());
-	            // Bắt đầu một chunk mới với câu hiện tại
-	            currentChunk = new StringBuilder(sentence);
-	        } else {
-	            // Nếu chưa vượt quá, tiếp tục thêm vào chunk hiện tại
-	            if (currentChunk.length() > 0) {
-	                currentChunk.append(" "); // Thêm khoảng trắng giữa các câu
-	            }
-	            currentChunk.append(sentence);
-	        }
-	    }
-	    
-	    // Xử lý phần còn lại của văn bản không kết thúc bằng dấu câu
-	    int lastMatchEnd = 0;
-	    matcher.reset();
-	    while (matcher.find()) {
-	        lastMatchEnd = matcher.end();
-	    }
-	    if (lastMatchEnd < text.length()) {
-	        String remainingText = text.substring(lastMatchEnd).trim();
-	        if (!remainingText.isEmpty()) {
-	             if (currentChunk.length() + remainingText.length() + 1 > maxLength && currentChunk.length() > 0) {
-	                 chunks.add(currentChunk.toString());
-	                 chunks.add(remainingText);
-	             } else {
-	                 if (currentChunk.length() > 0) {
-	                    currentChunk.append(" ");
-	                 }
-	                 currentChunk.append(remainingText);
-	             }
-	        }
-	    }
-
-	    // Thêm chunk cuối cùng nếu nó không rỗng
-	    if (currentChunk.length() > 0) {
-	        chunks.add(currentChunk.toString());
-	    }
-
-	    return chunks;
-	}
-
+        return chunks;
+    }
+    
+    
 }

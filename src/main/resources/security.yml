@@ -12,7 +12,7 @@ app:
       - GET:/user/login
       - GET:/user/loginByEmail
       - GET:/novel/getAll
-      - GET:/chapter/getAll/**
+      - POST:/chapter/getAll
       - GET:/chapter/increaseViewChapter/**
       - GET:/category/getAll
       - GET:/author/getAll
@@ -22,7 +22,7 @@ app:
       - GET:/novel/**
       - GET:/api/fetch-html
       - POST:/api/tts/speak
-      - POST:/api/tts/callback
+      - POST:/api/tts/sub-callback
       - GET:/api/tts/status/**
       - GET:/api/tts/audio/**
     permission:
