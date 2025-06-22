@@ -42,22 +42,35 @@ export const getCommentsByNovel = createAsyncThunk(
 // POST /comment/create
 export const createComment = createAsyncThunk(
   'comments/create',
-  async ({ contentComment, idUser, idChapter }, { rejectWithValue }) => {
+  // Thay đổi tên từ parentIdComment thành idParent để khớp với backend
+  async ({ contentComment, idUser, idChapter, idParent = null }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.post(`/comment/create`, {
+      const payload = {
         contentComment,
-        user: idUser,      // API của bạn yêu cầu 'user' là idUser
-        chapter: idChapter // API của bạn yêu cầu 'chapter' là idChapter
-      });
+        user: idUser,    // API yêu cầu trường 'user' với giá trị là idUser (string)
+        chapter: idChapter // API yêu cầu trường 'chapter' với giá trị là idChapter (number)
+      };
+
+      // Nếu idParent được cung cấp (nghĩa là đây là một reply), thêm nó vào payload
+      if (idParent !== null && idParent !== undefined) {
+        payload.idParent = idParent; // Backend của bạn sử dụng trường 'idParent'
+      }
+      console.log("Payload gửi đi cho /comment/create:", JSON.stringify(payload, null, 2));
+
+      const response = await apiClient.post(`/comment/create`, payload);
+
       if (response.data && (response.data.code === 200 || response.data.code === 1000) && response.data.result) {
+        // Trả về comment mới (bao gồm cả idParent nếu là reply và backend trả về)
         return response.data.result;
       }
-      return rejectWithValue(response.data.message || 'Failed to create comment');
+      console.error("Create comment API response không như mong đợi:", response.data);
+      return rejectWithValue(response.data?.message || 'Không thể tạo bình luận do phản hồi không hợp lệ từ server.');
     } catch (error) {
+      console.error("Lỗi khi tạo bình luận:", error.response?.data || error.message);
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-        return rejectWithValue('Unauthorized. Please login to comment.');
+        return rejectWithValue('Chưa được xác thực. Vui lòng đăng nhập để bình luận.');
       }
-      return rejectWithValue(error.response?.data?.message || error.message || 'Error creating comment');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tạo bình luận.');
     }
   }
 );
@@ -230,13 +243,47 @@ const commentSlice = createSlice({
       })
       .addCase(createComment.fulfilled, (state, action) => {
         state.actionLoading.create = false;
-        if (action.payload && action.payload.idComment) {
-          state.commentsByChapter.unshift(action.payload);
+        state.error = null; // Xóa lỗi cũ khi thành công
+        const newComment = action.payload;
+
+        if (newComment && newComment.idComment) {
+          // Nếu backend trả về idParent trong newComment, chúng ta có thể xử lý lồng reply ở đây
+          if (newComment.idParent) {
+            const findAndAddReplyRecursive = (comments, parentId, replyToAdd) => {
+              for (let i = 0; i < comments.length; i++) {
+                if (String(comments[i].idComment) === String(parentId)) { // So sánh string để chắc chắn
+                  if (!comments[i].replyComments) {
+                    comments[i].replyComments = [];
+                  }
+                  // Thêm vào đầu để reply mới nhất lên trên (hoặc push() để xuống dưới)
+                  comments[i].replyComments.unshift(replyToAdd);
+                  return true;
+                }
+                if (comments[i].replyComments && comments[i].replyComments.length > 0) {
+                  if (findAndAddReplyRecursive(comments[i].replyComments, parentId, replyToAdd)) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            };
+
+            if (!findAndAddReplyRecursive(state.commentsByChapter, newComment.idParent, newComment)) {
+              // Nếu không tìm thấy comment cha (hiếm khi xảy ra nếu logic đúng),
+              // hoặc để đơn giản, tạm thời thêm vào cấp gốc và chờ fetch lại
+              console.warn(`Không tìm thấy comment cha với idParent: ${newComment.idParent} để thêm reply. Thêm reply vào cấp gốc.`);
+              state.commentsByChapter.unshift(newComment);
+              // Tốt hơn là nên fetch lại getCommentsByChapter(chapterId) để đảm bảo dữ liệu đồng bộ hoàn toàn
+            }
+          } else {
+            // Đây là comment gốc
+            state.commentsByChapter.unshift(newComment);
+          }
         }
       })
       .addCase(createComment.rejected, (state, action) => {
         state.actionLoading.create = false;
-        state.error = action.payload || 'Failed to create comment';
+        state.error = action.payload || 'Không thể tạo bình luận';
       })
 
       // Update Comment Content
