@@ -1,18 +1,17 @@
 package com.example.demo.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.entity.Comment;
-import com.example.demo.entity.Novel;
-import com.example.demo.entity.User;
 import java.util.List;
 
 
 @Repository
-public interface ICommentRepository extends JpaRepository<Comment, Integer>{
+public interface ICommentRepository extends JpaRepository<Comment, Integer>,JpaSpecificationExecutor<Comment>{
 	List<Comment> findByChapter_IdChapter(Integer idChapter); 
 	
 	List<Comment> findByUser_IdUser(String user);

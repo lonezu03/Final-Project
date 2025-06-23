@@ -3,6 +3,9 @@ package com.example.demo.controller;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.ChapterCreationRequest;
 import com.example.demo.dto.request.CommentCreationRequest;
+import com.example.demo.dto.request.CommentSearchRequest;
 import com.example.demo.dto.request.CommentUpdateLikeRequest;
 import com.example.demo.dto.request.CommentUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
@@ -58,6 +62,17 @@ public class CommentController {
 				.build();
 	}
 
+	 @PostMapping("/search")
+	    public ResponseEntity<Page<CommentRespone>> searchComments(
+	            @RequestBody CommentSearchRequest request,
+	            Pageable pageable) {
+	        
+
+	        
+	        Page<CommentRespone> comments = commentService.searchComments(request, pageable);
+	        return ResponseEntity.ok(comments);
+	    }
+	
 	@GetMapping(value = "/getAllByNovel/{idNovel}")
 	@Operation(summary = "Lấy danh sách bình luận theo truyện", description = "Trả về tất cả bình luận thuộc các chương của truyện có ID tương ứng.")
 	public ApiRespone<List<CommentNovelRespone>> getAllCommentByNovel(@PathVariable(name = "idNovel") String idNovel) {

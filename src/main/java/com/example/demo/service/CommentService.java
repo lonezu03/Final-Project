@@ -2,9 +2,15 @@ package com.example.demo.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.example.demo.dto.request.CommentCreationRequest;
+import com.example.demo.dto.request.CommentSearchRequest;
 import com.example.demo.dto.request.CommentUpdateLikeRequest;
 import com.example.demo.dto.request.CommentUpdateRequest;
 import com.example.demo.dto.respone.CommentNovelRespone;
@@ -12,12 +18,14 @@ import com.example.demo.dto.respone.CommentRespone;
 import com.example.demo.entity.Chapter;
 import com.example.demo.entity.Comment;
 import com.example.demo.entity.User;
+import com.example.demo.enums.StringOperator;
 import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.ICommentMapper;
 import com.example.demo.repository.IChapterRepository;
 import com.example.demo.repository.ICommentRepository;
 import com.example.demo.repository.IUserRepository;
+import com.example.demo.specification.CommentSpecification;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -123,5 +131,56 @@ public class CommentService {
 		}
 		return idComment;
 	}
+
+	@Transactional(readOnly = true)
+    public Page<CommentRespone> searchComments(CommentSearchRequest request, Pageable pageable) {
+        // Bắt đầu với một Specification không có điều kiện (tương đương với WHERE 1=1)
+        Specification<Comment> spec = Specification.where(null);
+
+        // 1. Lọc theo nội dung comment
+        if (StringUtils.hasText(request.getContent())) {
+            if (request.getContentOperator() == StringOperator.EQUALS) {
+                spec = spec.and(CommentSpecification.contentEquals(request.getContent()));
+            } else { // Mặc định là CONTAINS
+                spec = spec.and(CommentSpecification.contentContains(request.getContent()));
+            }
+        }
+
+        // 2. Lọc theo ID người dùng
+        if (StringUtils.hasText(request.getIdUser())) {
+            spec = spec.and(CommentSpecification.byUser(request.getIdUser()));
+        }
+
+        // 3. Lọc theo ID chương
+        if (request.getIdChapter() != null) {
+            spec = spec.and(CommentSpecification.byChapter(request.getIdChapter()));
+        }
+
+        // 4. Lọc theo ID truyện
+        if (StringUtils.hasText(request.getIdNovel())) {
+            spec = spec.and(CommentSpecification.byNovel(request.getIdNovel()));
+        }
+
+        // 5. Lọc theo số lượt thích
+        if (request.getMinLikes() != null) {
+            spec = spec.and(CommentSpecification.likesGreaterThanOrEqual(request.getMinLikes()));
+        }
+
+        // 6. Lọc theo số lượt không thích
+        if (request.getMinDislikes() != null) {
+            spec = spec.and(CommentSpecification.dislikesGreaterThanOrEqual(request.getMinDislikes()));
+        }
+
+        // 7. Lọc chỉ lấy comment gốc
+        if (Boolean.TRUE.equals(request.getParentOnly())) {
+            spec = spec.and(CommentSpecification.isParent());
+        }
+
+        // Thực thi truy vấn với Specification đã được xây dựng và có phân trang
+        Page<Comment> commentPage= commentRepository.findAll(spec, pageable);
+        
+        return commentPage.map(t  -> commentMapper.toCommentRespone(t));
+
+    }
 
 }
