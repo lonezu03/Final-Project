@@ -96,15 +96,16 @@ public class ChapterService {
 
 		Novel novel = novelRepository.findById(request.getNovel()).get();
 
-		Long lastChapterNumber = chapterRepository.findTopByNovelOrderByIndexChapterDesc(novel)
-				.map(Chapter::getIndexChapter) // Lấy ra chapterNumber từ chapter cuối cùng
-				.orElse((long) 0); // Nếu chưa có chương nào, trả về 0
+		if (chapter.getIndexChapter() == null) {
+			Long lastChapterNumber = chapterRepository.findTopByNovelOrderByIndexChapterDesc(novel)
+					.map(Chapter::getIndexChapter) // Lấy ra chapterNumber từ chapter cuối cùng
+					.orElse((long) 0); // Nếu chưa có chương nào, trả về 0
+			chapter.setIndexChapter(lastChapterNumber + 1);
 
-		logger.info("last: "+lastChapterNumber);
-		
+		}
+
 		chapter.setNovel(novel);
 		chapter.setViewChapter(0);
-		chapter.setIndexChapter(lastChapterNumber+1);
 
 		if (textFile != null && !textFile.isEmpty()) {
 			String originalFilename = textFile.getOriginalFilename();
@@ -115,48 +116,51 @@ public class ChapterService {
 				throw new AppException(ErrorCode.FILE_MUST_TXT);
 			}
 		}
-		novel.setTotalChapter(Integer.parseInt("" + lastChapterNumber) + 1);
+		novel.setTotalChapter(novel.getTotalChapter() + 1);
 		novelRepository.save(novel);
 
 		chapter = chapterRepository.save(chapter);
 
-//		Path audioFilePath = textService.convert(chapter.getContentChapter());
-//
-//		if (audioFilePath != null) {
-//			logger.info("Audio file generated at: {}", audioFilePath);
-//			try {
-//				// Đọc file thành byte[]
-//				byte[] audioBytes = Files.readAllBytes(audioFilePath);
-//				chapter.setAudioFile(audioBytes);
-//
-//				// Cập nhật chapter với dữ liệu audio
-//				chapterRepository.save(chapter);
-//				logger.info("Successfully saved audio file to database for chapter ID: {}", chapter.getIdChapter());
-//
-//			} catch (IOException e) {
-//				logger.error("Failed to read audio file from path: {}", audioFilePath, e);
-//				throw new AppException(ErrorCode.CANNOT_READ_AUDIO_FILE);
-////		        } finally {
-////		            // Dọn dẹp file tạm
-////		            Files.deleteIfExists(audioFilePath);
-////		            logger.info("Deleted temporary audio file: {}", audioFilePath);
-//			}
-//		} else {
-//			// Xử lý khi service không thể tạo được file audio
-//			logger.error("Failed to generate audio for chapter ID: {}", chapter.getIdChapter());
-//			// Ở đây bạn có thể không làm gì cả, hoặc ném lỗi tùy theo yêu cầu nghiệp vụ
-//		}
+		// Path audioFilePath = textService.convert(chapter.getContentChapter());
+		//
+		// if (audioFilePath != null) {
+		// logger.info("Audio file generated at: {}", audioFilePath);
+		// try {
+		// // Đọc file thành byte[]
+		// byte[] audioBytes = Files.readAllBytes(audioFilePath);
+		// chapter.setAudioFile(audioBytes);
+		//
+		// // Cập nhật chapter với dữ liệu audio
+		// chapterRepository.save(chapter);
+		// logger.info("Successfully saved audio file to database for chapter ID: {}",
+		// chapter.getIdChapter());
+		//
+		// } catch (IOException e) {
+		// logger.error("Failed to read audio file from path: {}", audioFilePath, e);
+		// throw new AppException(ErrorCode.CANNOT_READ_AUDIO_FILE);
+		//// } finally {
+		//// // Dọn dẹp file tạm
+		//// Files.deleteIfExists(audioFilePath);
+		//// logger.info("Deleted temporary audio file: {}", audioFilePath);
+		// }
+		// } else {
+		// // Xử lý khi service không thể tạo được file audio
+		// logger.error("Failed to generate audio for chapter ID: {}",
+		// chapter.getIdChapter());
+		// // Ở đây bạn có thể không làm gì cả, hoặc ném lỗi tùy theo yêu cầu nghiệp vụ
+		// }
 
 		return chapterMapper.toChapterRespone(chapter);
 	}
 
 	public String deleteChapter(String idChapter) {
-		if (!chapterRepository.existsById(idChapter)) {
-			throw new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
-		}
+		Chapter chapter = chapterRepository.findById(idChapter)
+				.orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
+		Novel novel = novelRepository.findById(chapter.getNovel().getIdNovel()).get();
 		try {
 			chapterRepository.deleteById(idChapter);
-
+			novel.setTotalChapter(novel.getTotalChapter() - 1);
+			novelRepository.save(novel);
 		} catch (Exception e) {
 			throw new AppException(ErrorCode.DELETE_CONTRAINT);
 		}

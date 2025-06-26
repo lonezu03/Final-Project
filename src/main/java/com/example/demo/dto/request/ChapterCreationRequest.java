@@ -16,6 +16,7 @@ public class ChapterCreationRequest {
 
 	String titleChapter;
 
-
 	String novel;
+
+	Long indexChapter;
 }
