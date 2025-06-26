@@ -12,7 +12,7 @@ import java.util.List;
 
 @Repository
 public interface ICommentRepository extends JpaRepository<Comment, Integer>,JpaSpecificationExecutor<Comment>{
-	List<Comment> findByChapter_IdChapter(Integer idChapter); 
+	List<Comment> findByChapter_IdChapter(String idChapter); 
 	
 	List<Comment> findByUser_IdUser(String user);
 	

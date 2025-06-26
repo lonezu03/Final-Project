@@ -44,7 +44,7 @@ public class ChapterService {
 	INovelRepository novelRepository;
 	TextService textService;
 	AuthenticationService authenticationService;
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(ChapterService.class);
 
 	// public List<ChapterRespone> getAll(){
@@ -53,32 +53,36 @@ public class ChapterService {
 	// }
 
 	public List<ChapterRespone> getAllChapter(ChapterGetByIdNovelRequest request) throws JOSEException, ParseException {
-		if (request.getToken()!=null) {
-			
-			
-			IntrospectRespone introspectRespone= authenticationService.introspect(IntrospectRequest.builder().token(request.getToken()).build());
-			
+
+		if (request.getToken() != null) {
+
+			IntrospectRespone introspectRespone = authenticationService
+					.introspect(IntrospectRequest.builder().token(request.getToken()).build());
+
 			if (introspectRespone.isValid()) {
-				return chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream().map(t -> chapterMapper.toChapterRespone(t))
-						.toList();
-			}else {
+				List<ChapterRespone> chapters = chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream()
+						.map(t -> chapterMapper.toChapterRespone(t)).toList();
+
+				if (chapters.isEmpty()) {
+					throw new AppException(ErrorCode.CHAPTER_EMPTY);
+				}
+				return chapters;
+			} else {
 				throw new AppException(ErrorCode.UNAUTHENTICATION);
 			}
-			
-			
+
 		} else {
-			return chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream()
-					.map(t -> {
+			return chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream().map(t -> {
 
 				ChapterRespone chapterRespone = new ChapterRespone();
 				chapterRespone.setTitleChapter(t.getTitleChapter());
 				return chapterRespone;
-			})
-			.collect(Collectors.toList());
+			}).collect(Collectors.toList());
 		}
+
 	}
 
-	public ChapterRespone getChapterById(Integer idChapter) {
+	public ChapterRespone getChapterById(String idChapter) {
 		return chapterMapper.toChapterRespone(chapterRepository.findById(idChapter).get());
 	}
 
@@ -92,8 +96,16 @@ public class ChapterService {
 
 		Novel novel = novelRepository.findById(request.getNovel()).get();
 
+		Long lastChapterNumber = chapterRepository.findTopByNovelOrderByIndexChapterDesc(novel)
+				.map(Chapter::getIndexChapter) // Lấy ra chapterNumber từ chapter cuối cùng
+				.orElse((long) 0); // Nếu chưa có chương nào, trả về 0
+
+		logger.info("last: "+lastChapterNumber);
+		
 		chapter.setNovel(novel);
 		chapter.setViewChapter(0);
+		chapter.setIndexChapter(lastChapterNumber+1);
+
 		if (textFile != null && !textFile.isEmpty()) {
 			String originalFilename = textFile.getOriginalFilename();
 			if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
@@ -103,6 +115,8 @@ public class ChapterService {
 				throw new AppException(ErrorCode.FILE_MUST_TXT);
 			}
 		}
+		novel.setTotalChapter(Integer.parseInt("" + lastChapterNumber) + 1);
+		novelRepository.save(novel);
 
 		chapter = chapterRepository.save(chapter);
 
@@ -136,7 +150,7 @@ public class ChapterService {
 		return chapterMapper.toChapterRespone(chapter);
 	}
 
-	public Integer deleteChapter(Integer idChapter) {
+	public String deleteChapter(String idChapter) {
 		if (!chapterRepository.existsById(idChapter)) {
 			throw new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
 		}
@@ -149,7 +163,7 @@ public class ChapterService {
 		return idChapter;
 	}
 
-	public Integer increaseView(Integer idChapter) {
+	public Integer increaseView(String idChapter) {
 		Chapter chapter = chapterRepository.findById(idChapter).get();
 		chapter.setViewChapter(chapter.getViewChapter() + 1);
 		chapterRepository.save(chapter);

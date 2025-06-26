@@ -18,7 +18,7 @@ public class CommentCreationRequest {
 
 	String user;
 	
-	Integer chapter;
+	String chapter;
 
 	Integer idParent;
 }

@@ -49,7 +49,7 @@ public class ChapterController {
 
 	@GetMapping(value = "/{idChapter}")
 	@Operation(summary = "Lấy chương theo ID", description = "Trả về nội dung của chương theo ID chương.")
-	public ApiRespone<ChapterRespone> getChapterById(@PathVariable Integer idChapter) {
+	public ApiRespone<ChapterRespone> getChapterById(@PathVariable String idChapter) {
 		return ApiRespone.<ChapterRespone>builder().result(chapterService.getChapterById(idChapter)).build();
 	}
 
@@ -62,7 +62,7 @@ public class ChapterController {
 
 	@GetMapping(value = "increaseViewChapter/{idChapter}")
 	@Operation(summary = "Tăng lượt xem chương", description = "Tăng số lượt xem cho chương có ID tương ứng và trả về tổng lượt xem sau khi tăng.")
-	public ApiRespone<Integer> increaseViewChapter(@PathVariable Integer idChapter) {
+	public ApiRespone<Integer> increaseViewChapter(@PathVariable String idChapter) {
 		return ApiRespone.<Integer>builder().result(chapterService.increaseView(idChapter)).build();
 	}
 
@@ -75,7 +75,7 @@ public class ChapterController {
 
 	@DeleteMapping(value = "/{idChapter}")
 	@Operation(summary = "Xoá chương", description = "Xoá chương theo ID.")
-	public ApiRespone<Integer> deleteChapter(@PathVariable Integer idChapter) {
-		return ApiRespone.<Integer>builder().result(chapterService.deleteChapter(idChapter)).build();
+	public ApiRespone<String> deleteChapter(@PathVariable String idChapter) {
+		return ApiRespone.<String>builder().result(chapterService.deleteChapter(idChapter)).build();
 	}
 }

@@ -29,7 +29,6 @@ public class AuthorCreationRequest {
 	LocalDate dobAuthor;
 	LocalDate dodAuthor;
 	Gender genderAuthor;
-	String imageAuthor;
  
 	Set<String> novels ;
 }

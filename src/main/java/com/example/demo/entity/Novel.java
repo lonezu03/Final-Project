@@ -21,6 +21,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -69,5 +70,6 @@ public class Novel {
 	Set<Category> categories = new HashSet<>();
 	
 	@OneToMany(mappedBy = "novel",cascade = CascadeType.ALL,orphanRemoval = true)
+	@OrderBy("indexChapter ASC") // <-- THÊM DÒNG NÀY
 	Set<Chapter> chapters=new HashSet<>();
 }

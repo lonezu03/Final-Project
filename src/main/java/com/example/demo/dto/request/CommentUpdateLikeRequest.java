@@ -14,6 +14,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CommentUpdateLikeRequest {
 	Integer idComment;
-	Integer idChapter;
+	String idChapter;
 	String idUser;
 }

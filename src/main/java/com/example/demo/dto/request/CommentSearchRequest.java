@@ -16,7 +16,7 @@ public class CommentSearchRequest {
     private String idUser;
     
     // 3. Tìm theo chương truyện (ID của Chapter)
-    private Integer idChapter;
+    private String idChapter;
     
     // 4. Tìm theo truyện (ID của Novel) - một filter rất hữu ích
     private String idNovel;

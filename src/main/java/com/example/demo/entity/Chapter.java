@@ -35,8 +35,8 @@ import lombok.experimental.FieldDefaults;
 public class Chapter {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	Integer idChapter;
+	@GeneratedValue(strategy = GenerationType.UUID)
+	String idChapter;
 
 	@Column(name = "title_chapter", length = 100)
 	String titleChapter;
@@ -47,6 +47,9 @@ public class Chapter {
 
 	Integer viewChapter;
 
+	@Column(nullable = false)
+	Long indexChapter;
+	
 	@Lob
 	@Column(name = "audio_file", columnDefinition = "MEDIUMBLOB")
 	byte[] audioFile;

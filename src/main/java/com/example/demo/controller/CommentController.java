@@ -45,10 +45,11 @@ import lombok.extern.slf4j.Slf4j;
 public class CommentController {
 
 	CommentService commentService;
-	
+
 	@GetMapping(value = "/getAllByChapter/{idChapter}")
 	@Operation(summary = "Lấy danh sách bình luận theo chương", description = "Trả về danh sách các bình luận thuộc chương truyện có ID tương ứng.")
-	public ApiRespone<List<CommentRespone>> getAllCommentByChapter(@PathVariable(name = "idChapter") Integer idChapter) {
+	public ApiRespone<List<CommentRespone>> getAllCommentByChapter(
+			@PathVariable(name = "idChapter") String idChapter) {
 		return ApiRespone.<List<CommentRespone>>builder()
 				.result(commentService.getListCommentByChapter(idChapter))
 				.build();
@@ -62,17 +63,15 @@ public class CommentController {
 				.build();
 	}
 
-	 @PostMapping("/search")
-	    public ResponseEntity<Page<CommentRespone>> searchComments(
-	            @RequestBody CommentSearchRequest request,
-	            Pageable pageable) {
-	        
+	@PostMapping("/search")
+	public ResponseEntity<Page<CommentRespone>> searchComments(
+			@RequestBody CommentSearchRequest request,
+			Pageable pageable) {
 
-	        
-	        Page<CommentRespone> comments = commentService.searchComments(request, pageable);
-	        return ResponseEntity.ok(comments);
-	    }
-	
+		Page<CommentRespone> comments = commentService.searchComments(request, pageable);
+		return ResponseEntity.ok(comments);
+	}
+
 	@GetMapping(value = "/getAllByNovel/{idNovel}")
 	@Operation(summary = "Lấy danh sách bình luận theo truyện", description = "Trả về tất cả bình luận thuộc các chương của truyện có ID tương ứng.")
 	public ApiRespone<List<CommentNovelRespone>> getAllCommentByNovel(@PathVariable(name = "idNovel") String idNovel) {
@@ -84,7 +83,6 @@ public class CommentController {
 	@PostMapping("/create")
 	@Operation(summary = "Tạo bình luận mới", description = "Tạo mới một bình luận cho chương truyện.")
 	public ApiRespone<CommentRespone> createChapter(@RequestBody CommentCreationRequest request) {
-//		log.info(request.getChapter() + "");
 		return ApiRespone.<CommentRespone>builder()
 				.result(commentService.createComment(request))
 				.build();
@@ -121,5 +119,5 @@ public class CommentController {
 				.result(commentService.deleteComment(idComment))
 				.build();
 	}
-	
+
 }

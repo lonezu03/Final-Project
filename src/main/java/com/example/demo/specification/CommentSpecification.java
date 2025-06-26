@@ -33,7 +33,7 @@ public class CommentSpecification {
     /**
      * Lọc comment theo ID của chương.
      */
-    public static Specification<Comment> byChapter(Integer idChapter) {
+    public static Specification<Comment> byChapter(String idChapter) {
         if (idChapter == null) return null;
         return (root, query, cb) -> cb.equal(root.get("chapter").get("idChapter"), idChapter);
     }

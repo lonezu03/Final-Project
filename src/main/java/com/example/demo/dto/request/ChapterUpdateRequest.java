@@ -14,7 +14,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ChapterUpdateRequest {
 
-	Integer idChapter;
+	String idChapter;
 	String titleChapter;
 
 	Integer viewChapter;

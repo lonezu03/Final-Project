@@ -22,7 +22,7 @@ public class CommentUpdateRequest {
 
 	Integer dislikeComment;
 	
-	Integer chapter;
+	String chapter;
 	String user;
 
 }

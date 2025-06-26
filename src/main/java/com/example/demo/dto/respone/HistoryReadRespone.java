@@ -22,5 +22,7 @@ public class HistoryReadRespone {
 
 	private String titleChapter;
 
+	private Integer readPlace;
+	
 	private LocalDateTime readingTime;
 }

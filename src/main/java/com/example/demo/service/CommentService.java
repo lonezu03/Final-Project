@@ -41,7 +41,7 @@ public class CommentService {
 	IUserRepository userRepository;
 	IChapterRepository chapterRepository;
 
-	public List<CommentRespone> getListCommentByChapter(Integer idChapter) {
+	public List<CommentRespone> getListCommentByChapter(String idChapter) {
 		List<Comment> comments = commentRepository.findByChapter_IdChapter(idChapter);
 
 		return comments.stream().map(t -> commentMapper.toCommentRespone(t)).toList();
@@ -78,7 +78,7 @@ public class CommentService {
 					.orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_EXISTED));
 
 			comment.setParent(oldComment);
-		}
+		} 
 
 		comment = commentRepository.save(comment);
 		return commentMapper.toCommentRespone(comment);

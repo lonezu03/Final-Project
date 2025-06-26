@@ -16,7 +16,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChapterRespone {
-	Integer idChapter;
+	String idChapter;
 
 	String titleChapter;
 
@@ -24,5 +24,7 @@ public class ChapterRespone {
 
 	Integer viewChapter;
 
+	Long indexChapter;
+	
 	String novel;
 }
