@@ -4,17 +4,17 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getNovelById } from '../../redux/novelSlice';
 import {
-  getNovelChaptersList,
+  getNovelChaptersList, // Bạn vẫn đang import action này
   getChapterContentById,
   clearChapterState
 } from '../../redux/chapterSlice';
 import { createHistory } from '../../redux/userSlice';
-import apiClient from '../../services/api'; 
+import apiClient from '../../services/api'; // Đảm bảo đường dẫn này đúng
 
 import { FaCog, FaListUl, FaAngleLeft, FaAngleRight } from 'react-icons/fa';
-import AudioPlayer from '../AudioPlayer';
-import ChapterComments from '../ChapterComments';
-import CanvasTextRenderer from '../CanvasTextRenderer';
+import AudioPlayer from '../AudioPlayer'; // Đảm bảo đường dẫn này đúng
+import ChapterComments from '../ChapterComments'; // Đảm bảo đường dẫn này đúng
+import CanvasTextRenderer from '../CanvasTextRenderer'; // COMPONENT MỚI ĐỂ VẼ CANVAS
 
 // Component Dialog để hỏi người dùng
 const ContinueReadingDialog = ({ onConfirm, onCancel }) => (
@@ -49,11 +49,13 @@ const ReadingPage = () => {
   const { currentNovel, loading: novelLoading, error: novelError } = useSelector((state) => state.novels);
   const {
     currentChapterContent,
+    // chaptersForReadingPageDropdown sẽ được lấy từ state.chapters.chaptersForReadingPageDropdown
+    // mà getNovelChaptersList action cập nhật vào
     chaptersForReadingPageDropdown,
     loadingContent,
     errorContent,
-    loadingListForReading,
-    errorListForReading,
+    loadingListForReading, // Corresponds to loadingDropdownChapters in slice
+    errorListForReading,   // Corresponds to errorDropdownChapters in slice
   } = useSelector((state) => state.chapters);
   const currentUser = useSelector((state) => state.user?.currentUser || null);
 
@@ -73,8 +75,8 @@ const ReadingPage = () => {
   const [processedChapterContent, setProcessedChapterContent] = useState(null);
   const [canvasContainerWidth, setCanvasContainerWidth] = useState(0);
 
-  const NAVBAR_MAIN_HEIGHT_PX = 0;
-  const AUDIO_PLAYER_ACTUAL_HEIGHT_PX = 0;
+  const NAVBAR_MAIN_HEIGHT_PX = 64; // CẬP NHẬT GIÁ TRỊ NÀY
+  const AUDIO_PLAYER_ACTUAL_HEIGHT_PX = 62; // CẬP NHẬT GIÁ TRỊ NÀY
 
   const pagePaddingTop = `${NAVBAR_MAIN_HEIGHT_PX}px`;
   const pagePaddingBottom = showAudioPlayer ? `${AUDIO_PLAYER_ACTUAL_HEIGHT_PX}px` : '0px';
@@ -92,6 +94,7 @@ const ReadingPage = () => {
   useEffect(() => {
     if (novelId) {
       dispatch(getNovelById(novelId));
+      // Gọi getNovelChaptersList để lấy danh sách cho dropdown
       dispatch(getNovelChaptersList(novelId));
     }
     return () => dispatch(clearChapterState());
@@ -99,6 +102,7 @@ const ReadingPage = () => {
 
   useEffect(() => {
     if (novelId && chapterId) {
+      // getChapterContentById sẽ lấy nội dung chi tiết
       dispatch(getChapterContentById({ novelId, chapterId }));
       setShowChapterListDropdown(false);
       setShowSettings(false);
@@ -108,7 +112,7 @@ const ReadingPage = () => {
     }
   }, [dispatch, novelId, chapterId]);
 
-  useEffect(() => {
+  useEffect(() => { // Lưu vị trí cuộn
     const scrollContainer = contentRef.current;
     if (!scrollContainer) return;
     let debounceTimer;
@@ -125,9 +129,9 @@ const ReadingPage = () => {
       scrollContainer.removeEventListener('scroll', handleScroll);
       clearTimeout(debounceTimer);
     };
-  }, [novelId, chapterId]);
+  }, [novelId, chapterId, contentRef]);
 
-  useEffect(() => {
+  useEffect(() => { // Kiểm tra vị trí đã lưu và hiển thị dialog
     if (!loadingContent && currentChapterContent && novelId && chapterId) {
       const key = getPositionKey();
       const positionString = localStorage.getItem(key);
@@ -143,6 +147,7 @@ const ReadingPage = () => {
     }
   }, [loadingContent, currentChapterContent, novelId, chapterId]);
 
+  // useEffect để gửi vị trí đọc khi thoát hoặc chuyển chương
   useEffect(() => {
     const getFinalReadPlace = () => {
         const key = getPositionKey();
@@ -206,24 +211,30 @@ const ReadingPage = () => {
       window.removeEventListener('pagehide', savePositionWithBeacon);
       savePositionWithDispatch();
     };
-  }, [novelId, chapterId, currentUser, dispatch, currentChapterContent]);
+  }, [novelId, chapterId, currentUser, dispatch, currentChapterContent, contentRef]);
 
+
+  // useEffect để xử lý nội dung và chèn Canvas
   useEffect(() => {
     if (currentChapterContent?.contentChapter && mainContentAreaRef.current && canvasContainerWidth > 0) {
       const originalText = currentChapterContent.contentChapter;
       const paragraphs = originalText.split(/\r\n|\n/).filter(p => p.trim() !== '');
+
       let potentialCanvasSegments = [];
-      const MIN_LENGTH_FOR_CANVAS = 10;
-      const MAX_LENGTH_FOR_CANVAS = 50;
-      const NUM_CANVAS_SECTIONS = 2;
+      const MIN_LENGTH_FOR_CANVAS = 50;
+      const MAX_LENGTH_FOR_CANVAS = 100;
+      const NUM_CANVAS_SECTIONS = 5;
+
       paragraphs.forEach((paragraphText, pIndex) => {
         const trimmedText = paragraphText.trim();
-        if (trimmedText.length >= MIN_LENGTH_FOR_CANVAS && trimmedText.length <= MAX_LENGTH_FOR_CANVAS && !/<[^>]+>/.test(trimmedText) && !/^Chương\s*\d+/i.test(trimmedText) && trimmedText.split(' ').length > 2 ) {
+        if (trimmedText.length >= MIN_LENGTH_FOR_CANVAS && trimmedText.length <= MAX_LENGTH_FOR_CANVAS && !/<[^>]+>/.test(trimmedText) && !/^Chương\s*\d+/i.test(trimmedText) && trimmedText.split(' ').length > 3 ) {
           potentialCanvasSegments.push({ text: trimmedText, originalIndex: pIndex });
         }
       });
+
       let contentToRender = [];
       let canvasIndices = new Set();
+
       if (potentialCanvasSegments.length > 0) {
           let tempPoints = [...potentialCanvasSegments];
           for (let i = 0; i < NUM_CANVAS_SECTIONS && tempPoints.length > 0; i++) {
@@ -232,6 +243,7 @@ const ReadingPage = () => {
             tempPoints.splice(randomIndex, 1);
           }
       }
+
       let htmlBufferArray = [];
       paragraphs.forEach((paragraphText, pIndex) => {
         const isSelectedForCanvas = canvasIndices.has(pIndex);
@@ -245,9 +257,11 @@ const ReadingPage = () => {
           htmlBufferArray.push(paragraphText);
         }
       });
+
       if (htmlBufferArray.length > 0) {
         contentToRender.push({ type: 'html', content: htmlBufferArray.join('<br />') });
       }
+      
       if (contentToRender.length === 0 && originalText) {
         setProcessedChapterContent([{ type: 'html', content: originalText.replace(/\n/g, '<br />') }]);
       } else if (contentToRender.length > 0) {
@@ -276,7 +290,7 @@ const ReadingPage = () => {
         cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(measureContainer);
     };
-    if(mainContentAreaRef.current && canvasContainerWidth === 0) {
+    if(mainContentAreaRef.current && canvasContainerWidth === 0) { // Đo lần đầu nếu chưa có width
         debouncedMeasure();
     }
     window.addEventListener('resize', debouncedMeasure);
@@ -284,7 +298,7 @@ const ReadingPage = () => {
         window.removeEventListener('resize', debouncedMeasure);
         cancelAnimationFrame(rafId);
     };
-  }, [canvasContainerWidth, currentChapterContent?.contentChapter]);
+  }, [canvasContainerWidth, currentChapterContent?.contentChapter]); // Chạy lại khi currentChapterContent thay đổi
 
   const handleConfirmContinue = () => {
     if (contentRef.current && savedScrollPosition) {
@@ -318,38 +332,38 @@ const ReadingPage = () => {
 
   const currentChapterNumber = useMemo(() => {
     if (currentChapterIndex !== -1 && chaptersForReadingPageDropdown?.[currentChapterIndex]) {
-        // Thêm kiểm tra chặt chẽ cho chapterNumber ở đây
-        const num = chaptersForReadingPageDropdown[currentChapterIndex].chapterNumber;
-        if (num !== null && num !== undefined && !isNaN(num)) {
-            return num;
+        const chap = chaptersForReadingPageDropdown[currentChapterIndex];
+        if (chap.chapterNumber !== null && chap.chapterNumber !== undefined && chap.chapterNumber !== 'N/A' && !isNaN(Number(chap.chapterNumber))) {
+            return Number(chap.chapterNumber);
         }
     }
-    // Fallback về chapterNumber của nội dung chương hiện tại
     const contentNum = currentChapterContent?.chapterNumber;
     if (contentNum !== null && contentNum !== undefined && !isNaN(contentNum)) {
-        return contentNum;
+        return Number(contentNum);
     }
-    return null; // Trả về null nếu không có số chương hợp lệ
+    return null;
   }, [currentChapterIndex, chaptersForReadingPageDropdown, currentChapterContent]);
 
-
-  const isFirstChapter = currentChapterIndex === 0;
+  const isFirstChapter = currentChapterIndex === 0 && chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length > 0;
   const isLastChapter = !!(chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length > 0 && currentChapterIndex === chaptersForReadingPageDropdown.length - 1);
 
   const handlePrevChapter = () => {
     if (prevChapterDetails?.idChapter) {
+      setProcessedChapterContent(null);
       navigate(`/novel/${novelId}/chapter/${prevChapterDetails.idChapter}`);
     }
   };
 
   const handleNextChapter = () => {
     if (nextChapterDetails?.idChapter) {
+      setProcessedChapterContent(null);
       navigate(`/novel/${novelId}/chapter/${nextChapterDetails.idChapter}`);
     }
   };
 
   const handleChapterSelect = (selectedChapterId) => {
-    if (String(selectedChapterId) !== String(chapterId)) {
+    if (selectedChapterId && String(selectedChapterId) !== String(chapterId)) {
+      setProcessedChapterContent(null);
       navigate(`/novel/${novelId}/chapter/${selectedChapterId}`);
     }
     setShowChapterListDropdown(false);
@@ -361,6 +375,7 @@ const ReadingPage = () => {
     </div>
   );
 
+  // Điều kiện render loading/error
   if (novelLoading && !currentNovel) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải thông tin truyện...</div>;
   if (novelError && !currentNovel) return renderErrorText(novelError, "thông tin truyện");
   if (!currentNovel) {
@@ -421,36 +436,26 @@ const ReadingPage = () => {
               </button>
               {showChapterListDropdown && chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length > 0 && (
                 <div className={`absolute top-full mt-1 ${theme === 'den' ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-white border-gray-300 text-gray-700'} border rounded shadow-lg max-h-60 w-64 sm:w-72 overflow-y-auto z-40`}>
-                  
-                  {/* ======================= BẮT ĐẦU KHỐI SỬA ======================= */}
                   {chaptersForReadingPageDropdown.map((chap, index) => {
-                    // Kiểm tra và xác định số chương để hiển thị một cách an toàn
-                    let displayChapterNumber;
-                    if (chap.chapterNumber !== null && chap.chapterNumber !== undefined && !isNaN(chap.chapterNumber)) {
-                      // Nếu chapterNumber là một số hợp lệ, dùng nó
-                      displayChapterNumber = chap.chapterNumber;
-                    } else {
-                      // Nếu không, dùng index + 1 làm phương án dự phòng.
-                      // Điều này đặc biệt hữu ích nếu danh sách chương được sắp xếp đúng.
+                    let displayChapterNumber = chap.chapterNumber;
+                    // Nếu chapterNumber không hợp lệ (null, undefined, 'N/A', hoặc không phải số), dùng index + 1
+                    if (displayChapterNumber === null || displayChapterNumber === undefined || displayChapterNumber === 'N/A' || (typeof displayChapterNumber === 'string' && isNaN(parseInt(displayChapterNumber))) ) {
                       displayChapterNumber = index + 1;
                     }
-
                     const chapterTitleText = chap.titleChapter || 'Chưa có tiêu đề';
                     const fullTitle = `Chương ${displayChapterNumber}: ${chapterTitleText}`;
-
                     return (
                       <button
-                        key={chap.idChapter || `chap-dropdown-${index}`} // Thêm key dự phòng
-                        onClick={() => handleChapterSelect(chap.idChapter)}
-                        className={`block w-full text-left px-3 py-2 text-sm truncate ${String(chap.idChapter) === String(chapterId) ? `font-bold ${theme === 'den' ? 'text-blue-300 bg-gray-600' : 'text-blue-600 bg-blue-50'}` : `${theme === 'den' ? 'hover:bg-gray-600' : 'hover:bg-gray-100'}`}`}
+                        key={chap.idChapter || `chap-dropdown-${index}-${chapterTitleText}`} // Key fallback an toàn hơn
+                        onClick={() => chap.idChapter && handleChapterSelect(chap.idChapter)}
+                        disabled={!chap.idChapter} // Disable nếu không có idChapter thật
+                        className={`block w-full text-left px-3 py-2 text-sm truncate ${!chap.idChapter ? 'opacity-50 cursor-not-allowed' : ''} ${String(chap.idChapter) === String(chapterId) ? `font-bold ${theme === 'den' ? 'text-blue-300 bg-gray-600' : 'text-blue-600 bg-blue-50'}` : `${theme === 'den' ? 'hover:bg-gray-600' : 'hover:bg-gray-100'}`}`}
                         title={fullTitle}
                       >
                         C. {displayChapterNumber}: {chapterTitleText}
                       </button>
                     );
                   })}
-                  {/* ======================= KẾT THÚC KHỐI SỬA ======================= */}
-
                 </div>
               )}
             </div>
@@ -494,7 +499,7 @@ const ReadingPage = () => {
                     <CanvasTextRenderer
                       key={uniqueKey}
                       text={element.text}
-                      fontSize={fontSize + 5}
+                      fontSize={fontSize} // Giữ nguyên fontSize cho canvas hoặc bạn có thể điều chỉnh nếu muốn
                       fontFamily={fontFamily}
                       lineHeightFactor={lineHeight}
                       theme={theme}

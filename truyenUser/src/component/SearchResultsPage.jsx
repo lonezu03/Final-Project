@@ -26,7 +26,7 @@ const SearchResultsPage = () => {
 
   // Sử dụng selector mới cho kết quả tìm kiếm và pagination
   const novels = useSelector(selectSearchedNovels);
-  const paginationInfoFromStore = useSelector(selectNovelsPagination);
+  const paginationInfoFromStore = useSelector(selectSearchPagination);
   const loading = useSelector(selectSearchLoading);
   const error = useSelector(selectNovelsError);
 

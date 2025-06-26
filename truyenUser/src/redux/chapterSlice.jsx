@@ -48,14 +48,20 @@ export const getAllChapters = createAsyncThunk(
 // Body: { "idNovel": "string" } (KHÔNG GỬI TOKEN để chỉ lấy title)
 export const getNovelChaptersList = createAsyncThunk(
   'chapters/getNovelChaptersList',
-  async (novelId, { rejectWithValue }) => {
+  async (novelId, { rejectWithValue, getState }) => { // Thêm getState để lấy token
     try {
+      const token = getState().user.token; // Lấy token từ userSlice (nếu người dùng đã đăng nhập)
       const payload = {
         idNovel: novelId,
-        if (token) {
-        payload.token = token; // Chỉ gửi token nếu user đã đăng nhập
-      }      };
-      // console.log(`Dispatching getNovelChaptersList for novel ${novelId}, payload:`, payload);
+      };
+
+      if (token) {
+        payload.token = token; // Gửi token nếu có
+        // console.log(`Dispatching getNovelChaptersList for novel ${novelId} WITH token.`);
+      } else {
+        // console.log(`Dispatching getNovelChaptersList for novel ${novelId} WITHOUT token.`);
+        // Backend sẽ quyết định trả về gì. Để next/prev hoạt động, backend VẪN PHẢI trả về idChapter và chapterNumber.
+      }
 
       const response = await apiClient.post(`${API_BASE_CHAPTER}/getAll`, payload, {
         headers: { 'Content-Type': 'application/json' },
@@ -64,50 +70,52 @@ export const getNovelChaptersList = createAsyncThunk(
       if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
         const chaptersFromApi = response.data.result;
 
-        // Log dữ liệu thô từ API để kiểm tra
-        // console.log('Raw chapters from API for dropdown:', JSON.stringify(chaptersFromApi, null, 2));
+        // QUAN TRỌNG: Backend PHẢI trả về idChapter và chapterNumber cho mỗi chương
+        if (chaptersFromApi.length > 0 && (chaptersFromApi[0].idChapter === undefined || chaptersFromApi[0].chapterNumber === undefined)) {
+            console.error("API /chapter/getAll VẪN KHÔNG TRẢ VỀ idChapter hoặc chapterNumber đầy đủ!", chaptersFromApi[0]);
+            // Nếu thiếu, chức năng next/prev và dropdown sẽ không hoạt động đúng.
+            // Bạn có thể chọn reject ở đây hoặc cố gắng xử lý với dữ liệu thiếu.
+            // return rejectWithValue('Dữ liệu chương từ API không có idChapter hoặc chapterNumber.');
+        }
 
-        // Xử lý dữ liệu khi backend CHỈ trả về titleChapter
         const processedChapters = chaptersFromApi.map((chap, index) => {
-          const title = chap.titleChapter || "Chưa có tiêu đề";
-          let chapterNumber = null; // Không có chapterNumber từ API
-
-          // Cố gắng suy luận chapterNumber từ title (ví dụ: "Chương 123: Tên chương")
-          // Đây là logic suy luận cơ bản, có thể cần phức tạp hơn tùy định dạng title
-          const titleMatch = title.match(/^(?:Chương|Chương số|C\.)\s*(\d+)/i);
-          if (titleMatch && titleMatch[1]) {
-            chapterNumber = parseInt(titleMatch[1], 10);
+          // Ưu tiên chapterNumber từ API nếu có và là số hợp lệ
+          let numberToUse;
+          if (chap.chapterNumber !== null && chap.chapterNumber !== undefined && !isNaN(Number(chap.chapterNumber))) {
+            numberToUse = Number(chap.chapterNumber);
+          } else {
+            // Fallback nếu không có chapterNumber từ API: thử parse từ title
+            const title = chap.titleChapter || "";
+            const titleMatch = title.match(/^(?:Chương|Chương số|C\.)\s*(\d+)/i);
+            if (titleMatch && titleMatch[1]) {
+              numberToUse = parseInt(titleMatch[1], 10);
+            } else {
+              // Fallback cuối cùng: dùng index + 1 (chỉ đúng nếu API trả về theo thứ tự)
+              numberToUse = index + 1;
+              // console.warn(`Chapter (id: ${chap.idChapter}, title: "${title}") không có chapterNumber hoặc không parse được, dùng index+1: ${numberToUse}`);
+            }
           }
-
-          // Tạo ID tạm thời dựa trên index hoặc title (không ổn định bằng ID từ backend)
-          // Sử dụng index làm key tạm thời nếu không có idChapter thật sự.
-          // Nếu title có thể trùng lặp, dùng index là cách đơn giản nhất để có key duy nhất cho map.
-          // Quan trọng: ID này không nên dùng để điều hướng nếu có thể.
-          const tempId = `temp-chapter-${novelId}-${index}-${title.substring(0,10).replace(/\s/g, '_')}`;
-
           return {
-            idChapter: chap.idChapter || tempId, // Ưu tiên idChapter nếu backend bất ngờ trả về, nếu không dùng ID tạm
-            chapterNumber: chapterNumber !== null ? chapterNumber : (index + 1), // Fallback về index + 1 nếu không parse được
-            titleChapter: title
+            ...chap, // Giữ lại các trường khác từ API (bao gồm contentChapter nếu backend trả về)
+            idChapter: String(chap.idChapter), // Backend phải trả về idChapter. Đảm bảo là string.
+            chapterNumber: numberToUse, // Số chương đã được xử lý/suy luận
           };
         });
 
-        // Sắp xếp dựa trên chapterNumber đã suy luận (hoặc index)
-        const sortedChapters = processedChapters.sort((a, b) => {
-          const numA = a.chapterNumber !== null && !isNaN(a.chapterNumber) ? Number(a.chapterNumber) : Infinity;
-          const numB = b.chapterNumber !== null && !isNaN(b.chapterNumber) ? Number(b.chapterNumber) : Infinity;
-          
-          if (numA === Infinity && numB === Infinity) { // Nếu cả hai không parse được số chương
-            // Có thể sắp xếp theo idChapter tạm thời (theo thứ tự gốc)
-            return String(a.idChapter).localeCompare(String(b.idChapter));
-          }
-          return numA - numB;
-        });
+        // Sắp xếp dựa trên chapterNumber đã xử lý
+        const sortedChapters = processedChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
 
-        // console.log('Mapped chapters for dropdown:', sortedChapters);
-        return sortedChapters;
+        // Chỉ map lại để lấy các trường cần cho dropdown nếu bạn không muốn lưu contentChapter
+        // trong state.chapters.chaptersForReadingPageDropdown.
+        // Nếu bạn muốn lưu cả content (nếu có) thì không cần map lại ở đây.
+        return sortedChapters.map(chap => ({
+          idChapter: chap.idChapter,
+          chapterNumber: chap.chapterNumber,
+          titleChapter: chap.titleChapter || "Chưa có tiêu đề"
+          // Không bao gồm contentChapter ở đây để giữ cho dropdown nhẹ
+        }));
       }
-      return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương cho dropdown (dữ liệu không hợp lệ).');
+      return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương cho dropdown.');
     } catch (error) {
       console.error(`Lỗi khi tải danh sách chương cho ReadingPage (novelId: ${novelId}):`, error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách chương cho dropdown.');

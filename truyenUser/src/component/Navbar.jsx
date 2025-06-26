@@ -1,11 +1,12 @@
 // Navbar.js
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, UserCircle2, Settings, BookOpen, LogOut } from "lucide-react";
+import { Search, UserCircle2, Settings, BookOpen, LogOut,Filter as FilterIcon } from "lucide-react";
 import AuthModal from './AuthModal';
 import SettingsSidebar from './SettingsSidebar';
 import { auth as firebaseAuthInstance } from '../firebase-config'; // Đổi tên để rõ ràng hơn
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import FilterSidebar from './FilterSidebar'; // Đường dẫn đến component FilterSidebar
 
 // *** THÊM IMPORT CHO REDUX ***
 import { useDispatch, useSelector } // Thêm useSelector nếu cần lấy state từ Redux (ví dụ: để đồng bộ currentUser)
@@ -58,6 +59,7 @@ const Navbar = () => {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isSettingsSidebarOpen, setSettingsSidebarOpen] = useState(false);
   // const [currentUser, setCurrentUser] = useState(null); // Sẽ lấy từ Redux store
+const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -189,6 +191,13 @@ const Navbar = () => {
                 placeholder="Tìm kiếm..."
               />
             )}
+             <button
+          onClick={() => setFilterSidebarOpen(true)}
+          className="p-2 rounded-md text-white hover:bg-blue-700 focus:outline-none"
+          title="Bộ lọc"
+        >
+          <FilterIcon size={20} />
+        </button>
             <Search
               className="text-lg sm:text-xl cursor-pointer hover:text-gray-300 absolute right-0 top-1/2 transform -translate-y-1/2 mr-2"
               size={18}
@@ -228,7 +237,10 @@ const Navbar = () => {
           />
         </div>
       </div>
-
+ <FilterSidebar
+        isOpen={isFilterSidebarOpen}
+        onClose={() => setFilterSidebarOpen(false)}
+      />
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setAuthModalOpen(false)}

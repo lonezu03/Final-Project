@@ -45,7 +45,7 @@ const authorSlice = createSlice({
       })
       .addCase(getAllAuthors.rejected, (state, action) => {
         state.loading = false;
-        //state.authors = Array.isArray(action.payload) ? action.payload : []; // Kiểm tra dữ liệu trả về
+        state.authors = Array.isArray(action.payload) ? action.payload : []; // Kiểm tra dữ liệu trả về
 
         state.error = action.error.message;
       })
