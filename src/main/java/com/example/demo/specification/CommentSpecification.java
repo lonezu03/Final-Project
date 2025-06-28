@@ -1,5 +1,9 @@
 package com.example.demo.specification;
 import com.example.demo.entity.Comment;
+import com.example.demo.entity.CommentLike;
+
+import jakarta.persistence.criteria.Join;
+
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 
@@ -67,5 +71,32 @@ public class CommentSpecification {
      */
     public static Specification<Comment> isParent() {
         return (root, query, cb) -> cb.isNull(root.get("parent"));
+    }
+    
+    public static Specification<Comment> likedByUser(String idUser) {
+        // Luôn kiểm tra đầu vào để trả về null, cho phép service chaining an toàn
+        if (!StringUtils.hasText(idUser)) {
+            return null;
+        }
+
+        return (root, query, criteriaBuilder) -> {
+            // 1. Join từ Comment (root) đến collection 'likes' của nó.
+            // Điều này tương đương với "FROM Comment c JOIN c.likes cl" trong JPQL/HQL.
+            // "likes" là tên của trường `private Set<CommentLike> likes;` trong entity Comment.
+            Join<Comment, CommentLike> likesJoin = root.join("likes");
+
+            // 2. Từ 'likesJoin' (đại diện cho bảng comment_likes), đi sâu vào trường 'user',
+            // rồi lấy ra trường 'idUser' của user đó và so sánh với giá trị truyền vào.
+            // Tương đương với "WHERE cl.user.idUser = :idUser".
+            var predicate = criteriaBuilder.equal(likesJoin.get("user").get("idUser"), idUser);
+
+            // 3. Rất quan trọng: Thêm distinct() để tránh kết quả bị trùng lặp.
+            // Khi bạn join với một collection, một comment có thể xuất hiện nhiều lần
+            // nếu có nhiều bản ghi join thỏa mãn (dù trong trường hợp này ít xảy ra sau khi lọc).
+            // Đây là một good practice.
+            query.distinct(true);
+
+            return predicate;
+        };
     }
 }

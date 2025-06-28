@@ -1,6 +1,6 @@
 package com.example.demo.dto.respone;
 
-import java.util.List;
+import java.time.LocalDateTime;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -14,27 +14,10 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CommentRespone {
-	String idComment;
-
-	String contentComment;
-
-	Integer likeComment;
-
-	Boolean isLike;
-	
-	Boolean isDislike;
-	
-	Integer dislikeComment;
-	
-	String userName;
-	
+public class CommetDislikeRespone {
 	String idUser;
-	
-	List<CommentRespone> replyComments;
-	
-	List<CommetLikeRespone> likes;
-	
-	List<CommetDislikeRespone> dislikes;
 
+	String userNameUser;
+
+	LocalDateTime dislikedAt;
 }

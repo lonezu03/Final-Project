@@ -1,6 +1,5 @@
 package com.example.demo.controller;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -13,18 +12,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.example.demo.dto.request.ChapterCreationRequest;
 import com.example.demo.dto.request.CommentCreationRequest;
 import com.example.demo.dto.request.CommentSearchRequest;
 import com.example.demo.dto.request.CommentUpdateLikeRequest;
 import com.example.demo.dto.request.CommentUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
-import com.example.demo.dto.respone.ChapterRespone;
 import com.example.demo.dto.respone.CommentNovelRespone;
 import com.example.demo.dto.respone.CommentRespone;
 import com.example.demo.service.CommentService;
@@ -103,6 +96,7 @@ public class CommentController {
 				.result(commentService.updatelikeComment(request))
 				.build();
 	}
+	
 
 	@PutMapping("/updatedislike")
 	@Operation(summary = "Tăng lượt dislike cho bình luận", description = "Tăng số lượt không thích (dislike) cho bình luận.")

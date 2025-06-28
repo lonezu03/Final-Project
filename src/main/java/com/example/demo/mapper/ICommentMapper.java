@@ -7,7 +7,9 @@ import com.example.demo.dto.request.CommentCreationRequest;
 import com.example.demo.dto.request.CommentUpdateRequest;
 import com.example.demo.dto.respone.CommentNovelRespone;
 import com.example.demo.dto.respone.CommentRespone;
+import com.example.demo.dto.respone.CommetLikeRespone;
 import com.example.demo.entity.Comment;
+import com.example.demo.entity.CommentLike;
 
 @Mapper(componentModel = "spring")
 public interface ICommentMapper {
@@ -21,10 +23,17 @@ public interface ICommentMapper {
 	Comment toCommentUpdate(CommentUpdateRequest request);
 
 	@Mapping(source = "user.userNameUser", target = "userName")
+	@Mapping(source = "user.idUser", target = "idUser")
 	@Mapping(source = "replies", target = "replyComments")
+	@Mapping(source = "likes", target = "likes") // Mapping cho danh sách like
 	CommentRespone toCommentRespone(Comment comment);
-	
+
 	@Mapping(target = "titleChapter", source = "chapter.titleChapter")
 	@Mapping(source = "user.userNameUser", target = "userName")
 	CommentNovelRespone toCommentNovelRespone(Comment comment);
+
+	@Mapping(source = "user.idUser", target = "idUser")
+	@Mapping(source = "user.userNameUser", target = "userNameUser")
+	@Mapping(source = "likedAt", target = "likedAt")
+	CommetLikeRespone toCommentLikeRespone(CommentLike commentLike);
 }

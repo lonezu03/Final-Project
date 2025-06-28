@@ -2,7 +2,9 @@ package com.example.demo.entity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.example.demo.enums.Role;
 
@@ -59,4 +61,10 @@ public class Comment {
 
 	@OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Comment> replies = new ArrayList<>();
+	
+	@OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+	private Set<CommentLike> likes = new HashSet<>();
+	
+	@OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+	private Set<CommentDislike> dislikes = new HashSet<>();
 }
