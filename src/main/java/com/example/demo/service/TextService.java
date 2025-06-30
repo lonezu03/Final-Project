@@ -22,7 +22,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
+/**
+ * Service xử lý nghiệp vụ liên quan đến chuyển văn bản thành giọng nói (TTS),
+ * chia văn bản thành các phần nhỏ phù hợp và gửi tới FPT.AI để xử lý.
+ */
 @Service
 @RequiredArgsConstructor
 public class TextService {
@@ -33,13 +36,19 @@ public class TextService {
     private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj"; // Nên đưa vào application.properties
     private static final String API_URL = "https://api.fpt.ai/hmi/tts/v5";
 
+    /**
+     * Gửi danh sách sub-job TTS song song lên FPT.AI.
+     * 
+     * @param subJobs Danh sách các TtsSubJob cần xử lý
+     * @param serverBaseUrl Base URL của server để tạo callback_url
+     */
     public void processSubJobs(List<TtsSubJob> subJobs, String serverBaseUrl) {
         subJobs.forEach(subJob -> {
             CompletableFuture.runAsync(() -> {
                 try {
                     String callbackUrl = serverBaseUrl + "/api/tts/sub-callback?subJobId=" + subJob.getId();
                     sendToFptAi(subJob.getTextChunk(), callbackUrl);
-                    
+
                     subJob.setStatus("PROCESSING");
                     ttsSubJobRepository.save(subJob);
                 } catch (Exception e) {
@@ -51,133 +60,128 @@ public class TextService {
             });
         });
     }
-    
+
+    /**
+     * Gửi một đoạn text tới FPT.AI kèm callback URL.
+     *
+     * @param text Đoạn văn bản đã xử lý cần chuyển thành giọng nói
+     * @param callbackUrl URL sẽ được FPT.AI gọi lại khi xử lý xong
+     * @throws RuntimeException nếu gửi request thất bại (timeout, lỗi mạng...)
+     */
     private void sendToFptAi(String text, String callbackUrl) {
         String cleanText = text.replaceAll("\\s+", " ").trim();
 
-        // 1. ĐỊNH NGHĨA CẤU HÌNH TIMEOUT
-        // Đặt thời gian chờ là 30 giây (30000 milliseconds).
-        // Đây là khoảng thời gian đủ an toàn cho các kết nối mạng có độ trễ cao.
         final int timeoutMillis = 30000; 
         RequestConfig config = RequestConfig.custom()
-            .setConnectTimeout(timeoutMillis)        // Timeout để thiết lập kết nối ban đầu.
-            .setConnectionRequestTimeout(timeoutMillis) // Timeout để lấy kết nối từ connection pool.
-            .setSocketTimeout(timeoutMillis)         // Timeout chờ dữ liệu sau khi kết nối thành công.
+            .setConnectTimeout(timeoutMillis)
+            .setConnectionRequestTimeout(timeoutMillis)
+            .setSocketTimeout(timeoutMillis)
             .build();
 
-        // 2. TẠO HTTP CLIENT VỚI CẤU HÌNH TIMEOUT TÙY CHỈNH
-        // Dùng try-with-resources để đảm bảo client được đóng đúng cách.
         try (CloseableHttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(config).build()) {
-            
             HttpPost request = new HttpPost(API_URL);
-            
-            // 3. SET CÁC HEADER NHƯ CŨ
             request.setHeader("api-key", API_KEY);
             request.setHeader("voice", "banmai");
             request.setHeader("callback_url", callbackUrl);
 
-            // 4. SET BODY REQUEST NHƯ CŨ
             StringEntity entity = new StringEntity(cleanText, "UTF-8");
             request.setEntity(entity);
 
             logger.info("Sending request to FPT.AI with a {}ms timeout...", timeoutMillis);
             logger.info("Callback URL: {}", callbackUrl);
 
-            // 5. THỰC THI REQUEST
             try (CloseableHttpResponse response = httpClient.execute(request)) {
-                 String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-                 logger.info("FPT.AI initial response: {}", responseBody);
+                String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                logger.info("FPT.AI initial response: {}", responseBody);
             }
-            
+
         } catch (Exception e) {
-            // Các lỗi timeout (như ConnectTimeoutException, SocketTimeoutException) sẽ được bắt ở đây.
             logger.error("Error sending request to FPT.AI (possible timeout)", e);
             throw new RuntimeException("Error sending request to FPT.AI: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Chia văn bản gốc thành các đoạn nhỏ (chunk) với độ dài phù hợp để gửi đi xử lý.
+     *
+     * @param originalText Văn bản gốc
+     * @param maxChunkLength Độ dài tối đa mỗi chunk
+     * @param maxCharsWithoutBreak Số ký tự tối đa không có dấu ngắt trước khi chèn dấu phẩy
+     * @return Danh sách các đoạn văn bản đã chia nhỏ
+     */
     public List<String> ultimateTextSplitter(String originalText, int maxChunkLength, int maxCharsWithoutBreak) {
         if (originalText == null || originalText.isBlank()) {
             return new ArrayList<>();
         }
 
-        // 1. Dọn dẹp văn bản thô
         String cleanedText = sanitizeText(originalText);
-
-        // 2. Chèn dấu phẩy vào các đoạn quá dài
         String safeText = addCommasToLongStrings(cleanedText, maxCharsWithoutBreak);
-
-        // 3. Chia văn bản đã an toàn thành các chunk
         return splitIntoChunks(safeText, maxChunkLength);
     }
 
+    /**
+     * Làm sạch văn bản bằng cách loại bỏ khoảng trắng thừa.
+     *
+     * @param text Văn bản thô
+     * @return Văn bản đã làm sạch
+     */
     private String sanitizeText(String text) {
         return text.replaceAll("\\s+", " ").trim();
     }
-    
-    // =========================================================================
-    // === HÀM MỚI: CHÈN DẤU PHẨY THEO ĐỘ DÀI KÝ TỰ ===
-    // =========================================================================
+
     /**
-     * Chèn dấu phẩy vào văn bản để đảm bảo không có đoạn nào dài quá `maxLength`
-     * mà không có dấu ngắt nghỉ ('.' '?' '!' hoặc ',').
+     * Chèn dấu phẩy vào văn bản nếu có đoạn quá dài không có dấu ngắt.
      *
-     * @param text Văn bản cần xử lý.
-     * @param maxLength Độ dài ký tự tối đa cho phép.
-     * @return Văn bản đã được chèn dấu phẩy.
+     * @param text Văn bản cần xử lý
+     * @param maxLength Số ký tự tối đa giữa các dấu ngắt
+     * @return Văn bản đã được thêm dấu phẩy
      */
     private String addCommasToLongStrings(String text, int maxLength) {
         StringBuilder result = new StringBuilder();
-        int lastBreak = 0; // Vị trí của dấu ngắt nghỉ cuối cùng
+        int lastBreak = 0;
 
         for (int i = 0; i < text.length(); i++) {
             char currentChar = text.charAt(i);
             result.append(currentChar);
 
-            // Nếu ký tự hiện tại là một dấu ngắt nghỉ tự nhiên
             if (currentChar == '.' || currentChar == '?' || currentChar == '!' || currentChar == ',') {
-                lastBreak = i; // Cập nhật vị trí ngắt nghỉ cuối cùng
+                lastBreak = i;
             }
-            
-            // Nếu khoảng cách từ lần ngắt nghỉ cuối cùng đã vượt quá giới hạn
+
             if (i - lastBreak >= maxLength) {
-                // Tìm một khoảng trắng gần nhất để chèn dấu phẩy cho "đẹp"
                 int insertPos = result.lastIndexOf(" ", i);
-                
                 if (insertPos != -1 && insertPos > lastBreak) {
-                    // Chèn dấu phẩy vào vị trí khoảng trắng đó
                     result.insert(insertPos, ',');
-                    lastBreak = insertPos; // Cập nhật lại vị trí ngắt nghỉ
+                    lastBreak = insertPos;
                 }
-                // Nếu không tìm thấy khoảng trắng, nó sẽ tiếp tục cho đến khi tìm thấy
-                // hoặc đến khi gặp dấu ngắt nghỉ tự nhiên tiếp theo.
             }
         }
         return result.toString();
     }
 
-
     /**
-     * Chia một đoạn văn bản (đã an toàn) thành các chunk có độ dài tối đa.
-     * Cách này đơn giản hơn vì ta không cần lo về các câu quá dài nữa.
+     * Chia văn bản thành các đoạn nhỏ (chunk) có độ dài tối đa.
+     *
+     * @param text Văn bản đã xử lý
+     * @param maxChunkLength Độ dài tối đa mỗi chunk
+     * @return Danh sách các đoạn đã cắt
      */
     private List<String> splitIntoChunks(String text, int maxChunkLength) {
         List<String> chunks = new ArrayList<>();
         int offset = 0;
         while (offset < text.length()) {
             int end = Math.min(offset + maxChunkLength, text.length());
-            
-            // Nếu chưa phải cuối văn bản, tìm khoảng trắng gần nhất để cắt
+
             if (end < text.length()) {
                 int lastSpace = text.lastIndexOf(' ', end);
                 if (lastSpace != -1 && lastSpace > offset) {
                     end = lastSpace;
                 }
             }
-            
+
             chunks.add(text.substring(offset, end).trim());
             offset = end;
         }
         return chunks;
     }
-    
 }
