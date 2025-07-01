@@ -55,14 +55,14 @@ public class Novel {
 	Status statusNovel;
 	String imageNovel;
 
-	@ManyToMany
+	@ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
 	@JoinTable(
 			name = "novel_author",
 			joinColumns = @JoinColumn(name = "novel_id"),
 			inverseJoinColumns = @JoinColumn(name = "author_id"))
 	Set<Author> authors = new HashSet<>();
 	
-	@ManyToMany
+	@ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
 	@JoinTable(
 			name = "novel_category",
 			joinColumns = @JoinColumn(name = "novel_id"),

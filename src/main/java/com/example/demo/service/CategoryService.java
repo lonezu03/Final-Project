@@ -32,6 +32,7 @@ public class CategoryService {
 	ICategoryMapper categoryMapper;
 	ICategoryRepository categoryRepository;
 	INovelRepository novelRepository;
+
 	public List<CategoryRespone> getAllCategory() {
 		return categoryRepository.findAll().stream().map(t -> categoryMapper.toCategoryRespone(t)).toList();
 	}
@@ -42,37 +43,44 @@ public class CategoryService {
 		}
 		Category category = categoryMapper.toCategory(request);
 
-		category=categoryRepository.save(category);
-		
+		category = categoryRepository.save(category);
+
 		return categoryMapper.toCategoryRespone(category);
 	}
 
 	public String deleteCategory(String idCategory) {
-		if (!categoryRepository.existsById(idCategory)) {
-			throw new AppException(ErrorCode.CATEGORY_NOT_EXISTED);
-		}
+		Category category = categoryRepository.findById(idCategory)
+				.orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+
+
+		for (Novel novel : new HashSet<>(category.getNovels())) {
+            novel.getCategories().remove(category); // xóa Author khỏi Novel (bên sở hữu)
+        }
+		category.getNovels().clear();
+		
 		try {
 			categoryRepository.deleteById(idCategory);
 
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new AppException(ErrorCode.DELETE_CONTRAINT);
 		}
 		return idCategory;
 	}
 
 	public CategoryRespone updateCategory(CategoryUpdateRequest request) {
-		Category category=categoryMapper.toCategoryUpdate(request);
+		Category category = categoryMapper.toCategoryUpdate(request);
 		if (!categoryRepository.existsById(request.getIdCategory())) {
 			throw new AppException(ErrorCode.CATEGORY_NOT_EXISTED);
 		}
 //		Set<Novel> novels = new HashSet<>(novelRepository.findAllById(request.getNovels()));
-		 category= categoryRepository.save(category);
+		category = categoryRepository.save(category);
 
 //		for (Novel novel : novels) {
 //			novel.getCategories().add(category);
 //			novelRepository.save(novel);
 //		}
-		
+
 		return categoryMapper.toCategoryRespone(category);
 	}
 }

@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.AuthorCreationRequest;
@@ -114,18 +115,30 @@ public class AuthorService {
 		return authorMapper.toAuthorRespone(author);
 	}
 
+	@Transactional
 	public String deleteById(String idAuthor) {
 		try {
-			Author author = authorRepository.findById(idAuthor).get();
-			if (!author.getPublicIDAuthor().isEmpty()) {
-				uploadFileService.deleteImage(author.getPublicIDAuthor());
-			}
-			authorRepository.deleteById(idAuthor);
-			return idAuthor;
-		} catch (Exception e) {
-			throw new AppException(ErrorCode.DELETE_CONTRAINT);
-		}
+			Author author = authorRepository.findById(idAuthor)
+	                .orElseThrow(() -> new AppException(ErrorCode.AUTHOR_NOT_EXISTED));
 
+	        // Xóa liên kết giữa Author và Novel từ cả hai phía
+	        for (Novel novel : new HashSet<>(author.getNovels())) {
+	            novel.getAuthors().remove(author); // xóa Author khỏi Novel (bên sở hữu)
+	        }
+	        author.getNovels().clear(); // xóa Novel khỏi Author (bên bị phụ thuộc)
+
+	        // Sau đó xóa ảnh nếu có
+	        if (author.getPublicIDAuthor() != null && !author.getPublicIDAuthor().isEmpty()) {
+	            uploadFileService.deleteImage(author.getPublicIDAuthor());
+	        }
+
+	        // Xóa Author
+	        authorRepository.deleteById(idAuthor);
+
+	        return idAuthor;
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        throw new AppException(ErrorCode.DELETE_CONTRAINT);
+	    }
 	}
-
 }
