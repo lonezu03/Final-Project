@@ -58,7 +58,7 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isSettingsSidebarOpen, setSettingsSidebarOpen] = useState(false);
-  // const [currentUser, setCurrentUser] = useState(null); // Sẽ lấy từ Redux store
+   const [currentUser, setCurrentUser] = useState(null); // Sẽ lấy từ Redux store
 const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
 
   const navigate = useNavigate();

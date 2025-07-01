@@ -1,95 +1,70 @@
-// App.jsx
-import React, { useEffect } from 'react'; // Thêm useEffect
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { Provider, useDispatch, useSelector } from "react-redux"; // Thêm useDispatch, useSelector
+import { Provider, useDispatch, useSelector } from "react-redux";
 
-import store from "./redux/store"; // Đường dẫn tới store của bạn
+import store from "./redux/store";
 
-// Import các actions "getAll" từ các slice của bạn
-import { getAllNovels } from './redux/novelSlice'; // Điều chỉnh đường dẫn nếu cần
-// import { getAllAuthors } from './redux/authorSlice'; // Điều chỉnh đường dẫn
-import { getAllCategories } from './redux/categorySlice'; // Điều chỉnh đường dẫn
-import {loadUserFromStorage} from './redux/userSlice'; // Điều chỉnh đường dẫn
+import { getAllNovels } from './redux/novelSlice';
+import { getAllCategories } from './redux/categorySlice';
+import { loadUserFromStorage } from './redux/userSlice';
+
 // Import các component trang
-import ReadingPage from './component/page/readingPage'; // Component mới sẽ tạo
+import ReadingPage from './component/page/readingPage';
 import Home from './component/page/home';
-import Navbar from './component/Navbar'; // Navbar có thể nằm ngoài Router nếu muốn nó cố định
+import Navbar from './component/Navbar';
 import DetailPage from './component/page/DetailPage';
 import NotFoundPage from './component/NotFoundPage';
 import DepositPage from './component/page/DepositPage';
 import ReadingHistoryPage from './component/page/ReadingHistoryPage';
 import TransactionHistoryPage from './component/page/TransactionHistoryPage';
-import SearchResultsPage from './component/SearchResultsPage'; // Đường dẫn đến trang kết quả tìm kiếm
+import SearchResultsPage from './component/SearchResultsPage';
+import UserProfilePage from './component/page/UserProfilePage'; // Đổi tên route để khớp với đây
 
-// Component trung gian để xử lý việc fetch dữ liệu
+// AppContent bây giờ chỉ chịu trách nhiệm fetch dữ liệu không thay đổi thường xuyên
 const AppContent = () => {
   const dispatch = useDispatch();
-
-  // Lấy trạng thái loading hoặc dữ liệu để tránh gọi lại nếu đã có
-  const { novels, loading: novelsLoading } = useSelector((state) => state.novels);
-  const { authors, loading: authorsLoading } = useSelector((state) => state.authors);
-  const { categories, loading: categoriesLoading } = useSelector((state) => state.categories);
+  const novels = useSelector((state) => state.novels.novels);
+  const categories = useSelector((state) => state.categories.categories);
 
   useEffect(() => {
-    // Chỉ dispatch nếu dữ liệu chưa có hoặc chưa từng được tải
-    if (!novelsLoading && (!novels || novels.length === 0)) {
-      console.log("App.jsx: Fetching all novels for the first time.");
+    // Chỉ fetch nếu dữ liệu chưa tồn tại
+    if (!novels || novels.length === 0) {
       dispatch(getAllNovels());
     }
-    dispatch(loadUserFromStorage());
-    // if (!authorsLoading && (!authors || authors.length === 0)) {
-    //   console.log("App.jsx: Fetching all authors for the first time.");
-    //   dispatch(getAllAuthors());
-    // }
-
-    if (!categoriesLoading && (!categories || categories.length === 0)) {
-      console.log("App.jsx: Fetching all categories for the first time.");
+    if (!categories || categories.length === 0) {
       dispatch(getAllCategories());
     }
-}, [dispatch, novels, authors, categories, novelsLoading, authorsLoading, categoriesLoading]);
-
-  // Hiển thị một loader toàn cục trong khi dữ liệu ban đầu đang được tải (tùy chọn)
-  // if (
-  //   (novelsLoading && (!novels || novels.length === 0)) ||
-  //   (authorsLoading && (!authors || authors.length === 0)) ||
-  //   (categoriesLoading && (!categories || categories.length === 0))
-  // ) {
-  //   return (
-  //     <div className="flex justify-center items-center min-h-screen bg-gray-800 text-white">
-  //       Đang tải dữ liệu ứng dụng...
-  //     </div>
-  //   );
-  // }
-
-
-  // Router và Routes nên nằm bên trong component con này
-  // để đảm bảo Redux context (Provider) đã bao bọc chúng
+  }, [dispatch, novels, categories]);
+  
   return (
     <Router>
-      <div> {/* Bạn có thể giữ div này hoặc dùng Fragment <> */}
-        <Navbar /> {/* Navbar giờ sẽ có quyền truy cập vào Redux store */}
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/novel/:novelId" element={<DetailPage />} />
-          <Route path="/novel/:novelId/chapter/:chapterId" element={<ReadingPage />} />
-          <Route path="/deposit" element={<DepositPage />} />
-          <Route path="/user/reading-history" element={<ReadingHistoryPage />} />
-          <Route path="/user/transaction-history" element={<TransactionHistoryPage />} />
-          <Route path="/search-results" element={<SearchResultsPage />} />
-
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-        {/* Footer có thể đặt ở đây */}
-      </div>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/novel/:novelId" element={<DetailPage />} />
+        <Route path="/novel/:novelId/chapter/:chapterId" element={<ReadingPage />} />
+        <Route path="/deposit" element={<DepositPage />} />
+        <Route path="/user/reading-history" element={<ReadingHistoryPage />} />
+        <Route path="/user/transaction-history" element={<TransactionHistoryPage />} />
+        <Route path="/search-results" element={<SearchResultsPage />} />
+        {/* THỐNG NHẤT ROUTE: Sử dụng /user/settings hoặc /user/profile */}
+        <Route path="/user/settings" element={<UserProfilePage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </Router>
   );
-}
+};
 
-
+// Component App gốc chịu trách nhiệm cung cấp store và tải phiên đăng nhập
 function App() {
+  // useEffect để dispatch loadUserFromStorage một lần duy nhất khi app khởi động
+  useEffect(() => {
+    store.dispatch(loadUserFromStorage());
+  }, []);
+
   return (
     <Provider store={store}>
-      <AppContent /> {/* Sử dụng component trung gian */}
+      <AppContent />
     </Provider>
   );
 }

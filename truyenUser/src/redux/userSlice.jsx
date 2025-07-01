@@ -220,8 +220,159 @@ export const getAllHistoryByUser = createAsyncThunk(
     }
   }
 );
+//10
+
+// ====================================================================
+// === BẮT ĐẦU CẬP NHẬT LOGIC DỰA TRÊN API MỚI ===
+// ====================================================================
+
+/**
+ * THUNK: Cập nhật thông tin người dùng (tên, ngày sinh).
+ * Sẽ gọi endpoint PUT /user/updateUser.
+ */
+export const updateUserProfile = createAsyncThunk(
+  'user/updateProfile',
+  async ({ userNameUser, dobUser }, { getState, rejectWithValue }) => {
+    try {
+      const { currentUser } = getState().user;
+      if (!currentUser) {
+        return rejectWithValue('Người dùng chưa đăng nhập.');
+      }
+
+      // ======================= BẮT ĐẦU SỬA LỖI =======================
+      // CHUYỂN ĐỔI ĐỊNH DẠNG NGÀY THÁNG
+      let formattedDob = null;
+      if (dobUser && dobUser.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Nếu dobUser là một chuỗi hợp lệ dạng 'YYYY-MM-DD'
+        // Tạo một đối tượng Date và chuyển nó sang chuỗi ISO 8601.
+        // new Date('2003-11-05') sẽ hiểu là ngày 5/11/2003 lúc 00:00:00 giờ địa phương.
+        // toISOString() sẽ chuyển nó về giờ UTC.
+        formattedDob = new Date(dobUser).toISOString();
+      }
+      // ======================= KẾT THÚC SỬA LỖI =======================
+
+      const payload = {
+        ...currentUser,
+        userNameUser: userNameUser,
+        // Sử dụng ngày tháng đã được định dạng lại
+        dobUser: formattedDob,
+      };
+
+      // Xóa các trường không cần thiết
+      delete payload.token; 
+      delete payload.historyRead;
+      delete payload.commentRespones;
+
+      console.log("Sending final payload to backend:", payload);
+
+      const response = await apiClient.put('/user/updateUser', payload);
+
+      if (response.data && response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Cập nhật thông tin thất bại.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi cập nhật thông tin.');
+    }
+  }
+);
+
+/**
+ * THUNK: Thay đổi mật khẩu người dùng.
+ * Cũng sẽ gọi endpoint PUT /user/updateUser.
+ * LƯU Ý: API của bạn không yêu cầu `oldPassword`, nó chỉ ghi đè `passwordUser`.
+ * Việc kiểm tra `oldPassword` sẽ phải được thực hiện ở backend hoặc chúng ta bỏ qua nó.
+ * Dialog của chúng ta vẫn hỏi mật khẩu cũ để tăng tính bảo mật ở phía client.
+ */
+export const changeUserPassword = createAsyncThunk(
+  'user/changePassword',
+  async ({ newPassword }, { getState, rejectWithValue }) => {
+    try {
+      // Lấy state hiện tại của user để xây dựng payload
+      const { currentUser } = getState().user;
+       if (!currentUser) {
+        return rejectWithValue('Người dùng chưa đăng nhập.');
+      }
+
+      const payload = {
+        ...currentUser, // Bắt đầu với tất cả thông tin người dùng hiện tại
+        passwordUser: newPassword, // Ghi đè bằng mật khẩu mới
+      };
+
+      // Xóa các trường không cần thiết
+      delete payload.token;
+      delete payload.historyRead;
+      delete payload.commentRespones;
+
+      console.log("Sending payload to /user/updateUser for password change:", payload);
+      
+      // Chúng ta không gửi oldPassword vì API không yêu cầu
+      const response = await apiClient.put('/user/updateUser', payload);
+
+      if (response.data && response.data.code === 1000) {
+        // Trả về user object mới (có thể chứa token mới nếu backend cấp lại)
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Đổi mật khẩu thất bại.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+    }
+  }
+);
 
 
+/**
+ * THUNK: Cập nhật avatar.
+ * Giả sử API này vẫn riêng biệt vì nó xử lý file upload (multipart/form-data),
+ * khác với API /user/updateUser chỉ nhận JSON.
+ */
+export const updateUserAvatar = createAsyncThunk(
+  'user/updateAvatar',
+  async (avatarFile, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', avatarFile);
+
+      // Endpoint có thể là /user/update-avatar hoặc tương tự
+      const response = await apiClient.post('/user/update-avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data && response.data.code === 1000) {
+        return response.data.result; // API trả về user object đã cập nhật
+      }
+      return rejectWithValue(response.data.message || 'Cập nhật avatar thất bại.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi cập nhật avatar.');
+    }
+  }
+);
+ const handlePending = (state) => {
+      state.loading = true;
+      state.error = null;
+    };
+    
+    const handleRejected = (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    };
+// ====================================================================
+// === KẾT THÚC CẬP NHẬT LOGIC ===
+// ====================================================================
+
+const handleLoginOrUpdateSuccess = (state, action) => {
+      state.loading = false;
+      state.error = null;
+      state.currentUser = action.payload; // Payload là user object đầy đủ
+      // Giả sử token cũng nằm trong user object trả về
+      if (action.payload.token) {
+        state.token = action.payload.token;
+        localStorage.setItem('token', action.payload.token);
+      }
+      localStorage.setItem('user', JSON.stringify(action.payload));
+    };
 // --- SLICE DEFINITION ---
 // const initialState = {
 //   currentUser: null, // Sẽ lưu thông tin user (không bao gồm token)
@@ -247,6 +398,11 @@ const initialState = {
   error: null,
   otpMessage: null,
   historyActionStatus: null, // Lưu message từ create/delete history
+  forgotPassword: {
+      status: 'idle', // 'idle' | 'sending_otp' | 'otp_sent' | 'resetting' | 'success' | 'error'
+      error: null,
+      message: null,
+  }
 };
 
 const userSlice = createSlice({
@@ -417,7 +573,12 @@ const userSlice = createSlice({
         state.isUserHistoryLoading = false;
         state.error = action.payload;
         state.userHistory = [];
-      })
+      }
+    )
+     .addCase(updateUserProfile.pending, handlePending)
+      .addCase(updateUserProfile.fulfilled, handleLoginOrUpdateSuccess) // Dùng chung handler
+      .addCase(updateUserProfile.rejected, handleRejected)
+      
       .addMatcher(
         (action) => [
           loginUserWithPassword.fulfilled.type,

@@ -310,9 +310,45 @@ const ChapterComments = ({ chapterId, novelId }) => {
     }
   };
 
-  const handleLike = async (comment) => { /* ... giữ nguyên, đảm bảo comment.idChapter hoặc chapterId đúng ... */ };
-  const handleDislike = async (comment) => { /* ... giữ nguyên ... */ };
+   const handleLike = async (comment) => {
+    if (!currentUser) {
+      alert("Vui lòng đăng nhập để thích bình luận.");
+      return;
+    }
+    // Payload cần idComment, idChapter, và idUser của người thực hiện
+    const payload = {
+      idComment: comment.idComment,
+      idChapter: chapterId, // chapterId đã có sẵn từ props của ChapterComments
+      idUser: currentUser.idUser,
+    };
+    try {
+      // Dispatch action `likeComment`
+      await dispatch(likeComment(payload)).unwrap();
+    } catch (err) {
+      console.error("Lỗi khi thích bình luận:", err);
+      // Bạn có thể hiển thị thông báo lỗi cho người dùng ở đây nếu muốn
+      // alert(err.message || 'Có lỗi xảy ra');
+    }
+  };
 
+  // Hàm xử lý khi người dùng nhấn nút "Không thích"
+  const handleDislike = async (comment) => {
+    if (!currentUser) {
+      alert("Vui lòng đăng nhập để bày tỏ cảm xúc.");
+      return;
+    }
+    const payload = {
+      idComment: comment.idComment,
+      idChapter: chapterId,
+      idUser: currentUser.idUser,
+    };
+    try {
+      // Dispatch action `dislikeComment`
+      await dispatch(dislikeComment(payload)).unwrap();
+    } catch (err) {
+      console.error("Lỗi khi không thích bình luận:", err);
+    }
+  };
   const handleStartEdit = (commentToEdit) => {
     const isOwner = currentUser && commentToEdit.user && currentUser.idUser === commentToEdit.user.idUser;
     const isOwnerFallback = !commentToEdit.user && currentUser && currentUser.userNameUser === commentToEdit.userName;
