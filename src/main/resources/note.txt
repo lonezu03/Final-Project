@@ -1,0 +1,4 @@
+1. Cái chỗ title của lịch sử đọc chắc đổi sang map thẳng từ chapter ok hơn là tự lưu
+2. Sửa lại cái request của tạo novel đi, rating, totalchapter chắc tự gắn với tự cộng từ chapter thôi gắn chết vô là ko đc. Sửa xong nhớ vô cái cái schema của novel check lại á, h đang có gì thì làm nấy chưa check đúng sai
+3. Cái coin của user cũng phải chỉnh lại nha thấy ko ổn, mấy cái cập nhật user dính liếu đến trông nó cũng ngô ngô như nào á
+
