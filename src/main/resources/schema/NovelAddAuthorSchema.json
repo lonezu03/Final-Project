@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "NovelAddAuthorSchema",
+  "type": "object",
+  "properties": {
+    "idNovel": {
+      "type": "string"
+    },
+    "idAuthor": {
+      "type": "string"
+    }
+  },
+  "required": ["idNovel", "idAuthor"],
+  "additionalProperties": false
+}

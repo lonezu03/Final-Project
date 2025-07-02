@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "ChapterUpdateSchema",
+  "type": "object",
+  "properties": {
+    "idChapter": {
+      "type": "string"
+    },
+    "titleChapter": {
+      "type": "string"
+    },
+    "viewChapter": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "novel": {
+      "type": "string"
+    }
+  },
+  "required": ["idChapter"],
+  "additionalProperties": false
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "CommentUpdateLikeSchema",
+  "type": "object",
+  "properties": {
+    "idComment": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "idUser": {
+      "type": "string"
+    }
+  },
+  "required": ["idComment", "idUser"],
+  "additionalProperties": false
+}

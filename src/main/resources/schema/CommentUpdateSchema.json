@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "CommentUpdateSchema",
+  "type": "object",
+  "properties": {
+    "idComment": {
+      "type": "string"
+    },
+    "contentComment": {
+      "type": "string"
+    },
+    "chapter": {
+      "type": "string"
+    },
+    "user": {
+      "type":"string"
+    }
+  },
+  "required": ["idComment","contentComment","chapter","user"],
+  "additionalProperties": false
+}

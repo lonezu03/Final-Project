@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "UserUpdateRequest",
+  "type": "object",
+  "properties": {
+    "idUser": {
+      "type": "string"
+    },
+    "userNameUser": {
+      "type": ["string", "null"]
+    },
+    "passwordUser": {
+      "type": ["string", "null"],
+      "minLength": 8,
+      "maxLength": 255,
+      "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*])[^\\s]{1,}$"
+
+    },
+    "emailUser": {
+      "type": ["string", "null"],
+      "format": "email"
+    },
+    "dobUser": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "coin": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    }
+  },
+  "required": ["idUser"],
+  "additionalProperties": false
+}

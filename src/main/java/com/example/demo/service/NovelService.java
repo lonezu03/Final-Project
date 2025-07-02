@@ -63,6 +63,8 @@ public class NovelService {
 			novel.setImageNovel(uploadFileRespone.getUrl());
 			novel.setPublicIDNovel(uploadFileRespone.getPublic_id());
 		}
+
+
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
 	}
 

@@ -18,12 +18,10 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class NovelUpdateRequest {
 	String idNovel;
-	String publicIDNovel;
 	String nameNovel;
 	String descriptionNovel;
 	Integer totalChapter;
 	String rating;
 	Status statusNovel;
-	String imageNovel;
   
 }

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "CommentSearchSchema",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": ["string", "null"]
+    },
+    "contentOperator": {
+      "type": ["string", "null"],
+      "enum": ["EQUALS", "CONTAINS"]
+    },
+    "idUser": {
+      "type": ["string", "null"]
+    },
+    "idChapter": {
+      "type": ["string", "null"]
+    },
+    "idNovel": {
+      "type": ["string", "null"]
+    },
+    "minLikes": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "minDislikes": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "parentOnly": {
+      "type": ["boolean", "null"]
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "UserLoginRequest",
+  "type": "object",
+  "properties": {
+    "password": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    }
+  },
+  "required": ["email", "password"],
+  "additionalProperties": false
+}

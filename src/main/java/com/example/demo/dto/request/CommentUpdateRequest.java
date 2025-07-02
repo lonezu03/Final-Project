@@ -17,12 +17,9 @@ public class CommentUpdateRequest {
 	String idComment;
     
 	String contentComment;
-
-	Integer likeComment;
-
-	Integer dislikeComment;
 	
 	String chapter;
+	
 	String user;
 
 }

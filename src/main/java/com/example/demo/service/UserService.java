@@ -216,7 +216,7 @@ public UserRespone uploadUser(MultipartFile avatar, String email) throws IOExcep
 	if (user == null) {
 		throw new AppException(ErrorCode.USER_NOT_EXISTED);
 	}
-	if (user.getAvatarUser() != null) {
+	if (user.getAvatarUser() != null && !user.getAvatarUser().isEmpty()) {
 		uploadFileService.deleteImage(user.getPublicIdAvartarUser());
 	}
 	UploadFileRespone respone = uploadFileService.uploadFile(avatar);

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "NovelCreatationSchema",
+  "type": "object",
+  "properties": {
+    "nameNovel": {
+      "type": "string"
+    },
+    "descriptionNovel": {
+      "type":"string"
+    },
+    "totalChapter": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "rating": {
+      "type": ["string", "null"],
+      "default":0
+    },
+    "statusNovel": {
+      "type": "string",
+      "enum": ["COMPLETED","CONTINUE","DROP" ]  
+    }
+  },
+  "required": ["nameNovel","descriptionNovel","totalChapter","statusNovel"],
+  "additionalProperties": false
+}

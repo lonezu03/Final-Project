@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "CategoryUpdateSchema",
+  "type": "object",
+  "properties": {
+    "idCategory": {
+      "type": "string"
+    },
+    "nameCategory": {
+      "type": "string"
+    }
+  },
+  "required": ["idCategory","nameCategory"],
+  "additionalProperties": false
+}

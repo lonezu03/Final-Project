@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "AuthorUpdateSchema",
+  "type": "object",
+  "properties": {
+    "idAuthor": {
+      "type": "string"
+    },
+    "nameAuthor": {
+      "type": ["string", "null"]
+    },
+    "descriptionAuthor": {
+      "type": ["string", "null"]
+    },
+    "nationalityAuthor": {
+      "type": ["string", "null"]
+    },
+    "dobAuthor": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "dodAuthor": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "genderAuthor": {
+      "type": ["string", "null"],
+      "enum": ["MALE", "FEMALE"]  
+    },
+    "novels": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": ["idAuthor"],
+  "additionalProperties": false
+}

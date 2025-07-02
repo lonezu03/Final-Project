@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "CreateHistoryReadSchema",
+  "type": "object",
+  "properties": {
+    "idNovel": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "idChapter": {
+      "type": "string"
+    },
+    "readPlace": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "titleChapter": {
+      "type": ["string", "null"]
+    }
+  },
+  "required": ["idNovel", "email", "idChapter","readPlace"],
+  "additionalProperties": false
+}
