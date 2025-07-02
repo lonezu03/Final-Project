@@ -1,17 +1,23 @@
 package com.example.demo.service;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.dto.request.FollowNovelRequest;
 import com.example.demo.dto.request.NovelAddAuthorRequest;
 import com.example.demo.dto.request.NovelAddCategoryRequest;
 import com.example.demo.dto.request.NovelCreatationRequest;
@@ -23,14 +29,21 @@ import com.example.demo.dto.respone.NovelRespone;
 import com.example.demo.dto.respone.UploadFileRespone;
 import com.example.demo.entity.Author;
 import com.example.demo.entity.Category;
+import com.example.demo.entity.FollowNovel;
+import com.example.demo.entity.FollowNovelId;
+import com.example.demo.entity.HistoryNotify;
 import com.example.demo.entity.Novel;
+import com.example.demo.entity.User;
 import com.example.demo.enums.StringOperator;
 import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.INovelMapper;
 import com.example.demo.repository.IAuthorRepository;
 import com.example.demo.repository.ICategoryRepository;
+import com.example.demo.repository.IFollowNovelRepository;
+import com.example.demo.repository.IHistoryNotifyRepository;
 import com.example.demo.repository.INovelRepository;
+import com.example.demo.repository.IUserRepository;
 import com.example.demo.specification.NovelSpecification;
 
 import lombok.AccessLevel;
@@ -43,9 +56,14 @@ import lombok.experimental.FieldDefaults;
 public class NovelService {
 	INovelRepository novelRepository;
 	INovelMapper novelMapper;
+	IUserRepository userRepository;
 	IAuthorRepository authorRepository;
 	UploadFileService uploadFileService;
 	ICategoryRepository categoryRepository;
+	IFollowNovelRepository followNovelRepository;
+	IHistoryNotifyRepository historyNotifyRepository;
+
+	static Logger logger = LoggerFactory.getLogger(NovelService.class);
 
 	public List<NovelRespone> getAll() {
 		return novelRepository.findAll().stream().map(t -> novelMapper.toNovelRespone(t)).toList();
@@ -57,13 +75,12 @@ public class NovelService {
 
 	public NovelRespone createNovel(NovelCreatationRequest request, MultipartFile file) throws IOException {
 		Novel novel = novelMapper.toNovel(request);
-	
+
 		if (file != null && !file.isEmpty()) {
 			UploadFileRespone uploadFileRespone = uploadFileService.uploadFile(file);
 			novel.setImageNovel(uploadFileRespone.getUrl());
 			novel.setPublicIDNovel(uploadFileRespone.getPublic_id());
 		}
-
 
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
 	}
@@ -71,8 +88,6 @@ public class NovelService {
 	public NovelRespone updateNovel(NovelUpdateRequest request, MultipartFile file) throws IOException {
 
 		Novel novel = novelMapper.toNovelUpdate(request);
-
-		
 
 		if (file != null && !file.isEmpty()) {
 
@@ -138,7 +153,7 @@ public class NovelService {
 		if (novel.getCategories().remove(category)) {
 			novelRepository.save(novel);
 		}
-		
+
 		if (category.getNovels().remove(novel)) {
 			categoryRepository.save(category);
 		}
@@ -158,56 +173,93 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-	 @Transactional(readOnly = true) // Dùng readOnly để tối ưu hóa hiệu năng cho các truy vấn đọc
-		public Page<NovelRespone> searchNovels(NovelSearchCriteriaRequest criteria, Pageable pageable) {
-	        // Bắt đầu với một Specification không có điều kiện (luôn đúng)
-	        Specification<Novel> spec = Specification.where(null);
 
-	        // 1. Lọc theo tên truyện
-	        if (criteria.getNameNovel() != null && !criteria.getNameNovel().isEmpty()) {
-	            if (criteria.getNameOperator() == StringOperator.EQUALS) {
-	                spec = spec.and(NovelSpecification.hasName(criteria.getNameNovel()));
-	            } else {
-	                // Mặc định là tìm kiếm tương đối (CONTAINS)
-	                spec = spec.and(NovelSpecification.hasSimilarName(criteria.getNameNovel()));
-	            }
-	        }
-	        
-	        // (Bạn có thể thêm logic tương tự cho descriptionNovel ở đây nếu cần)
+	@Transactional(readOnly = true) // Dùng readOnly để tối ưu hóa hiệu năng cho các truy vấn đọc
+	public Page<NovelRespone> searchNovels(NovelSearchCriteriaRequest criteria, Pageable pageable) {
+		// Bắt đầu với một Specification không có điều kiện (luôn đúng)
+		Specification<Novel> spec = Specification.where(null);
 
-	        // 2. Lọc theo rating
-	        if (criteria.getRatingGreaterThanOrEqual() != null) {
-	            spec = spec.and(NovelSpecification.ratingGreaterThanOrEqual(criteria.getRatingGreaterThanOrEqual()));
-	        }
+		// 1. Lọc theo tên truyện
+		if (criteria.getNameNovel() != null && !criteria.getNameNovel().isEmpty()) {
+			if (criteria.getNameOperator() == StringOperator.EQUALS) {
+				spec = spec.and(NovelSpecification.hasName(criteria.getNameNovel()));
+			} else {
+				// Mặc định là tìm kiếm tương đối (CONTAINS)
+				spec = spec.and(NovelSpecification.hasSimilarName(criteria.getNameNovel()));
+			}
+		}
 
-	        // 3. Lọc theo tổng số chương
-	        if (criteria.getTotalChapterGreaterThan() != null) {
-	            spec = spec.and(NovelSpecification.totalChapterGreaterThan(criteria.getTotalChapterGreaterThan()));
-	        }
-	        if (criteria.getTotalChapterLessThan() != null) {
-	            spec = spec.and(NovelSpecification.totalChapterLessThan(criteria.getTotalChapterLessThan()));
-	        }
+		// (Bạn có thể thêm logic tương tự cho descriptionNovel ở đây nếu cần)
 
-	        // 4. Lọc theo danh sách trạng thái (statuses)
-	        if (criteria.getStatuses() != null && !criteria.getStatuses().isEmpty()) {
-	            spec = spec.and(NovelSpecification.hasStatusIn(criteria.getStatuses()));
-	        }
-	        
-	        // 5. Lọc theo danh sách tên tác giả
-	        if (criteria.getAuthorNames() != null && !criteria.getAuthorNames().isEmpty()) {
-	            spec = spec.and(NovelSpecification.byAuthorNames(criteria.getAuthorNames()));
-	        }
+		// 2. Lọc theo rating
+		if (criteria.getRatingGreaterThanOrEqual() != null) {
+			spec = spec.and(NovelSpecification.ratingGreaterThanOrEqual(criteria.getRatingGreaterThanOrEqual()));
+		}
 
-	        // 6. Lọc theo danh sách tên thể loại
-	        if (criteria.getCategoryNames() != null && !criteria.getCategoryNames().isEmpty()) {
-	            spec = spec.and(NovelSpecification.byCategoryNames(criteria.getCategoryNames()));
-	        }
+		// 3. Lọc theo tổng số chương
+		if (criteria.getTotalChapterGreaterThan() != null) {
+			spec = spec.and(NovelSpecification.totalChapterGreaterThan(criteria.getTotalChapterGreaterThan()));
+		}
+		if (criteria.getTotalChapterLessThan() != null) {
+			spec = spec.and(NovelSpecification.totalChapterLessThan(criteria.getTotalChapterLessThan()));
+		}
 
-	        // Thực thi truy vấn với Specification đã được xây dựng và có phân trang
-	        // Nhờ có @EntityGraph trong Repository, câu lệnh này sẽ được tối ưu để tránh N+1
-	        Page<Novel> novelsPage = novelRepository.findAll(spec, pageable);
-	        
-	        // Chuyển đổi từ Page<Novel> sang Page<NovelDTO> để trả về cho client
-	        return novelsPage.map(novel -> novelMapper.toNovelRespone(novel));
-	    }
+		// 4. Lọc theo danh sách trạng thái (statuses)
+		if (criteria.getStatuses() != null && !criteria.getStatuses().isEmpty()) {
+			spec = spec.and(NovelSpecification.hasStatusIn(criteria.getStatuses()));
+		}
+
+		// 5. Lọc theo danh sách tên tác giả
+		if (criteria.getAuthorNames() != null && !criteria.getAuthorNames().isEmpty()) {
+			spec = spec.and(NovelSpecification.byAuthorNames(criteria.getAuthorNames()));
+		}
+
+		// 6. Lọc theo danh sách tên thể loại
+		if (criteria.getCategoryNames() != null && !criteria.getCategoryNames().isEmpty()) {
+			spec = spec.and(NovelSpecification.byCategoryNames(criteria.getCategoryNames()));
+		}
+
+		// Thực thi truy vấn với Specification đã được xây dựng và có phân trang
+		// Nhờ có @EntityGraph trong Repository, câu lệnh này sẽ được tối ưu để tránh
+		// N+1
+		Page<Novel> novelsPage = novelRepository.findAll(spec, pageable);
+		
+	
+		Set<String> followedNovelIds;
+		
+		if (StringUtils.hasText(criteria.getIdUser())) {
+			List<FollowNovel> followNovels = followNovelRepository.findByUserIdUser(criteria.getIdUser());
+			final Set<String> ids = followNovels.stream()
+				.map(f -> f.getNovel().getIdNovel())
+				.collect(Collectors.toSet());
+			followedNovelIds = ids;
+		} else {
+			followedNovelIds = Collections.emptySet(); 
+		}
+
+
+		
+		// Chuyển đổi từ Page<Novel> sang Page<NovelDTO> để trả về cho client
+		return novelsPage.map(novel -> {
+			 Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
+
+			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
+			boolean isFollow = followedNovelIds.contains(novel.getIdNovel());
+			novelRespone.setIsFollow(isFollow);
+			novelRespone.setTotalFollower(finalTotalFollower);
+			return novelRespone;
+		});
+	}
+
+	public List<FollowNovel> getAllFollowNovel() {
+		logger.info("Gọi danh sách follow novel");
+		return followNovelRepository.findAll();
+	}
+
+	
+
+	public List<HistoryNotify> getAllHistoryNotify() {
+		return historyNotifyRepository.findAll();
+	}
+
 }

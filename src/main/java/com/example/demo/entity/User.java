@@ -61,8 +61,11 @@ public class User {
 	List<Comment> comments=new ArrayList<>();
 
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-	Set<CommentLike> likedComments = new HashSet<>();
+	List<HistoryNotify> historyNotifies = new ArrayList<>();
 
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	Set<CommentLike> likedComments = new HashSet<>();
+	
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	Set<CommentDislike> dislikedComments = new HashSet<>();
 }

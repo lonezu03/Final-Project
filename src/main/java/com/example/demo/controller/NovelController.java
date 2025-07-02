@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.dto.request.FollowNovelRequest;
 import com.example.demo.dto.request.NovelAddAuthorRequest;
 import com.example.demo.dto.request.NovelAddCategoryRequest;
 import com.example.demo.dto.request.NovelCreatationRequest;
@@ -27,6 +28,7 @@ import com.example.demo.dto.request.NovelSearchCriteriaRequest;
 import com.example.demo.dto.request.NovelUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.NovelRespone;
+import com.example.demo.service.FollowNovelService;
 import com.example.demo.service.NovelService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 public class NovelController {
 
 	NovelService novelService;
-
+	FollowNovelService followNovelService;
 	@GetMapping("/getAll")
 	@Operation(summary = "Lấy toàn bộ novel", description = "Thì có vậy hoi á lấy toàn bộ Novel")
 	public ApiRespone<List<NovelRespone>> getAll() {
@@ -110,5 +112,18 @@ public class NovelController {
 	@Operation(summary = "Xoá thể loại khỏi tiểu thuyết", description = "Xoá một thể loại khỏi danh sách thể loại của tiểu thuyết.")
 	public ApiRespone<NovelRespone> removeCategory(@RequestBody NovelRemoveCategoryRequest request) {
 		return ApiRespone.<NovelRespone>builder().result(novelService.removeCategory(request)).build();
+	}
+	
+	@PostMapping("/followNovel")
+	@Operation(summary = "Follow truyện", description = "User bấm theo dõi 1 truyện.")
+	public ApiRespone<Boolean> followNovel(@RequestBody FollowNovelRequest request){
+		try {
+			followNovelService.followNovel(request);
+			return ApiRespone.<Boolean>builder().result(true).build();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ApiRespone.<Boolean>builder().result(false).build();
+		}
 	}
 }

@@ -1,0 +1,62 @@
+package com.example.demo.service;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import com.example.demo.dto.request.FollowNovelRequest;
+import com.example.demo.entity.FollowNovel;
+import com.example.demo.entity.FollowNovelId;
+import com.example.demo.entity.Novel;
+import com.example.demo.entity.User;
+import com.example.demo.exception.AppException;
+import com.example.demo.exception.ErrorCode;
+import com.example.demo.repository.IFollowNovelRepository;
+import com.example.demo.repository.INovelRepository;
+import com.example.demo.repository.IUserRepository;
+
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+
+@Service
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public class FollowNovelService {
+
+	IUserRepository userRepository;
+	INovelRepository novelRepository;
+	IFollowNovelRepository followNovelRepository;
+	
+	public void followNovel(FollowNovelRequest request) {
+		User user = userRepository.findById(request.getIdUser())
+				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+		Novel novel = novelRepository.findById(request.getIdNovel())
+				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
+
+		Set<String> followedNovelIds;
+		if (StringUtils.hasText(request.getIdUser())) {
+			List<FollowNovel> followNovels = followNovelRepository.findByNovel_IdNovel(request.getIdNovel());
+			final Set<String> ids = followNovels.stream().map(f -> f.getUser().getIdUser()).collect(Collectors.toSet());
+			followedNovelIds = ids;
+		} else {
+			followedNovelIds = Collections.emptySet();
+		}
+
+		if (followedNovelIds.contains(request.getIdUser())) {
+			throw new AppException(ErrorCode.USER_ALREADY_FOLLOW_NOVEL);
+		}
+
+		FollowNovelId followNovelId = FollowNovelId.builder().idUser(request.getIdUser()).idNovel(request.getIdNovel())
+				.build();
+
+		FollowNovel followNovel = FollowNovel.builder().id(followNovelId).user(user).novel(novel).build();
+
+		followNovelRepository.save(followNovel);
+
+	}
+}

@@ -24,7 +24,10 @@ public class NovelRespone {
 	String rating;
 	String statusNovel;
 	String imageNovel;
-  
+	Integer totalFollower;
+	Boolean isFollow;
+	
+	
 	Set<AuthorResponeForNovel> authors ;
 	
 	Set<CategoryRespone> categories;

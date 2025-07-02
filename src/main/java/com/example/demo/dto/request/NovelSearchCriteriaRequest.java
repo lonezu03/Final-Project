@@ -31,6 +31,9 @@ public class NovelSearchCriteriaRequest {
     // Lưu ý: Kiểu dữ liệu nên là String để khớp với Specification
     private List<String> statuses;
 
+    //Dùng để kiểm tra người dùng đang follow truyện nào
+    private String idUser;
+    
     // Tương ứng với byAuthorIds (đã sửa thành lọc theo tên)
     // Tên trường nên là nameAuthors hoặc authorNames để rõ nghĩa
     private List<String> authorNames;

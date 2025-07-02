@@ -16,16 +16,23 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.dto.request.ChapterCreationRequest;
 import com.example.demo.dto.request.ChapterGetByIdNovelRequest;
 import com.example.demo.dto.request.ChapterUpdateRequest;
+import com.example.demo.dto.request.HistoryNotityCreationRequest;
 import com.example.demo.dto.request.IntrospectRequest;
 import com.example.demo.dto.respone.ChapterRespone;
 import com.example.demo.dto.respone.IntrospectRespone;
 import com.example.demo.entity.Chapter;
+import com.example.demo.entity.FollowNovel;
+import com.example.demo.entity.HistoryNotify;
 import com.example.demo.entity.Novel;
+import com.example.demo.entity.User;
 import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.IChapterMapper;
 import com.example.demo.repository.IChapterRepository;
+import com.example.demo.repository.IFollowNovelRepository;
+import com.example.demo.repository.IHistoryNotifyRepository;
 import com.example.demo.repository.INovelRepository;
+import com.example.demo.repository.IUserRepository;
 import com.nimbusds.jose.JOSEException;
 
 import jakarta.transaction.Transactional;
@@ -44,6 +51,9 @@ public class ChapterService {
 	INovelRepository novelRepository;
 	TextService textService;
 	AuthenticationService authenticationService;
+	IHistoryNotifyRepository historyNotifyRepository;
+	IUserRepository userRepository;
+	IFollowNovelRepository followNovelRepository;
 
 	private static final Logger logger = LoggerFactory.getLogger(ChapterService.class);
 
@@ -121,34 +131,18 @@ public class ChapterService {
 
 		chapter = chapterRepository.save(chapter);
 
-		// Path audioFilePath = textService.convert(chapter.getContentChapter());
-		//
-		// if (audioFilePath != null) {
-		// logger.info("Audio file generated at: {}", audioFilePath);
-		// try {
-		// // Đọc file thành byte[]
-		// byte[] audioBytes = Files.readAllBytes(audioFilePath);
-		// chapter.setAudioFile(audioBytes);
-		//
-		// // Cập nhật chapter với dữ liệu audio
-		// chapterRepository.save(chapter);
-		// logger.info("Successfully saved audio file to database for chapter ID: {}",
-		// chapter.getIdChapter());
-		//
-		// } catch (IOException e) {
-		// logger.error("Failed to read audio file from path: {}", audioFilePath, e);
-		// throw new AppException(ErrorCode.CANNOT_READ_AUDIO_FILE);
-		//// } finally {
-		//// // Dọn dẹp file tạm
-		//// Files.deleteIfExists(audioFilePath);
-		//// logger.info("Deleted temporary audio file: {}", audioFilePath);
-		// }
-		// } else {
-		// // Xử lý khi service không thể tạo được file audio
-		// logger.error("Failed to generate audio for chapter ID: {}",
-		// chapter.getIdChapter());
-		// // Ở đây bạn có thể không làm gì cả, hoặc ném lỗi tùy theo yêu cầu nghiệp vụ
-		// }
+		List<FollowNovel> followNovels = followNovelRepository.findByNovel_IdNovel(chapter.getNovel().getIdNovel());
+
+		for (FollowNovel followNovel : followNovels) {
+			try {
+				HistoryNotityCreationRequest historyNotityCreationRequest = HistoryNotityCreationRequest.builder()
+						.user(followNovel.getUser()).nameNovel(followNovel.getNovel().getNameNovel())
+						.titleChapter(chapter.getTitleChapter()).build();
+				createHistoryNotify(historyNotityCreationRequest);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 
 		return chapterMapper.toChapterRespone(chapter);
 	}
@@ -203,4 +197,19 @@ public class ChapterService {
 
 		return chapterMapper.toChapterRespone(chapterOgirin);
 	}
+
+	public Boolean createHistoryNotify(HistoryNotityCreationRequest request) {
+		try {
+
+			HistoryNotify historyNotify = HistoryNotify.builder().user(request.getUser()).dateNotify(null)
+					.nameNovel(request.getNameNovel()).titleChapter(request.getTitleChapter()).isNotify(false).build();
+
+			historyNotifyRepository.save(historyNotify);
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
 }
