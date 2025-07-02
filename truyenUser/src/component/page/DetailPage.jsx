@@ -7,7 +7,7 @@ import { getAllChapters } from '../../redux/chapterSlice'; // Action này lấy 
 
 import { FaStar, FaBookOpen, FaListUl, FaPlusSquare, FaRegHeart, FaInfoCircle, FaThList, FaAngleRight } from 'react-icons/fa';
 import GoToChapterInput from '../GoToChapterInput'; // Đường dẫn component
-import PaginationControls from '../PaginationControls'; // Đường dẫn component
+import PaginationControls from '../PaginationChapter'; // Đường dẫn component
 import ChapterListDisplay from '../ChapterListDisplay'; // Đường dẫn component
 
 const DetailPage = () => {

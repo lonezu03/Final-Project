@@ -20,7 +20,6 @@ import {
 
 // Dữ liệu cho các mục điều hướng trong sidebar
 const sidebarNavItems = [
-  { label: "Đăng truyện", icon: PenLine, href: "#" }, // Giữ nguyên hoặc đổi href nếu cần navigate
   {
     label: "Kho truyện",
     icon: Archive,
@@ -124,7 +123,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                   <Repeat size={16} className="mr-2 text-gray-500" /> Lịch sử giao dịch
                 </li>
                 <li
-                  onClick={() => handleNavigate('/user/settings')} // Ví dụ route
+                  onClick={() => handleNavigate('/user/profile')} // Ví dụ route
                   className="cursor-pointer hover:bg-stone-100 p-1.5 rounded flex items-center"
                 >
                   Cài đặt cá nhân

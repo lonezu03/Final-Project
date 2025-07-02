@@ -4,7 +4,7 @@ import { Provider, useDispatch, useSelector } from "react-redux";
 
 import store from "./redux/store";
 
-import { getAllNovels } from './redux/novelSlice';
+import { getAllNovels,searchNovels } from './redux/novelSlice';
 import { getAllCategories } from './redux/categorySlice';
 import { loadUserFromStorage } from './redux/userSlice';
 
@@ -19,7 +19,7 @@ import ReadingHistoryPage from './component/page/ReadingHistoryPage';
 import TransactionHistoryPage from './component/page/TransactionHistoryPage';
 import SearchResultsPage from './component/SearchResultsPage';
 import UserProfilePage from './component/page/UserProfilePage'; // Đổi tên route để khớp với đây
-
+import LibraryPage from './component/page/LibraryPage'; // Thêm trang Thư viện
 // AppContent bây giờ chỉ chịu trách nhiệm fetch dữ liệu không thay đổi thường xuyên
 const AppContent = () => {
   const dispatch = useDispatch();
@@ -30,6 +30,7 @@ const AppContent = () => {
     // Chỉ fetch nếu dữ liệu chưa tồn tại
     if (!novels || novels.length === 0) {
       dispatch(getAllNovels());
+      
     }
     if (!categories || categories.length === 0) {
       dispatch(getAllCategories());
@@ -47,8 +48,9 @@ const AppContent = () => {
         <Route path="/user/reading-history" element={<ReadingHistoryPage />} />
         <Route path="/user/transaction-history" element={<TransactionHistoryPage />} />
         <Route path="/search-results" element={<SearchResultsPage />} />
-        {/* THỐNG NHẤT ROUTE: Sử dụng /user/settings hoặc /user/profile */}
-        <Route path="/user/settings" element={<UserProfilePage />} />
+        <Route path="/user/profile" element={<UserProfilePage />} />
+        {/* Thêm route cho trang Thư viện */}
+        <Route path="/user/my-bookshelf" element={<LibraryPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>

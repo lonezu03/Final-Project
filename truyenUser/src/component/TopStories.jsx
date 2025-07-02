@@ -205,7 +205,7 @@ const TopStories = () => {
                       itemIdx === 2 ? "bg-orange-400 text-white" :
                       "bg-gray-200 text-gray-600"}`}
                   >
-                    {itemIdx + 2} {/* Số thứ tự bắt đầu từ 2 */}
+                    {itemIdx + 2} 
                   </span>
                   <Link to={`/novel/${item.id}`} className="truncate hover:text-blue-600 hover:underline" title={item.name}>
                     {item.name}

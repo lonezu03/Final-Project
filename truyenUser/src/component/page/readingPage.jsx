@@ -4,11 +4,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getNovelById } from '../../redux/novelSlice';
 import {
-  getNovelChaptersList, // Bạn vẫn đang import action này
+  getNovelChaptersList, 
   getChapterContentById,
-  clearChapterState
+  clearChapterState,
+  increaseChapterView, 
+
 } from '../../redux/chapterSlice';
-import { createHistory } from '../../redux/userSlice';
+import { createHistory, getAllHistoryByUser  } from '../../redux/userSlice';
 import apiClient from '../../services/api'; // Đảm bảo đường dẫn này đúng
 
 
@@ -51,7 +53,7 @@ const ReadingPage = () => {
 
   } = useSelector((state) => state.chapters);
 
-  const currentUser = useSelector((state) => state.user?.currentUser || null);
+  const {currentUser,userHistory} = useSelector((state) => state.user || {});
 
   const [showChapterListDropdown, setShowChapterListDropdown] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -75,139 +77,132 @@ const ReadingPage = () => {
   const pagePaddingTop = `${NAVBAR_MAIN_HEIGHT_PX}px`;
   const pagePaddingBottom = showAudioPlayer ? `${AUDIO_PLAYER_ACTUAL_HEIGHT_PX}px` : '0px';
   const readingHeaderStickyTop = `${NAVBAR_MAIN_HEIGHT_PX}px`;
+  const lastKnownPosition = useRef(0);
 
   const getPositionKey = () => `reading_position_${novelId}_${chapterId}`;
 
-  // Các useEffects không đổi...
   useEffect(() => {
     localStorage.setItem('readingFontSize', fontSize.toString());
     localStorage.setItem('readingLineHeight', lineHeight.toString());
     localStorage.setItem('readingFontFamily', fontFamily);
     localStorage.setItem('readingTheme', theme);
   }, [fontSize, lineHeight, fontFamily, theme]);
-
+  // Effect #1: Tải dữ liệu chính khi vào trang (chạy 1 lần hoặc khi novelId đổi)
+  // Effect #1: Tải dữ liệu chính khi vào trang (chạy 1 lần hoặc khi novelId đổi)
   useEffect(() => {
     if (novelId) {
       dispatch(getNovelById(novelId));
-      // Gọi getNovelChaptersList để lấy danh sách cho dropdown
       dispatch(getNovelChaptersList(novelId));
     }
-    return () => dispatch(clearChapterState());
   }, [dispatch, novelId]);
 
+  // Effect #2: Xử lý khi vào một chương MỚI (khi chapterId đổi)
   useEffect(() => {
     if (novelId && chapterId) {
-      // getChapterContentById sẽ lấy nội dung chi tiết
+      // 1. Tăng lượt xem
+      dispatch(increaseChapterView(chapterId));
+      
+      // 2. Tải nội dung chương
       dispatch(getChapterContentById({ novelId, chapterId }));
-      setShowChapterListDropdown(false);
-      setShowSettings(false);
+      
+      // 3. Tải lịch sử đọc (nếu đã đăng nhập)
+      if (currentUser?.idUser) {
+        dispatch(getAllHistoryByUser(currentUser.idUser));
+      }
+      
+      // 4. Reset giao diện
       if (contentRef.current) contentRef.current.scrollTop = 0;
-      localStorage.setItem(`lastRead_${novelId}`, chapterId);
-      setProcessedChapterContent(null);
+      lastKnownPosition.current = 0; // Reset vị trí đã biết
+      setShowContinueDialog(false);
     }
-  }, [dispatch, novelId, chapterId]);
+  }, [dispatch, novelId, chapterId, currentUser]);
 
-  useEffect(() => { // Lưu vị trí cuộn
-
-    const scrollContainer = contentRef.current;
-    if (!scrollContainer) return;
-    let debounceTimer;
-    const handleScroll = () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        if (scrollContainer.scrollTop > 100) {
-          localStorage.setItem(getPositionKey(), scrollContainer.scrollTop.toString());
-        }
-      }, 1000);
-    };
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
-      clearTimeout(debounceTimer);
-    };
-
-  }, [novelId, chapterId]);
+  // Effect #3: Hỏi "Đọc tiếp?" - Logic duy nhất, dựa vào Redux
   useEffect(() => {
-    if (!loadingContent && currentChapterContent && novelId && chapterId) {
-      const key = getPositionKey();
-      const positionString = localStorage.getItem(key);
-      if (positionString) {
-        const scrollPos = parseInt(positionString, 10);
-        if (!isNaN(scrollPos) && scrollPos > 0) {
-          setSavedScrollPosition(scrollPos);
-          setShowContinueDialog(true);
-        } else {
-          localStorage.removeItem(key);
-        }
+    if (currentUser && userHistory.length > 0 && !loadingContent && currentChapterContent) {
+      const historyForThisChapter = userHistory.find(
+        (h) => h.id?.idNovel === novelId && String(h.idChapter) === chapterId
+      );
+      if (historyForThisChapter && historyForThisChapter.readPlace > 100) {
+        setSavedScrollPosition(historyForThisChapter.readPlace);
+        setShowContinueDialog(true);
       }
     }
-  }, [loadingContent, currentChapterContent, novelId, chapterId]);
+  }, [userHistory, loadingContent, currentChapterContent, currentUser, novelId, chapterId]);
 
+  // Effect #4: Theo dõi cuộn và lưu vị trí đọc (duy nhất và hợp nhất)
   useEffect(() => {
-    const getFinalReadPlace = () => {
-        const key = getPositionKey();
-        const lastKnownReadPlaceString = localStorage.getItem(key);
-        const currentScrollTop = contentRef.current ? contentRef.current.scrollTop : 0;
-        const positionFromStorage = lastKnownReadPlaceString ? parseInt(lastKnownReadPlaceString, 10) : 0;
-        return currentScrollTop > 50 ? currentScrollTop : (positionFromStorage > 0 ? positionFromStorage : 0);
-    };
-    const prepareHistoryPayload = (readPlace) => {
-        if (!currentUser || !novelId || !chapterId || !currentChapterContent?.titleChapter || readPlace <= 0) {
-            return null;
-        }
-        return {
-            idNovel: novelId,
-            email: currentUser.emailUser,
-            idChapter: Number(chapterId),
-            readPlace: Number(readPlace),
-            titleChapter: currentChapterContent.titleChapter,
-        };
-    };
-    const savePositionWithBeacon = () => {
-        const finalReadPlace = getFinalReadPlace();
-        const historyPayload = prepareHistoryPayload(finalReadPlace);
-        if (historyPayload) {
-            const blob = new Blob([JSON.stringify(historyPayload)], { type: 'application/json; charset=UTF-8' });
-            const baseURL = (apiClient && apiClient.defaults && apiClient.defaults.baseURL)
-                              ? apiClient.defaults.baseURL
-                              : "https://truongthaiduongphanthanhvu.onrender.com";
-            const url = `${baseURL}/user/createHistory`;
-            try {
-                if (navigator.sendBeacon && navigator.sendBeacon(url, blob)) {
-                    console.log("Lịch sử đọc đã được xếp hàng (sendBeacon):", historyPayload);
-                    localStorage.removeItem(getPositionKey());
-                } else {
-                    console.warn("sendBeacon không được hỗ trợ hoặc thất bại. Payload:", historyPayload);
-                }
-            } catch (e) {
-                console.error("Lỗi khi sử dụng sendBeacon:", e, "Payload:", historyPayload);
-            }
-        }
-    };
-    const savePositionWithDispatch = () => {
-        const finalReadPlace = getFinalReadPlace();
-        const historyPayload = prepareHistoryPayload(finalReadPlace);
-        if (historyPayload) {
-            dispatch(createHistory(historyPayload))
-            .unwrap()
-            .then(() => {
-                console.log("Lịch sử đọc đã được gửi (dispatch):", historyPayload);
-                localStorage.removeItem(getPositionKey());
-            })
-            .catch((error) => {
-                console.error("Lỗi khi gửi lịch sử đọc (dispatch):", error);
-            });
-        }
-    };
-    window.addEventListener('beforeunload', savePositionWithBeacon);
-    window.addEventListener('pagehide', savePositionWithBeacon);
-    return () => {
-      window.removeEventListener('beforeunload', savePositionWithBeacon);
-      window.removeEventListener('pagehide', savePositionWithBeacon);
-      savePositionWithDispatch();
-    };
+  const scrollContainer = contentRef.current;
+  if (!scrollContainer) return;
 
-  }, [novelId, chapterId, currentUser, dispatch, currentChapterContent]);
+  // A. Theo dõi sự kiện cuộn để cập nhật vị trí đọc liên tục
+  let debounceTimer;
+  const handleScroll = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const currentPosition = Math.round(scrollContainer.scrollTop);
+      if (currentPosition > 100) {
+        lastKnownPosition.current = currentPosition;
+      }
+    }, 500); // Debounce để tối ưu hiệu suất
+  };
+
+  // B. Logic lưu lịch sử vào API khi rời trang
+  const saveHistoryToApi = () => {
+    if (!currentUser || !currentChapterContent?.titleChapter) return;
+    
+    const finalReadPlace = lastKnownPosition.current;
+    console.log('Saving history with payload:', {
+          idNovel: currentNovel.idNovel,
+          email: currentUser.emailUser,
+          idChapter: Number(chapterId),
+          readPlace: finalReadPlace,
+          titleChapter: currentChapterContent.titleChapter,
+    });
+    if (finalReadPlace > 100) {
+      const payload = {
+        idNovel,
+        email: currentUser.emailUser,
+        idChapter: Number(chapterId),
+        readPlace: finalReadPlace,
+        titleChapter: currentChapterContent.titleChapter,
+      };
+
+      // Gửi lịch sử đọc qua API (sendBeacon nếu có thể)
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json; charset=UTF-8' });
+        const url = `${apiClient.defaults.baseURL}/user/createHistory`;
+        if (navigator.sendBeacon(url, blob)) {
+          console.log("History sent via Beacon:", payload);
+          return;
+        }
+      }
+
+      // Dự phòng dùng dispatch nếu sendBeacon thất bại
+      dispatch(createHistory(payload))
+        .unwrap()
+        .then((response) => {
+          console.log('API response:', response);
+        })
+        .catch((error) => {
+          console.error('API error:', error);
+        });      
+      console.log("History sent via dispatch:", payload);
+    }
+  };
+
+  // Gán các sự kiện
+  scrollContainer.addEventListener('scroll', handleScroll);
+  window.addEventListener('pagehide', saveHistoryToApi);
+
+  // Hàm dọn dẹp khi component unmount (chuyển chương/rời trang)
+  return () => {
+    scrollContainer.removeEventListener('scroll', handleScroll);
+    window.removeEventListener('pagehide', saveHistoryToApi);
+    clearTimeout(debounceTimer);
+    saveHistoryToApi();  // Gửi lịch sử cuối khi đóng trang
+  };
+}, [novelId, chapterId, currentUser, dispatch, currentChapterContent]);
   useEffect(() => {
     if (currentChapterContent?.contentChapter && mainContentAreaRef.current && canvasContainerWidth > 0) {
       const originalText = currentChapterContent.contentChapter;
@@ -299,9 +294,7 @@ const ReadingPage = () => {
       setTimeout(() => { if (contentRef.current) contentRef.current.scrollTop = savedScrollPosition; }, 100);
     }
     setShowContinueDialog(false);
-    localStorage.removeItem(getPositionKey());
   };
-
   const handleCancelContinue = () => {
     setShowContinueDialog(false);
     localStorage.removeItem(getPositionKey());

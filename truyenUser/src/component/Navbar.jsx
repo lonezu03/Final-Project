@@ -58,7 +58,7 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isSettingsSidebarOpen, setSettingsSidebarOpen] = useState(false);
-   const [currentUser, setCurrentUser] = useState(null); // Sẽ lấy từ Redux store
+  const currentUser = useSelector((state) => state.user?.currentUser || null);
 const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
 
   const navigate = useNavigate();
@@ -191,13 +191,7 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
                 placeholder="Tìm kiếm..."
               />
             )}
-             <button
-          onClick={() => setFilterSidebarOpen(true)}
-          className="p-2 rounded-md text-white hover:bg-blue-700 focus:outline-none"
-          title="Bộ lọc"
-        >
-          <FilterIcon size={20} />
-        </button>
+            
             <Search
               className="text-lg sm:text-xl cursor-pointer hover:text-gray-300 absolute right-0 top-1/2 transform -translate-y-1/2 mr-2"
               size={18}
@@ -214,8 +208,8 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
           {/* User & Settings Icons - Sử dụng displayUser (ưu tiên Redux currentUser) */}
           {displayUser ? (
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <span className="text-xs sm:text-sm hidden sm:block max-w-[100px] truncate" title={displayUser.displayName || displayUser.emailUser || displayUser.email}>
-                {displayUser.displayName || displayUser.emailUser?.split('@')[0] || displayUser.email?.split('@')[0]}
+              <span className="text-xs sm:text-sm hidden sm:block max-w-[100px] truncate" title={currentUser.userNameUser}>
+                {currentUser.userNameUser}
               </span>
               <button onClick={handleLogout} title="Đăng xuất" className="hover:text-red-400 transition-colors">
                 <LogOut size={18} />
@@ -229,6 +223,13 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
               title="Đăng nhập / Đăng ký"
             />
           )}
+           <button
+          onClick={() => setFilterSidebarOpen(true)}
+          className="p-2 rounded-md text-white hover:bg-blue-700 focus:outline-none"
+          title="Bộ lọc"
+        >
+          <FilterIcon size={20} />
+        </button>
           <Settings
             className="text-lg sm:text-xl cursor-pointer hover:text-gray-300"
             size={20}

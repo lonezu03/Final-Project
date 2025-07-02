@@ -124,15 +124,30 @@ export const getChapterContentById = createAsyncThunk(
     }
   }
 );
-
-// ... (Các action thunk khác như createChapter, etc. giữ nguyên) ...
-export const createChapter = createAsyncThunk(/* ... */);
+//api tăng view
+export const increaseChapterView = createAsyncThunk(
+  'chapters/increaseView',
+  async (idChapter, { rejectWithValue }) => {
+    try {
+      // Gọi API để tăng lượt xem
+      const response = await apiClient.get(`/chapter/increaseViewChapter/${idChapter}`);
+      if (response.data && response.data.code === 1000) {
+        // Trả về số lượt xem mới của chương
+        return response.data.result;
+      }
+      return rejectWithValue(response.data?.message || 'Failed to increase view for chapter');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Error increasing chapter view');
+    }
+  }
+);
 
 
 const initialState = {
   chapters: [], // Danh sách chương đầy đủ (từ getAllChapters)
   chaptersForReadingPageDropdown: [], // Danh sách đã map cho dropdown (từ getNovelChaptersList)
   currentChapterContent: null, // Object chương hiện tại đang đọc
+  chapterViews: {},
 
   loadingAllChapters: false,
   errorAllChapters: null,
@@ -195,6 +210,21 @@ const chapterSlice = createSlice({
         state.loadingSpecificContent = false;
         state.errorSpecificContent = action.payload;
         state.currentChapterContent = null;
+      })
+      // increaseChapterView
+       .addCase(increaseChapterView.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(increaseChapterView.fulfilled, (state, action) => {
+        state.loading = false;
+        // Cập nhật số lượt xem của chapter sau khi tăng
+        const { idChapter, views } = action.payload;
+        state.chapterViews[idChapter] = views; // Cập nhật thông tin lượt xem
+      })
+      .addCase(increaseChapterView.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });

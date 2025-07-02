@@ -129,18 +129,13 @@ export const searchNovels = createAsyncThunk(
         queryString = params.toString() ? `?${params.toString()}` : '';
       }
 
-      // Giả sử API search này là public và không cần token.
-      // Nếu cần token, đổi thành apiClient.post và đường dẫn tương đối.
-      // Endpoint có thể là /novels/search hoặc /novel/search tùy backend
+
       const response = await apiClient.post(`${publicApiBaseNovel}/search${queryString}`, searchCriteria || {}, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      // *** SỬA ĐIỀU KIỆN KIỂM TRA RESPONSE Ở ĐÂY ***
-      // Kiểm tra trực tiếp sự tồn tại của các trường cần thiết trong response.data
-      // (vì response của bạn không có "code" và "result" bao ngoài)
       if (response.data && Array.isArray(response.data.content) && response.data.pageable) {
         console.log("Thunk searchNovels returning fulfilled with:", response.data);
         return response.data; // Trả về toàn bộ object response.data (chứa content, pageable, ...)
@@ -155,7 +150,37 @@ export const searchNovels = createAsyncThunk(
     }
   }
 );
+export const fetchHotNovels = createAsyncThunk(
+  'novels/fetchHot', // Đổi tên action type
+  async ({ page, size }, { rejectWithValue }) => {
+    try {
+      // Payload cho API search
+      const searchCriteria = {}; // Không có điều kiện tìm kiếm cụ thể
+      const paginationAndSortParams = {
+        page,
+        size,
+        sort: ['rating,desc'] // Sắp xếp theo rating giảm dần
+      };
 
+      // Xây dựng query string
+      const params = new URLSearchParams();
+      params.append('page', paginationAndSortParams.page);
+      params.append('size', paginationAndSortParams.size);
+      params.append('sort', paginationAndSortParams.sort);
+      const queryString = `?${params.toString()}`;
+
+      // Gọi API search
+      const response = await apiClient.post(`/novel/search${queryString}`, searchCriteria);
+      
+      if (response.data && Array.isArray(response.data.content)) {
+        return response.data; // Trả về toàn bộ object phân trang { content, totalPages, number, ... }
+      }
+      return rejectWithValue('Dữ liệu trả về không hợp lệ.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi tải truyện hot.');
+    }
+  }
+);
 
 
 // --- SLICE DEFINITION ---
@@ -173,7 +198,14 @@ const initialPaginationState = {
 
 const initialState = {
   novels: [], // << State mới để lưu danh sách truyện gốc từ getAllNovels
-  searchedNovels: [], // << State mới cho kết quả tìm kiếm
+  searchedNovels: [], 
+  hotNovels: {
+    list: [],
+    totalPages: 0,
+    currentPage: 0,
+    loading: false,
+    error: null
+  },
   currentNovel: null,
   loadingAll: false, // Loading cho getAllNovels
   searchLoading: false, // Loading cho searchNovels
@@ -277,7 +309,22 @@ const novelSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
+      // --- fetchHotNovels ---
+      .addCase(fetchHotNovels.pending, (state) => {
+        state.hotNovels.loading = true;
+        state.hotNovels.error = null;
+      })
+      .addCase(fetchHotNovels.fulfilled, (state, action) => {
+        state.hotNovels.loading = false;
+        state.hotNovels.list = action.payload.content;
+        state.hotNovels.totalPages = action.payload.totalPages;
+        state.hotNovels.currentPage = action.payload.number;
+      })
+      .addCase(fetchHotNovels.rejected, (state, action) => {
+        state.hotNovels.loading = false;
+        state.hotNovels.error = action.payload;
+        state.hotNovels.list = [];
+      })
       // --- deleteNovel ---
       .addCase(deleteNovel.pending, (state) => {
         state.loading = true;
@@ -305,9 +352,16 @@ const novelSlice = createSlice({
       state.searchLoading = false;
       state.error = null;
       if (action.payload && Array.isArray(action.payload.content)) {
-          state.searchedNovels = action.payload.content; // Cập nhật state mới
-          state.pagination = { /* ...cập nhật pagination... */ };
-      } else { /* ...xử lý payload không hợp lệ... */ }
+          state.searchedNovels = action.payload.content;
+          state.pagination = {
+            pageNumber: action.payload.number,
+            pageSize: action.payload.size,
+            totalPages: action.payload.totalPages,
+            totalElements: action.payload.totalElements,
+            last: action.payload.last,
+            first: action.payload.first,
+          };
+        }
     })
     .addCase(searchNovels.rejected, (state, action) => {
       state.searchLoading = false;
@@ -315,6 +369,7 @@ const novelSlice = createSlice({
       state.searchedNovels = []; // Reset state mới
       state.pagination = initialPaginationState;
     });
+    
   }
 });
 
