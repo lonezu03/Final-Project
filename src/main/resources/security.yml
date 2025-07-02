@@ -12,6 +12,7 @@ app:
       - GET:/user/login
       - GET:/user/loginByEmail
       - GET:/novel/getAll
+      - POST:/novel/search/**
       - POST:/chapter/getAll
       - GET:/chapter/increaseViewChapter/**
       - GET:/category/getAll
