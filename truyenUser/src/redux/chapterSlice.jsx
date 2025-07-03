@@ -1,0 +1,245 @@
+// src/redux/chapterSlice.js
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import apiClient from '../services/api'; // Luôn dùng apiClient vì API có thể yêu cầu token
+import { rooturl } from './element'; // Import đường dẫn gốc từ file element
+const API_BASE_CHAPTER = "/chapter"; // Base URL tương đối
+
+// Action để lấy danh sách chương đầy đủ (có thể có content nếu có token)
+// Sẽ được dùng bởi DetailPage và được gọi lại bởi getChapterContentById nếu cần
+export const getAllChapters = createAsyncThunk(
+  'chapters/getAllChapters',
+  async (novelId, { rejectWithValue, getState }) => {
+    try {
+      const token = getState().user.token;
+      const payload = { idNovel: novelId };
+      if (token) {
+        payload.token = token;
+      }
+      const response = await apiClient.post(`${API_BASE_CHAPTER}/getAll`, payload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
+        const chapters = response.data.result;
+        // Backend PHẢI trả về idChapter và indexChapter
+        if (chapters.length > 0 && (chapters[0].idChapter === undefined || chapters[0].indexChapter === undefined)) {
+            return rejectWithValue('Dữ liệu chương từ API không có idChapter hoặc indexChapter.');
+        }
+        return chapters.sort((a, b) => (Number(a.indexChapter) || 0) - (Number(b.indexChapter) || 0));
+      }
+      return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách chương.');
+    }
+  }
+);
+
+// Action để lấy danh sách chương cho dropdown của ReadingPage
+// Sửa lại để nó cũng gửi token, đảm bảo nhận được idChapter và indexChapter
+export const getNovelChaptersList = createAsyncThunk(
+  'chapters/getNovelChaptersList',
+
+  async (novelId, { rejectWithValue, getState }) => { // Thêm getState
+    try {
+      const token = getState().user.token; // Lấy token
+      const payload = {
+        idNovel: novelId,
+      };
+      if (token) {
+        payload.token = token; // Gửi token nếu có
+      }
+
+      const response = await apiClient.post(`${API_BASE_CHAPTER}/getAll`, payload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
+        const chaptersFromApi = response.data.result;
+
+
+        if (chaptersFromApi.length > 0 && (chaptersFromApi[0].idChapter === undefined || chaptersFromApi[0].indexChapter === undefined)) {
+            console.error("API /chapter/getAll VẪN KHÔNG TRẢ VỀ idChapter hoặc indexChapter đầy đủ!", chaptersFromApi[0]);
+            return rejectWithValue('Dữ liệu chương từ API không có idChapter hoặc indexChapter.');
+        }
+
+        const sortedChapters = [...chaptersFromApi].sort((a, b) => (Number(a.indexChapter) || 0) - (Number(b.indexChapter) || 0));
+
+        // Map để tạo ra định dạng chuẩn cho dropdown
+        return sortedChapters.map(chap => ({
+          idChapter: String(chap.idChapter),
+          // Sử dụng indexChapter + 1 để hiển thị số chương cho người dùng
+          chapterNumber: (chap.indexChapter !== null && chap.indexChapter !== undefined) ? Number(chap.indexChapter) + 1 : 'N/A',
+          titleChapter: chap.titleChapter || "Chưa có tiêu đề"
+        }));
+      }
+      return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương cho dropdown.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách chương cho dropdown.');
+    }
+  }
+);
+
+// Action để lấy nội dung chi tiết của một chương
+export const getChapterContentById = createAsyncThunk(
+  'chapters/getChapterContentById',
+  async ({ novelId, chapterId }, { getState, dispatch, rejectWithValue }) => {
+    const state = getState();
+    const token = state.user.token;
+
+    // 1. Kiểm tra trong state.chapters đã có nội dung chưa
+    const existingChapterWithContent = state.chapters.chapters.find(
+      chap => String(chap.idChapter) === String(chapterId) && chap.novelId === novelId && chap.contentChapter
+    );
+    if (existingChapterWithContent) {
+      return existingChapterWithContent;
+    }
+
+    // 2. Nếu chưa có content, fetch lại toàn bộ chương của novel đó KÈM TOKEN
+    try {
+      // Gọi getAllChapters vì nó đã có logic gửi token
+      const actionResult = await dispatch(getAllChapters(novelId));
+
+      if (getAllChapters.fulfilled.match(actionResult)) {
+        const chaptersFetchedWithContent = actionResult.payload;
+        const targetChapter = chaptersFetchedWithContent.find(chap => String(chap.idChapter) === String(chapterId));
+
+        if (targetChapter) {
+            // Nếu có token mà backend vẫn không trả content, trả về thông báo lỗi trong content
+            if (token && !targetChapter.contentChapter) {
+                 return { ...targetChapter, contentChapter: "Lỗi: Không thể tải nội dung chương (token có thể không hợp lệ)." };
+            }
+            // Nếu không có token, trả về thông báo yêu cầu đăng nhập
+            if (!token && !targetChapter.contentChapter) {
+                 return { ...targetChapter, contentChapter: "Vui lòng đăng nhập để đọc nội dung chương này." };
+            }
+            return targetChapter;
+        } else {
+          return rejectWithValue(`Chương ${chapterId} không tìm thấy sau khi fetch.`);
+        }
+      } else {
+        return rejectWithValue(actionResult.payload || 'Không thể tải nội dung chương.');
+      }
+    } catch (error) {
+      return rejectWithValue(error.message || 'Lỗi khi tải nội dung chương.');
+    }
+  }
+);
+//api tăng view
+export const increaseChapterView = createAsyncThunk(
+  'chapters/increaseView',
+  async (idChapter, { rejectWithValue }) => {
+    try {
+      // Gọi API để tăng lượt xem
+      const response = await apiClient.get(`/chapter/increaseViewChapter/${idChapter}`);
+      if (response.data && response.data.code === 1000) {
+        // Trả về số lượt xem mới của chương
+        return response.data.result;
+      }
+      return rejectWithValue(response.data?.message || 'Failed to increase view for chapter');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Error increasing chapter view');
+    }
+  }
+);
+
+
+const initialState = {
+  chapters: [], // Danh sách chương đầy đủ (từ getAllChapters)
+  chaptersForReadingPageDropdown: [], // Danh sách đã map cho dropdown (từ getNovelChaptersList)
+  currentChapterContent: null, // Object chương hiện tại đang đọc
+  chapterViews: {},
+
+  loadingAllChapters: false,
+  errorAllChapters: null,
+  loadingDropdownChapters: false,
+  errorDropdownChapters: null,
+  loadingSpecificContent: false,
+  errorSpecificContent: null,
+};
+
+const chapterSlice = createSlice({
+  name: 'chapters',
+  initialState,
+  reducers: {
+    clearChapterState: (state) => {
+      // Reset tất cả về trạng thái ban đầu
+      Object.assign(state, initialState);
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      // getAllChapters
+      .addCase(getAllChapters.pending, (state) => { state.loadingAllChapters = true; state.errorAllChapters = null; })
+      .addCase(getAllChapters.fulfilled, (state, action) => {
+        state.loadingAllChapters = false;
+        // Gán novelId vào mỗi chapter để tiện cho việc kiểm tra sau này
+        state.chapters = action.payload.map(chap => ({...chap, novelId: action.meta.arg}));
+        state.errorAllChapters = null;
+      })
+      .addCase(getAllChapters.rejected, (state, action) => {
+        state.loadingAllChapters = false; state.errorAllChapters = action.payload; state.chapters = [];
+      })
+
+      // getNovelChaptersList
+      .addCase(getNovelChaptersList.pending, (state) => {
+        state.loadingDropdownChapters = true;
+        state.errorDropdownChapters = null;
+      })
+      .addCase(getNovelChaptersList.fulfilled, (state, action) => {
+        state.loadingDropdownChapters = false;
+        state.chaptersForReadingPageDropdown = action.payload; // payload đã được map
+        state.errorDropdownChapters = null;
+      })
+      .addCase(getNovelChaptersList.rejected, (state, action) => {
+        state.loadingDropdownChapters = false;
+        state.errorDropdownChapters = action.payload;
+        state.chaptersForReadingPageDropdown = [];
+      })
+
+      // getChapterContentById
+      .addCase(getChapterContentById.pending, (state) => {
+        state.loadingSpecificContent = true;
+        state.errorSpecificContent = null;
+      })
+      .addCase(getChapterContentById.fulfilled, (state, action) => {
+        state.loadingSpecificContent = false;
+        state.currentChapterContent = action.payload;
+        state.errorSpecificContent = null;
+      })
+      .addCase(getChapterContentById.rejected, (state, action) => {
+        state.loadingSpecificContent = false;
+        state.errorSpecificContent = action.payload;
+        state.currentChapterContent = null;
+      })
+      // increaseChapterView
+       .addCase(increaseChapterView.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(increaseChapterView.fulfilled, (state, action) => {
+        state.loading = false;
+        // Cập nhật số lượt xem của chapter sau khi tăng
+        const { idChapter, views } = action.payload;
+        state.chapterViews[idChapter] = views; // Cập nhật thông tin lượt xem
+      })
+      .addCase(increaseChapterView.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
+  },
+});
+
+export const { clearChapterState } = chapterSlice.actions;
+
+// Selectors (Giữ nguyên tên để các component khác không bị lỗi)
+export const selectAllChaptersForNovel = (state) => state.chapters.chapters;
+export const selectChaptersForReadingDropdown = (state) => state.chapters.chaptersForReadingPageDropdown;
+export const selectCurrentChapterContent = (state) => state.chapters.currentChapterContent;
+export const selectLoadingAllChapters = (state) => state.chapters.loadingAllChapters;
+export const selectErrorAllChapters = (state) => state.chapters.errorAllChapters;
+export const selectLoadingDropdownChapters = (state) => state.chapters.loadingDropdownChapters;
+export const selectErrorDropdownChapters = (state) => state.chapters.errorDropdownChapters;
+export const selectLoadingSpecificContent = (state) => state.chapters.loadingSpecificContent;
+export const selectErrorSpecificContent = (state) => state.chapters.errorSpecificContent;
+
+export default chapterSlice.reducer;

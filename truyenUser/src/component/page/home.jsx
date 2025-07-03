@@ -1,8 +1,9 @@
 import React from 'react';
 import TopStories from '../TopStories';
 import Footer from '../Footer';
-import HotStories from '../HotStories';
+import HotStories from '../Stories';
 import StorySlider from '../StorySlider';
+
 const Home = () => {
     return (
         <div>
@@ -12,6 +13,7 @@ const Home = () => {
             <Footer />
             {/* Other components can be added here */}
         </div>
+
     );
 };
 
