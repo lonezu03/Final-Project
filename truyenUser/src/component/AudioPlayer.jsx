@@ -227,16 +227,14 @@ const AudioPlayer = ({
         {/* 3. Bên phải: Hẹn giờ, Giọng đọc, Chuyển chế độ Sáng/Tối */}
         <div className="flex items-center space-x-1 sm:space-x-1.5 flex-shrink-0">
           <div className="relative">
-            <button className="text-xs px-1 py-0.5 sm:px-2 sm:py-1 border border-black/60 rounded hover:bg-black/10 transition-colors flex items-center">
+            {/* <button className="text-xs px-1 py-0.5 sm:px-2 sm:py-1 border border-black/60 rounded hover:bg-black/10 transition-colors flex items-center">
               Hẹn giờ <span className="ml-0.5 sm:ml-1 tiny-arrow">▾</span>
-            </button>
-            {/* Dropdown Hẹn giờ sẽ được hiển thị ở đây */}
+            </button> */}
           </div>
           <div className="relative">
-            <button className="text-xs px-1 py-0.5 sm:px-2 sm:py-1 border border-black/60 rounded hover:bg-black/10 transition-colors flex items-center">
+            {/* <button className="text-xs px-1 py-0.5 sm:px-2 sm:py-1 border border-black/60 rounded hover:bg-black/10 transition-colors flex items-center">
               Giọng đọc <span className="ml-0.5 sm:ml-1 tiny-arrow">▾</span>
-            </button>
-            {/* Dropdown Giọng đọc sẽ được hiển thị ở đây */}
+            </button> */}
           </div>
           <button onClick={togglePlayerDarkMode} className="p-1 sm:p-1.5 bg-slate-800 text-white rounded-md hover:bg-slate-700" title={isDarkModeInPlayer ? "Chế độ sáng" : "Chế độ tối"}>
             {isDarkModeInPlayer ? <FaMoon className="text-sm sm:text-base" /> : <IoMdSunny className="text-sm sm:text-base" />}

@@ -1,8 +1,8 @@
 // src/redux/categorySlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-
-const apiBase = "https://truongthaiduongphanthanhvu.onrender.com/category";
+import { rooturl } from './element'; // Import đường dẫn gốc từ file element
+const apiBase = `${rooturl}/category`;
 
 // API requests cho Category
 export const getAllCategories = createAsyncThunk('categories/getAll', async () => {

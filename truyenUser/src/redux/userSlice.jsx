@@ -2,8 +2,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios'; // axios gốc vẫn được dùng cho các API không cần auth (như login, register)
 import apiClient from '../services/api'; // Import apiClient đã cấu hình
-
-const userApiBase = "https://truongthaiduongphanthanhvu.onrender.com/user"; // Chỉ dùng cho các API không cần auth
+import { rooturl } from './element'; // Import đường dẫn gốc từ file element
+const userApiBase = `${rooturl}/user`; // Chỉ dùng cho các API không cần auth
 
 // --- API DEFINITIONS ---
 

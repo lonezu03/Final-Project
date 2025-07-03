@@ -1,8 +1,8 @@
 // src/redux/authorSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-
-const apiBase = "https://truongthaiduongphanthanhvu.onrender.com/author";
+import { rooturl } from './element'; // Import đường dẫn gốc từ file element
+const apiBase = `${rooturl}/author`;
 
 // API requests cho Author
 export const getAllAuthors = createAsyncThunk('authors/getAll', async () => {

@@ -208,8 +208,8 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
           {/* User & Settings Icons - Sử dụng displayUser (ưu tiên Redux currentUser) */}
           {displayUser ? (
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <span className="text-xs sm:text-sm hidden sm:block max-w-[100px] truncate" title={currentUser.userNameUser}>
-                {currentUser.userNameUser}
+              <span className="text-xs sm:text-sm hidden sm:block max-w-[100px] truncate" title={currentUser?.userNameUser}>
+                {currentUser?.userNameUser}
               </span>
               <button onClick={handleLogout} title="Đăng xuất" className="hover:text-red-400 transition-colors">
                 <LogOut size={18} />

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react'; // Bỏ useCallback nếu không dùng như cách trước
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+// import 
 import {
   searchNovels,
   clearSearchedNovels,
@@ -58,12 +59,13 @@ const SearchResultsPage = () => {
 
     setCurrentSearchTerm(termFromUrl); // Cập nhật từ khóa hiển thị trên UI
 
-    if (termFromUrl.trim() !== "") {
-      doSearch(termFromUrl, pageFromUrl, sizeFromUrl);
-    } else {
-      dispatch(clearSearchedNovels());
-    }
-  }, [location.search, dispatch]); // Chỉ chạy lại khi query params trên URL thay đổi hoặc dispatch thay đổi
+      if (termFromUrl.trim() !== "") {
+    setCurrentSearchTerm(termFromUrl); // Cập nhật từ khóa tìm kiếm
+    doSearch(termFromUrl, pageFromUrl, sizeFromUrl); // Trigger tìm kiếm
+  } else {
+    dispatch(clearSearchedNovels()); // Xóa kết quả nếu không có từ khóa
+  }
+}, [location.search, dispatch]); // Chỉ chạy lại khi query params trên URL thay đổi hoặc dispatch thay đổi
 
   const handlePageChange = (newPage) => {
     const currentSize = paginationInfoFromStore?.pageSize || 20;

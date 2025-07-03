@@ -66,7 +66,7 @@ const ReadingPage = () => {
   const contentRef = useRef(null);
   const mainContentAreaRef = useRef(null);
   const [showAudioPlayer, setShowAudioPlayer] = useState(true);
-  const audioTestUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+  const urlAudio = currentChapterContent?.urlAudio || null;
 
   const [processedChapterContent, setProcessedChapterContent] = useState(null);
   const [canvasContainerWidth, setCanvasContainerWidth] = useState(0);
@@ -155,7 +155,7 @@ const ReadingPage = () => {
     console.log('Saving history with payload:', {
           idNovel: currentNovel.idNovel,
           email: currentUser.emailUser,
-          idChapter: Number(chapterId),
+          idChapter: currentChapterIndex,
           readPlace: finalReadPlace,
           titleChapter: currentChapterContent.titleChapter,
     });
@@ -476,8 +476,8 @@ const ReadingPage = () => {
           </div>
         )}
       </div>
-      {showAudioPlayer && (currentChapterContent?.audioUrl || audioTestUrl) && (
-        <AudioPlayer audioSrc={currentChapterContent?.audioUrl || audioTestUrl} onPrevChapter={handlePrevChapter} onNextChapter={handleNextChapter} isFirstChapter={isFirstChapter} isLastChapter={isLastChapter} novelTitle={currentNovel?.nameNovel} chapterTitle={currentChapterContent?.titleChapter} coverImage={currentNovel?.imageNovel} />
+      {showAudioPlayer && (currentChapterContent?.urlAudio || urlAudio) && (
+        <AudioPlayer audioSrc={currentChapterContent?.urlAudio || urlAudio} onPrevChapter={handlePrevChapter} onNextChapter={handleNextChapter} isFirstChapter={isFirstChapter} isLastChapter={isLastChapter} novelTitle={currentNovel?.nameNovel} chapterTitle={currentChapterContent?.titleChapter} coverImage={currentNovel?.imageNovel} />
       )}
     </div>
   );

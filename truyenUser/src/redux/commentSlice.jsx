@@ -2,8 +2,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import apiClient from '../services/api';
-
-const API_BASE_URL_COMMENT_PUBLIC = "https://truongthaiduongphanthanhvu.onrender.com/comment";
+import { rooturl } from './element'; // Import đường dẫn gốc từ file element
+const API_BASE_URL_COMMENT_PUBLIC = `${rooturl}/comment`;
 
 // --- API THUNKS ---
 
@@ -124,9 +124,9 @@ export const updateCommentContent = createAsyncThunk(
 // PUT /comment/updatelike
 export const likeComment = createAsyncThunk(
   'comments/like',
-  async ({ idComment, idChapter, idUser }, { rejectWithValue }) => {
+  async ({ idComment, idUser }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.put(`/comment/updatelike`, { idComment, idChapter, idUser });
+      const response = await apiClient.put(`/comment/updatelike`, { idComment, idUser });
       if (response.data && (response.data.code === 200 || response.data.code === 1000) && response.data.result) {
         return response.data.result; // API trả về comment đã được cập nhật
       }
@@ -143,9 +143,9 @@ export const likeComment = createAsyncThunk(
 // PUT /comment/updatedislike
 export const dislikeComment = createAsyncThunk(
   'comments/dislike',
-  async ({ idComment, idChapter, idUser }, { rejectWithValue }) => {
+  async ({ idComment, idUser }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.put(`/comment/updatedislike`, { idComment, idChapter, idUser });
+      const response = await apiClient.put(`/comment/updatedislike`, { idComment, idUser });
       if (response.data && (response.data.code === 200 || response.data.code === 1000) && response.data.result) {
         return response.data.result; // API trả về comment đã được cập nhật
       }

@@ -2,9 +2,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios'; // Dùng cho các API public không cần token
 import apiClient from '../services/api'; // Dùng cho các API cần token (đã cấu hình interceptor)
-
+import { rooturl } from './element'; // Import đường dẫn gốc từ file element
 // Base URL cho các API public liên quan đến novel
-const publicApiBaseNovel = "https://truongthaiduongphanthanhvu.onrender.com/novel";
+const publicApiBaseNovel = `${rooturl}/novel`;
 // Base URL tương đối cho các API cần token (sẽ được ghép với baseURL của apiClient)
 const protectedApiBaseNovel = "/novel"; // Ví dụ: /novel/create, /novel/update/:id
 
@@ -150,6 +150,16 @@ export const searchNovels = createAsyncThunk(
     }
   }
 );
+// api follow
+export const followNovel = createAsyncThunk('novels/followNovel', async (payload) => {
+  const response = await axios.post(`${apiBase}/followNovel`, payload, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  return response.data.result; // Trả về kết quả từ API
+});
+
 export const fetchHotNovels = createAsyncThunk(
   'novels/fetchHot', // Đổi tên action type
   async ({ page, size }, { rejectWithValue }) => {
@@ -206,6 +216,8 @@ const initialState = {
     loading: false,
     error: null
   },
+  followedNovels: [], // Lưu các truyện mà người dùng đã theo dõi
+
   currentNovel: null,
   loadingAll: false, // Loading cho getAllNovels
   searchLoading: false, // Loading cho searchNovels
@@ -368,7 +380,21 @@ const novelSlice = createSlice({
       state.error = action.payload;
       state.searchedNovels = []; // Reset state mới
       state.pagination = initialPaginationState;
-    });
+    })
+     .addCase(followNovel.pending, (state) => {
+        state.loading = true; // Đang chờ yêu cầu
+      })
+      .addCase(followNovel.fulfilled, (state, action) => {
+        state.loading = false;
+        // Thêm truyện đã theo dõi vào danh sách followedNovels
+        if (action.payload) {
+          state.followedNovels.push(action.payload);
+        }
+      })
+      .addCase(followNovel.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message; // Xử lý lỗi khi có vấn đề
+      });
     
   }
 });

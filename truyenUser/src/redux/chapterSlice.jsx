@@ -1,7 +1,7 @@
 // src/redux/chapterSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../services/api'; // Luôn dùng apiClient vì API có thể yêu cầu token
-
+import { rooturl } from './element'; // Import đường dẫn gốc từ file element
 const API_BASE_CHAPTER = "/chapter"; // Base URL tương đối
 
 // Action để lấy danh sách chương đầy đủ (có thể có content nếu có token)
