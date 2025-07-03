@@ -69,7 +69,6 @@ public class TTSController {
 		List<TtsSubJob> subJobs = new ArrayList<>();
 		for (int i = 0; i < textChunks.size(); i++) {
 			TtsSubJob subJob = new TtsSubJob();
-			subJob.setId(UUID.randomUUID().toString());
 			subJob.setParentJob(parentJob);
 			subJob.setJobOrder(i);
 			subJob.setStatus("PENDING");
@@ -92,7 +91,7 @@ public class TTSController {
 
 	@PostMapping("/sub-callback")
 	public ResponseEntity<?> handleSubJobCallback(@RequestBody Map<String, Object> callbackPayload,
-			@RequestParam("subJobId") String subJobId) {
+			@RequestParam("subJobId") Long subJobId) {
 
 		logger.info("Received callback for subJobId [{}]: {}", subJobId, callbackPayload);
 

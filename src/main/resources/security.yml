@@ -1,4 +1,4 @@
-app:
+ app:
   security:
     whitelist:
       - GET:/v3/api-docs/**

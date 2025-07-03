@@ -16,13 +16,15 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level =  AccessLevel.PRIVATE)
 public class HistoryReadRespone {
-	private HistoryId id;
+	 HistoryId id;
 
-	private String nameNovel;
-
-	private String titleChapter;
-
-	private Integer readPlace;
+	String urlNovel;
 	
-	private LocalDateTime readingTime;
+	 String nameNovel;
+
+	 String titleChapter;
+
+	 Integer readPlace;
+	
+	 LocalDateTime readingTime;
 }

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -68,12 +69,8 @@ public class ChapterService {
 	IFollowNovelRepository followNovelRepository;
 	ITtsJobRepository ttsJobRepository;
 	ITtsSubJobRepository ttsSubJobRepository;
-
+	TtsJobAsyncService ttsJobAsyncService;
 	private static final Logger logger = LoggerFactory.getLogger(ChapterService.class);
-
-	@NonFinal
-	@Value("${server.base-url}")
-	private String serverBaseUrl;
 
 	// public List<ChapterRespone> getAll(){
 	// return chapterRepository.getAll().stream().map(t ->
@@ -90,21 +87,18 @@ public class ChapterService {
 			if (introspectRespone.isValid()) {
 				List<ChapterRespone> chapters = chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream()
 						.map(t -> {
-						    ChapterRespone chapterRespone = chapterMapper.toChapterRespone(t);
+							ChapterRespone chapterRespone = chapterMapper.toChapterRespone(t);
 
-						    if (t.getAudioFile()!=null && !t.getAudioFile().isEmpty()) {
-						    	TtsJob ttsJobOpt = ttsJobRepository.findById(t.getAudioFile()).orElseThrow(() -> new AppException(ErrorCode.AUDIO_FILE_NOT_EXISTS)); 
-							    logger.info(ttsJobOpt.getFinalAudioUrl());
-							    chapterRespone.setUrlAudio(ttsJobOpt.getFinalAudioUrl());
+							if (ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter()).isPresent()) {
+								TtsJob ttsJobOpt = ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter())
+										.get();
+								logger.info(ttsJobOpt.getFinalAudioUrl());
+								chapterRespone.setUrlAudio(ttsJobOpt.getFinalAudioUrl());
 							}
-						    
-						    
 
-						    return chapterRespone;
+							return chapterRespone;
 						}).collect(Collectors.toList());
 
-				
-				
 				if (chapters.isEmpty()) {
 					throw new AppException(ErrorCode.CHAPTER_EMPTY);
 				}
@@ -148,19 +142,18 @@ public class ChapterService {
 
 		chapter.setNovel(novel);
 		chapter.setViewChapter(0);
-
+		Boolean isHaveFile = false;
 		if (textFile != null && !textFile.isEmpty()) {
 			String originalFilename = textFile.getOriginalFilename();
 			if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
 				String cotent = new String(textFile.getBytes(), StandardCharsets.UTF_8);
+//				logger.info(cotent);
 
-				Map<String, String> map = speakLongText(cotent);
-
-				String parentJobId = map.get("parentJobId");
+				isHaveFile = true;
+//				String parentJobId = map.get("parentJobId");
 //			    ttsSubJobRepository.existsByParentJobIdAndStatus( parentJobId, status);
-
 				chapter.setContentChapter(cotent);
-				chapter.setAudioFile(parentJobId);
+//				chapter.setAudioFile(parentJobId);
 			} else {
 				throw new AppException(ErrorCode.FILE_MUST_TXT);
 			}
@@ -169,6 +162,10 @@ public class ChapterService {
 		novelRepository.save(novel);
 
 		chapter = chapterRepository.save(chapter);
+		if (isHaveFile) {
+			ttsJobAsyncService.speakLongTextAsync(chapter.getContentChapter(), chapter.getIdChapter());
+
+		}
 
 		List<FollowNovel> followNovels = followNovelRepository.findByNovel_IdNovel(chapter.getNovel().getIdNovel());
 
@@ -249,50 +246,6 @@ public class ChapterService {
 			e.printStackTrace();
 			return false;
 		}
-	}
-
-	public Map<String, String> speakLongText(String longText) {
-		final int MAX_CHUNK_LENGTH = 1000; // Giới hạn cho mỗi request FPT
-		final int MAX_SENTENCE_LENGTH = 40; // Giới hạn cho mỗi câu đơn
-
-		List<String> textChunks = textService.ultimateTextSplitter(longText, MAX_CHUNK_LENGTH, MAX_SENTENCE_LENGTH);
-
-		if (textChunks.isEmpty()) {
-			throw new IllegalArgumentException("Text is empty or invalid.");
-		}
-
-		// Tạo Job chính
-		TtsJob parentJob = new TtsJob();
-		parentJob.setId(UUID.randomUUID().toString());
-		parentJob.setStatus("PENDING");
-		parentJob.setCreatedAt(new Date());
-		ttsJobRepository.save(parentJob);
-
-		// Tạo và lưu các Job con
-		List<TtsSubJob> subJobs = new ArrayList<>();
-		for (int i = 0; i < textChunks.size(); i++) {
-			TtsSubJob subJob = new TtsSubJob();
-			subJob.setId(UUID.randomUUID().toString());
-			subJob.setParentJob(parentJob);
-			subJob.setJobOrder(i);
-			subJob.setStatus("PENDING");
-			subJob.setTextChunk(textChunks.get(i));
-			subJobs.add(subJob);
-		}
-		ttsSubJobRepository.saveAll(subJobs);
-
-		// Bắt đầu xử lý các job con và cập nhật trạng thái job chính
-		parentJob.setStatus("PROCESSING");
-		ttsJobRepository.save(parentJob);
-
-		textService.processSubJobs(subJobs, serverBaseUrl);
-
-		// Trả về ID của Job chính
-		Map<String, String> response = Map.of("message", "Request accepted. Check status URL for progress.",
-				"parentJobId", parentJob.getId(), "status_check_url", "/api/tts/status/" + parentJob.getId());
-
-		return response;
-
 	}
 
 }

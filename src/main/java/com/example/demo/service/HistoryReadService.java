@@ -35,7 +35,7 @@ public class HistoryReadService {
 		
 			HistoryReadRespone historyReadRespone=historyReadMapper.toHistoryReadRespone(t);
 			historyReadRespone.setNameNovel(t.getNovel().getNameNovel());
-		
+			historyReadRespone.setUrlNovel(t.getNovel().getImageNovel());
 			return historyReadRespone;
 		}).toList(); 
 		
