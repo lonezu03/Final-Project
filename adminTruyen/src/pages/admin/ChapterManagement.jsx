@@ -63,8 +63,8 @@ const ChapterManagement = ({ novel }) => {
     // 1. Tạo object 'request' chứa dữ liệu JSON
     const requestData = {
       titleChapter: e.target.titleChapter.value,
-      viewChapter: parseInt(e.target.viewChapter.value, 10) || 0,
-      novel: { idNovel: novel.idNovel }, // Backend có thể cần object novel lồng nhau
+      // viewChapter: parseInt(e.target.viewChapter.value, 10) || 0,
+      novel:  novel.idNovel , // Backend có thể cần object novel lồng nhau
     };
 
     if (isEditing) {
@@ -124,14 +124,7 @@ const ChapterManagement = ({ novel }) => {
                   />
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="viewChapter" className="block text-sm font-medium text-gray-700 mb-1">Lượt xem</label>
-                  <input
-                    id="viewChapter"
-                    name="viewChapter"
-                    type="number"
-                    defaultValue={isEditing ? currentChapter?.viewChapter : 0}
-                    className="border border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  
                 </div>
                 <div className="mb-6">
                   <label htmlFor="chapterFile" className="block text-sm font-medium text-gray-700 mb-1">

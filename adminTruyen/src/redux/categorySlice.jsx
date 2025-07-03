@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 // import axios from 'axios'; // Không dùng axios gốc nữa
 import apiClient from '../services/api'; // Sử dụng apiClient đã cấu hình
-
+import {rooturl} from "./element"
 const apiPath = "/category"; // Đường dẫn tương đối
 
 // --- ASYNC THUNKS ---
