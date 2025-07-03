@@ -62,7 +62,7 @@ const TopOrders = () => {
     // Giả sử backend cần key là `idNovels` cho mảng ID
     const payload = {
       nameCategory: newCategory.nameCategory,
-      novels: newCategory.novels,
+      // novels: newCategory.novels,
     };
 
     if (isEditing) {
@@ -120,7 +120,7 @@ const TopOrders = () => {
                   />
                 </div>
 
-                <div className="mb-6">
+                {/* <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Select Novels</label>
                   <Select
                     isMulti
@@ -137,7 +137,7 @@ const TopOrders = () => {
                     isLoading={!novels}
                     placeholder="Search and select novels..."
                   />
-                </div>
+                </div> */}
                 
                 <div className="flex justify-end gap-4">
                   <button
