@@ -42,17 +42,23 @@ public class AuthorService {
 	INovelMapper novelMapper;
 
 	public List<AuthorRespone> getAll() {
-	    List<Author> authors = authorRepository.findAllWithNovels();
+		try {
+			  List<Author> authors = authorRepository.findAllWithNovels();
 
-	    return authors.stream()
-	            .map(author -> {
-	                // 1. Map các trường cơ bản của Author trước
-	                AuthorRespone respone = authorMapper.toAuthorRespone(author);
+			    return authors.stream()
+			            .map(author -> {
+			                // 1. Map các trường cơ bản của Author trước
+			                AuthorRespone respone = authorMapper.toAuthorRespone(author);
 
 
-	                return respone;
-	            })
-	            .collect(Collectors.toList());
+			                return respone;
+			            })
+			            .collect(Collectors.toList());
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new AppException(ErrorCode.UNKNOW_ERROR);
+		}
+	  
 	}
 
 

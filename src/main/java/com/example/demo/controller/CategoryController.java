@@ -59,7 +59,7 @@ public class CategoryController {
 	@DeleteMapping(value = "/{idCategory}")
 	@Operation(summary = "Xoá thể loại", description = "Xoá một thể loại ra khỏi hệ thống theo ID.")
 	public ApiRespone<String> deleteCategory(@PathVariable String idCategory) {
-		return ApiRespone.<String>builder()
+		return ApiRespone.<String>builder() 
 				.result(categoryService.deleteCategory(idCategory))
 				.build();
 	}

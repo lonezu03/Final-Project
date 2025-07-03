@@ -1,12 +1,12 @@
 package com.example.demo.config;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
-import javax.crypto.spec.SecretKeySpec;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,119 +15,129 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
+/**
+ * Central configuration class for Spring Security.
+ * <p>
+ * Responsible for defining the security filter chain, configuring JWT authentication,
+ * and applying role-based access control rules to endpoints.
+ * </p>
+ * {@code @EnableWebSecurity} enables Spring's web security support.
+ * {@code @EnableMethodSecurity} allows using security annotations at the method level.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder(10);
-	}
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-	@Value("${app.security.singer-key}")
-	private String SIGNER_KEY;
+//    @Autowired
+//    private TokenValidationFilter tokenValidationFilter;
 
-	@Autowired
-	private SecurityProperties securityProperties;
+    /**
+     * Defines the {@link SecurityFilterChain} bean, the core of security configuration.
+     * This method sets up the entire request processing logic, including CORS, JWT authentication,
+     * and fine-grained access control.
+     *
+     * @param httpSecurity The main builder for security configuration.
+     * @param resolver     A helper component that reads and parses permission rules from configuration files.
+     * @param decoder      A bean responsible for decoding and verifying JWT signatures.
+     * @return A fully configured {@link SecurityFilterChain}.
+     * @throws Exception if an error occurs during configuration.
+     */
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity httpSecurity, RolePermissionResolver resolver, JwtDecoder decoder)
+            throws Exception {
 
-	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity httpSecurity, RolePermissionResolver resolver)
-			throws Exception {
-		httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
+        // CORS configuration
+        httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-		httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
-				.jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        // Configure the app as a Resource Server using JWT authentication
+        httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.decoder(decoder)
+                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
-		httpSecurity.authorizeHttpRequests(auth -> {
-			// ✅ WHITELIST
-			for (String endpoint : resolver.getWhitelist()) {
-				String[] parts = endpoint.split(":", 2);
-				// log.info("✅ Whitelisted: {} {}", parts[0], parts[1]);
-				auth.requestMatchers(HttpMethod.valueOf(parts[0]), parts[1]).permitAll();
-			}
+        // Insert custom TokenValidationFilter after Spring’s default Bearer token filter
+//        httpSecurity.addFilterAfter(tokenValidationFilter, BearerTokenAuthenticationFilter.class);
 
-			// ✅ ROLE-PERMISSION MAPPING
-			for (String role : securityProperties.getRoles().keySet()) {
-				Set<String> endpoints = resolver.getEndpointsForRole(role);
-				// log.info("🔐 Role {} has endpoints: {}", role, endpoints);
-				for (String endpoint : endpoints) {
-					String[] parts = endpoint.split(":", 2);
-					// log.info("➡️ Mapping role [{}] to: {} {}", role, parts[0], parts[1]);
-					// log.info("🔍 Comparing with ROLE_MANAGER equals: {}",
-					// "ROLE_MANAGER".equals(role));
-					auth.requestMatchers(HttpMethod.valueOf(parts[0]), parts[1]).hasAuthority(role.toString());
-				}
-			}
+        // Configure authorization rules
+        httpSecurity.authorizeHttpRequests(auth -> {
+            // 1. WHITELIST configuration: endpoints accessible without authentication
+            for (String endpoint : resolver.getWhiteList()) {
+                String[] parts = endpoint.split(":", 2);
+                auth.requestMatchers(HttpMethod.valueOf(parts[0]), parts[1]).permitAll();
+            }
 
-			auth.anyRequest().authenticated();
-		});
+            // 2. Dynamic role-based permission configuration from YAML
+            Map<String, Set<String>> endpointToRoles = resolver.getEnpointToRolesMap();
 
-		httpSecurity.csrf(AbstractHttpConfigurer::disable);
+            logger.info("--- CONFIGURING ENDPOINT PERMISSIONS FROM YAML ---");
+            for (Map.Entry<String, Set<String>> entry : endpointToRoles.entrySet()) {
+                String[] endpointParts = entry.getKey().split(":", 2);
+                HttpMethod method = HttpMethod.valueOf(endpointParts[0]);
+                String path = endpointParts[1];
+                String[] roles = entry.getValue().toArray(new String[0]);
 
-		return httpSecurity.build();
-	}
+                logger.info("Mapping [{} {}] -> Roles: {}", method, path, roles);
+                auth.requestMatchers(method, path).hasAnyAuthority(roles);
+            }
+            logger.info("--- FINISHED CONFIGURING ENDPOINT PERMISSIONS ---");
 
-	@Bean
-	JwtDecoder jwtDecoder() {
-		SecretKeySpec secretKeySpec = new SecretKeySpec(SIGNER_KEY.getBytes(), "HS512");
-		return NimbusJwtDecoder.withSecretKey(secretKeySpec).macAlgorithm(MacAlgorithm.HS512).build();
-	}
+            // 3. Catch-all rule: Any other request requires authentication
+            auth.anyRequest().authenticated();
+        });
 
-	@Bean
-	JwtAuthenticationConverter jwtAuthenticationConverter() {
-		JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-		jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
-		jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+        // Disable CSRF protection (commonly disabled for stateless token-based APIs)
+        httpSecurity.csrf(AbstractHttpConfigurer::disable);
+      
+        return httpSecurity.build();
+    }
 
-		JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-		jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
-			Collection<GrantedAuthority> authorities = jwtGrantedAuthoritiesConverter.convert(jwt);
-			// log.info("✅ Authorities in token: {}", authorities);
-			return authorities;
-		});
+    /**
+     * Defines a bean to convert JWT claims into GrantedAuthority objects
+     * that Spring Security can understand.
+     *
+     * @return A configured JwtAuthenticationConverter.
+     */
+    @Bean
+    JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
+        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
 
-		return jwtAuthenticationConverter;
-	}
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<GrantedAuthority> authorities = jwtGrantedAuthoritiesConverter.convert(jwt);
+            return authorities;
+        });
 
-	// @Bean
-	// public CorsFilter corsFilter() {
-	// CorsConfiguration config = new CorsConfiguration();
-	// config.addAllowedOriginPattern("*"); // Cho phép tất cả origin
-	// config.addAllowedHeader("*"); // Cho phép tất cả header
-	// config.addAllowedMethod("*"); // Cho phép tất cả method
-	// config.setAllowCredentials(true); // Cho phép gửi cookie hoặc thông tin xác
-	// thực
+        return jwtAuthenticationConverter;
+    }
 
-	// UrlBasedCorsConfigurationSource source = new
-	// UrlBasedCorsConfigurationSource();
-	// source.registerCorsConfiguration("/**", config); // Áp dụng cho tất cả
-	// endpoint
-	// return new CorsFilter(source);
-	// }
+    /**
+     * Defines a bean to configure Cross-Origin Resource Sharing (CORS).
+     * Allows requests from different origins (e.g., frontend apps) to access this API.
+     *
+     * @return A configured UrlBasedCorsConfigurationSource.
+     */
+    @Bean
+    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.addAllowedOriginPattern("*");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        config.setAllowCredentials(true);
 
-	@Bean
-	public UrlBasedCorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration config = new CorsConfiguration();
-		config.addAllowedOriginPattern("*"); // Cho phép tất cả origin
-		config.addAllowedHeader("*"); // Cho phép tất cả header
-		config.addAllowedMethod("*"); // Cho phép tất cả method
-		config.setAllowCredentials(true); // Cho phép gửi cookie hoặc thông tin xác thực
-
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", config); // Áp dụng cho tất cả endpoint
-		return source;
-	}
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 }

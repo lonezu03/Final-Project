@@ -50,9 +50,8 @@ public class Chapter {
 	@Column(nullable = false)
 	Long indexChapter;
 	
-	@Lob
-	@Column(name = "audio_file", columnDefinition = "MEDIUMBLOB")
-	byte[] audioFile;
+	@Column(name = "audio_url")
+	String audioFile;
 
 	@ManyToOne
 	@JoinColumn(name = "id_Novel", nullable = false)

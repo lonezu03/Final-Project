@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.example.demo.entity.Author;
 import com.example.demo.entity.Novel;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import jakarta.persistence.ManyToMany;
 import lombok.AccessLevel;
@@ -27,8 +28,13 @@ public class AuthorRespone {
 	String nameAuthor;
 	String descriptionAuthor; 
 	String nationalityAuthor;
+	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
 	LocalDate dobAuthor;
+
+	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
 	LocalDate dodAuthor;
+
+
 	String genderAuthor;
 	String imageAuthor;
  

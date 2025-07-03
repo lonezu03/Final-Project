@@ -3,8 +3,12 @@ package com.example.demo.controller;
 import java.io.IOException;
 import java.util.List;
 
+import org.everit.json.schema.ValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -16,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.LoginRequest;
+import com.example.demo.dto.request.TokenRefreshRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
 import com.example.demo.dto.request.UserLoginByEmailRequest;
@@ -36,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
+
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
@@ -47,6 +53,7 @@ public class UserController {
 	UserService userService;
 	MailService mailService;
 	HistoryReadService historyReadService;
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	@GetMapping("/getAllUser")
 	@Operation(summary = "Lấy tất cả người dùng", description = "Trả về danh sách tất cả người dùng hiện có trong hệ thống.")
@@ -86,6 +93,30 @@ public class UserController {
 		return ApiRespone.<UserRespone>builder().result(userService.loginByEmail(request)).build();
 	}
 
+//    /**
+//     * Endpoint to issue a new access token using a valid refresh token.
+//     *
+//     * @param refreshRequest Object containing the refresh token.
+//     * @return An object containing a new access token and the old refresh token.
+//     */
+//    @PostMapping("/refreshToken")
+//    @Operation(summary = "Refresh Access Token", description = "Issues a new access token using a valid refresh token.")
+//    public ApiRespone<UserRespone> refreshToken(@RequestBody TokenRefreshRequest refreshRequest) {
+//        try {
+////            JsonSchemaValidator.validate(refreshRequest, "userRefreshTokenSchema.json");
+//            return userService.refreshToken(refreshRequest);
+//        } catch (ValidationException e) {
+//            logger.warn("Validation error during token refresh: {}", e.getMessage(), e);
+//            throw e;
+//        } catch (AppException e) {
+//            logger.warn("Business error during token refresh: {}", e.getMessage(), e);
+//            throw e;
+//        } catch (Exception e) {
+//            logger.error("System error during token refresh: {}", e.getMessage(), e);
+//            throw e;
+//        }
+//    }
+	
 	@PostMapping(value = "/uploadAvatar", consumes = { "multipart/form-data" })
 	@Operation(summary = "Cập nhật avatar người dùng", description = "Tải ảnh đại diện mới cho người dùng theo email.")
 	public ApiRespone<UserRespone> uploadAvatar(@RequestParam MultipartFile image, @RequestParam String email)
@@ -111,6 +142,8 @@ public class UserController {
 		return ApiRespone.<UserRespone>builder().result(userService.createHistoryRead(readRequest))
 				.build();
 	}
+	
+
 
 	@DeleteMapping("/deleteHistory")
 	@Operation(summary = "Xoá lịch sử đọc", description = "Xoá lịch sử đọc truyện theo đối tượng HistoryId.")

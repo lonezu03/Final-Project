@@ -42,6 +42,13 @@ public class NotifyUserScheduler {
 			historyNotifyRepository.save(historyNotify);
 
 		}
+	}
+
+	@Scheduled(fixedRate = 1000) // every 60 seconds
+	public void testWebsocket() {
+		log.info("thông báo nè");
+//		log.info("📤 Sending notify to user {} for new chapter {}", , );
+		messagingTemplate.convertAndSendToUser("truongthaiduong0808@gmail.com", "/queue/notify", "ok chưa");
 
 	}
 }

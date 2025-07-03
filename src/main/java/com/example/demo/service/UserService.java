@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.CreateHistoryReadRequest;
+import com.example.demo.dto.request.TokenRefreshRequest;
+import com.example.demo.dto.request.UpdateHistoryRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
 import com.example.demo.dto.request.UserLoginByEmailRequest;
@@ -18,10 +20,12 @@ import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
 import com.example.demo.dto.respone.HistoryReadRespone;
 import com.example.demo.dto.respone.UploadFileRespone;
+import com.example.demo.dto.respone.UserLoginRespone;
 import com.example.demo.dto.respone.UserRespone;
 import com.example.demo.entity.HistoryId;
 import com.example.demo.entity.HistoryRead;
 import com.example.demo.entity.Novel;
+import com.example.demo.entity.RefreshToken;
 import com.example.demo.entity.User;
 import com.example.demo.enums.Role;
 import com.example.demo.exception.AppException;
@@ -31,6 +35,7 @@ import com.example.demo.mapper.IUserMapper;
 import com.example.demo.repository.IHistoryReadRepository;
 import com.example.demo.repository.INovelRepository;
 import com.example.demo.repository.IUserRepository;
+import com.example.demo.repository.RefreshTokenRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +58,7 @@ public class UserService {
 	IHistoryReadMapper historyReadMapper;
 	HistoryReadService historyReadService;
 	AuthenticationService authenticationService;
-
+	RefreshTokenRepository refreshTokenRepository;
 	/**
 	 * Lấy danh sách tất cả người dùng từ database và map sang DTO UserRespone.
 	 *
@@ -291,5 +296,36 @@ public UserRespone createHistoryRead(CreateHistoryReadRequest readRequest) {
 	return userRespone;
 }
 
+
+
+///**
+// * Generate a new accessToken from a valid refreshToken.
+// *
+// * @param refreshRequest Object containing refreshToken.
+// * @return A LoginResponse containing the new accessToken and existing refreshToken.
+// * @throws AppException if the token is not found or expired.
+// */
+//public UserLoginRespone refreshToken(TokenRefreshRequest refreshRequest) {
+//	try {
+//		RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshRequest.getRefreshToken())
+//				.orElseThrow(() -> new AppException("REFRESH_TOKEN_NOT_EXISTS"));
+//
+//		if (refreshTokenService.verifiedRefreshToken(refreshToken) != null) {
+//			String accessToken = authenticationService.generateToken(refreshToken.getUser(),
+//					refreshToken.getToken());
+//
+//			return UserLoginRespone.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
+//		}
+//
+//		throw new AppException("REFRESH_TOKEN_EXPIRY");
+//
+//	} catch (AppException ex) {
+//		logger.warn("Business logic error when refreshing token: {}", ex.getMessage());
+//		throw ex;
+//	} catch (Exception ex) {
+//		logger.error("System error when refreshing token", ex);
+//		throw new AppException("UNCATEGORIZED_EXCEPTION");
+//	}
+//}
 	
 }

@@ -137,27 +137,35 @@ public class TextService {
      * @return Văn bản đã được thêm dấu phẩy
      */
     private String addCommasToLongStrings(String text, int maxLength) {
-        StringBuilder result = new StringBuilder();
-        int lastBreak = 0;
+    	StringBuilder result = new StringBuilder();
+    	int lastBreak = -1; // vị trí dấu ngắt cuối cùng (.,!? hoặc ,)
 
-        for (int i = 0; i < text.length(); i++) {
-            char currentChar = text.charAt(i);
-            result.append(currentChar);
+    	for (int i = 0; i < text.length(); i++) {
+    		char currentChar = text.charAt(i);
+    		result.append(currentChar);
 
-            if (currentChar == '.' || currentChar == '?' || currentChar == '!' || currentChar == ',') {
-                lastBreak = i;
-            }
+    		// Nếu là dấu ngắt, reset vị trí
+    		if (currentChar == '.' || currentChar == '?' || currentChar == '!' || currentChar == ',') {
+    			lastBreak = result.length() - 1;
+    		}
 
-            if (i - lastBreak >= maxLength) {
-                int insertPos = result.lastIndexOf(" ", i);
-                if (insertPos != -1 && insertPos > lastBreak) {
-                    result.insert(insertPos, ',');
-                    lastBreak = insertPos;
-                }
-            }
-        }
-        return result.toString();
+    		// Nếu đã vượt quá maxLength từ lần ngắt trước
+    		if (lastBreak != -1 && (result.length() - lastBreak) >= maxLength) {
+    			int insertPos = result.lastIndexOf(" ", result.length() - 1);
+    			if (insertPos > lastBreak) {
+    				result.insert(insertPos, ',');
+    				lastBreak = insertPos;
+    			} else {
+    				// Nếu không có khoảng trắng, chèn luôn tại vị trí hiện tại
+    				result.insert(result.length() - 1, ',');
+    				lastBreak = result.length() - 2;
+    			}
+    		}
+    	}
+
+    	return result.toString();
     }
+
 
     /**
      * Chia văn bản thành các đoạn nhỏ (chunk) có độ dài tối đa.

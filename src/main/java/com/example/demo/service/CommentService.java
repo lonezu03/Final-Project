@@ -100,7 +100,7 @@ public class CommentService {
 	public CommentRespone updateComment(CommentUpdateRequest request) {
 		User user = userRepository.findByIdUser(request.getUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-		Chapter chapter = chapterRepository.findById(request.getChapter()).get();
+		Chapter chapter = chapterRepository.findById(request.getIdchapter()).get();
 
 		Comment comment = commentMapper.toCommentUpdate(request);
 		comment.setUser(user);
@@ -110,86 +110,151 @@ public class CommentService {
 		return commentMapper.toCommentRespone(comment);
 	}
 
+//	public CommentRespone updatelikeComment(CommentUpdateLikeRequest request) {
+//		User user = userRepository.findByIdUser(request.getIdUser())
+//				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//
+//		Comment comment = commentRepository.findById(request.getIdComment()).get();
+//
+//		Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
+//		Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
+//
+//		if (!existingDislikeOpt.isPresent()) {
+//			if (existingLikeOpt.isPresent()) {
+//				CommentLike commentLike = existingLikeOpt.get();
+//
+//				comment.setLikeComment(comment.getLikeComment() - 1);
+//
+//				comment.getLikes().remove(commentLike);
+//			} else {
+//				comment.setLikeComment(comment.getLikeComment() + 1);
+//				comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
+//			}
+//		}else {
+//			CommentDislike commentDislike = existingDislikeOpt.get();
+//
+//			comment.setDislikeComment(comment.getDislikeComment() - 1);
+//
+//			comment.getDislikes().remove(commentDislike);
+//			
+//			comment.setLikeComment(comment.getLikeComment() + 1);
+//			
+//			comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
+//		}
+//		
+//		
+//
+//		comment = commentRepository.save(comment);
+//
+//		return commentMapper.toCommentRespone(comment);
+//	}
+	
 	public CommentRespone updatelikeComment(CommentUpdateLikeRequest request) {
-		User user = userRepository.findByIdUser(request.getIdUser())
-				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+	    User user = userRepository.findByIdUser(request.getIdUser())
+	            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-		Comment comment = commentRepository.findById(request.getIdComment()).get();
+	    Comment comment = commentRepository.findById(request.getIdComment())
+	            .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_EXISTED));
 
-		Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
-		Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
+	    Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
+	    Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
 
-		if (!existingDislikeOpt.isPresent()) {
-			if (existingLikeOpt.isPresent()) {
-				CommentLike commentLike = existingLikeOpt.get();
+	    // Nếu đã dislike => bỏ dislike trước
+	    if (existingDislikeOpt.isPresent()) {
+	        CommentDislike commentDislike = existingDislikeOpt.get();
+	        comment.setDislikeComment(comment.getDislikeComment() - 1);
+	        comment.getDislikes().remove(commentDislike);
+	    }
 
-				comment.setLikeComment(comment.getLikeComment() - 1);
+	    if (existingLikeOpt.isPresent()) {
+	        // Nếu đã like rồi => bỏ like (toggle off)
+	        CommentLike commentLike = existingLikeOpt.get();
+	        comment.setLikeComment(comment.getLikeComment() - 1);
+	        comment.getLikes().remove(commentLike);
+	    } else {
+	        // Nếu chưa like => thêm like
+	        comment.setLikeComment(comment.getLikeComment() + 1);
+	        comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
+	    }
 
-				comment.getLikes().remove(commentLike);
-			} else {
-				comment.setLikeComment(comment.getLikeComment() + 1);
-				comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
-			}
-		}else {
-			CommentDislike commentDislike = existingDislikeOpt.get();
-
-			comment.setDislikeComment(comment.getDislikeComment() - 1);
-
-			comment.getDislikes().remove(commentDislike);
-			
-			comment.setLikeComment(comment.getLikeComment() + 1);
-			
-			comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
-		}
-		
-		
-
-		comment = commentRepository.save(comment);
-
-		return commentMapper.toCommentRespone(comment);
+	    comment = commentRepository.save(comment);
+	    return commentMapper.toCommentRespone(comment);
 	}
 
+
+//	public CommentRespone updatedislikeComment(CommentUpdateLikeRequest request) {
+//		User user = userRepository.findByIdUser(request.getIdUser())
+//				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//
+//		Comment comment = commentRepository.findById(request.getIdComment()).get();
+//
+//		Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
+//		Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
+//
+//		if (!existingLikeOpt.isPresent()) {
+//			if (existingDislikeOpt.isPresent()) {
+//				CommentDislike commentDislike = existingDislikeOpt.get();
+//
+//				comment.setDislikeComment(comment.getDislikeComment() - 1);
+//
+//				comment.getDislikes().remove(commentDislike);
+//
+//			} else
+//
+//			{
+//				comment.setDislikeComment(comment.getDislikeComment()+1);
+//
+//				comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
+//			}
+//		}else {
+//			CommentLike commentLike = existingLikeOpt.get();
+//
+//			comment.setLikeComment(comment.getLikeComment()-1);;
+//
+//			comment.getLikes().remove(commentLike);
+//
+//			comment.setLikeComment(comment.getDislikeComment() + 1);
+//
+//			comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
+//		}
+//
+//		comment = commentRepository.save(comment);
+//
+//		return commentMapper.toCommentRespone(comment);
+//
+//	}
 	public CommentRespone updatedislikeComment(CommentUpdateLikeRequest request) {
-		User user = userRepository.findByIdUser(request.getIdUser())
-				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+	    User user = userRepository.findByIdUser(request.getIdUser())
+	            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-		Comment comment = commentRepository.findById(request.getIdComment()).get();
+	    Comment comment = commentRepository.findById(request.getIdComment())
+	            .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_EXISTED));
 
-		Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
-		Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
+	    Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
+	    Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
 
-		if (!existingLikeOpt.isPresent()) {
-			if (existingDislikeOpt.isPresent()) {
-				CommentDislike commentDislike = existingDislikeOpt.get();
+	    // Nếu đã like => bỏ like trước
+	    if (existingLikeOpt.isPresent()) {
+	        CommentLike commentLike = existingLikeOpt.get();
+	        comment.setLikeComment(comment.getLikeComment() - 1);
+	        comment.getLikes().remove(commentLike);
+	    }
 
-				comment.setDislikeComment(comment.getDislikeComment() - 1);
+	    if (existingDislikeOpt.isPresent()) {
+	        // Nếu đã dislike rồi => bỏ dislike (toggle off)
+	        CommentDislike commentDislike = existingDislikeOpt.get();
+	        comment.setDislikeComment(comment.getDislikeComment() - 1);
+	        comment.getDislikes().remove(commentDislike);
+	    } else {
+	        // Nếu chưa dislike => thêm dislike
+	        comment.setDislikeComment(comment.getDislikeComment() + 1);
+	        comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
+	    }
 
-				comment.getDislikes().remove(commentDislike);
-
-			} else
-
-			{
-				comment.setDislikeComment(comment.getDislikeComment()+1);
-
-				comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
-			}
-		}else {
-			CommentLike commentLike = existingLikeOpt.get();
-
-			comment.setLikeComment(comment.getLikeComment()-1);;
-
-			comment.getLikes().remove(commentLike);
-
-			comment.setLikeComment(comment.getDislikeComment() + 1);
-
-			comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
-		}
-
-		comment = commentRepository.save(comment);
-
-		return commentMapper.toCommentRespone(comment);
-
+	    comment = commentRepository.save(comment);
+	    return commentMapper.toCommentRespone(comment);
 	}
+
 
 	public Integer deleteComment(Integer idComment) {
 		try {

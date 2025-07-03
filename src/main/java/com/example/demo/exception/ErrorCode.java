@@ -20,6 +20,7 @@ public enum ErrorCode {
 	CANNOT_READ_AUDIO_FILE(1025,"Cant not read audio file"),
 	UNAUTHENTICATION(1026,"Unauthentication"),
 	CHAPTER_EMPTY(1027,"Chapter empty"), USER_ALREADY_LIKE(1028,"User already like this comment"),USER_ALREADY_FOLLOW_NOVEL(1028,"User already follow user"),
+	AUDIO_FILE_NOT_EXISTS(1029,"Audio file not exists"),
 	UNKNOW_ERROR(9999, "Unknow error") ;
 
 	private int code;

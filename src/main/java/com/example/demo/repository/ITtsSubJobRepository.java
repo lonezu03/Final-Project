@@ -9,4 +9,6 @@ import com.example.demo.entity.TtsSubJob;
 
 public interface ITtsSubJobRepository extends JpaRepository<TtsSubJob, String> {
     List<TtsSubJob> findByParentJob(TtsJob parentJob);
+    boolean existsByParentJobIdAndStatus(String parentJobId, String status);
+
 }

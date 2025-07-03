@@ -12,14 +12,14 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CommentUpdateRequest {
-
-	String idComment;
-    
-	String contentComment;
+public class UpdateHistoryRequest {
+	 
 	
-	String idchapter;
-	
-	String user;
+	String idNovel;
+	String email;
+	String idChapter;
 
+	Integer readPlace;
+
+	String titleChapter;
 }
