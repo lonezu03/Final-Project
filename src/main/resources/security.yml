@@ -18,6 +18,7 @@
       - GET:/comment/getAllByChapter/**
       - GET:/comment/getAllByNovel/**
       - GET:/novel/**
+      - POST:/novel/search
       - GET:/api/fetch-html
       - POST:/api/tts/speak
       - POST:/api/tts/sub-callback
@@ -28,7 +29,6 @@
       - OPTIONS:/ws/**
       - GET:/send-private/**
     endpoints:
-      "[user/**]": "GET,POST,PUT,DELETE,PATCH:member,admin,manager"
       "[/project/getAll]": "GET: member, manager, admin"
       "[/project/getByProjectId/**]": "GET: member, manager, admin"
       "[/project/createProject]": "POST: manager, admin"
