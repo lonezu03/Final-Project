@@ -25,7 +25,13 @@ public class NotifyUserScheduler {
 	SimpMessagingTemplate messagingTemplate;
 //	NovelService novelService;
 	IHistoryNotifyRepository historyNotifyRepository;
-
+/**
+ * Hàm được lên lịch để chạy mỗi 60 giây nhằm gửi thông báo chương mới cho người dùng.
+ * 
+ * - Tìm tất cả các bản ghi `HistoryNotify` có trường `isNotify = false`
+ * - Gửi thông báo qua WebSocket tới từng người dùng (dựa theo email)
+ * - Sau khi gửi xong, cập nhật lại bản ghi là đã thông báo và lưu thời gian gửi
+ */
 	@Scheduled(fixedRate = 60000) // every 60 seconds
 	public void remindUsersOfTasks() {
 		List<HistoryNotify> historyNotifies = historyNotifyRepository.findByIsNotifyFalse();

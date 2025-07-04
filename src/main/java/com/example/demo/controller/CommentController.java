@@ -38,7 +38,12 @@ import lombok.extern.slf4j.Slf4j;
 public class CommentController {
 
 	CommentService commentService;
-
+/**
+ * API lấy danh sách bình luận theo chương.
+ *
+ * @param idChapter ID chương cần lấy bình luận
+ * @return danh sách các bình luận thuộc chương tương ứng, bọc trong ApiRespone
+ */
 	@GetMapping(value = "/getAllByChapter/{idChapter}")
 	@Operation(summary = "Lấy danh sách bình luận theo chương", description = "Trả về danh sách các bình luận thuộc chương truyện có ID tương ứng.")
 	public ApiRespone<List<CommentRespone>> getAllCommentByChapter(
@@ -47,7 +52,12 @@ public class CommentController {
 				.result(commentService.getListCommentByChapter(idChapter))
 				.build();
 	}
-
+/**
+ * API lấy danh sách bình luận của người dùng.
+ *
+ * @param idUser ID người dùng cần lấy bình luận
+ * @return danh sách bình luận do người dùng đăng, bọc trong ApiRespone
+ */
 	@GetMapping(value = "/getAllByUser/{idUser}")
 	@Operation(summary = "Lấy danh sách bình luận theo người dùng", description = "Trả về tất cả bình luận được đăng bởi người dùng có ID tương ứng.")
 	public ApiRespone<List<CommentRespone>> getAllCommentByUser(@PathVariable(name = "idUser") String idUser) {
@@ -55,7 +65,13 @@ public class CommentController {
 				.result(commentService.getListCommentByUser(idUser))
 				.build();
 	}
-
+/**
+ * API tìm kiếm bình luận theo nhiều tiêu chí: nội dung, chương, truyện, lượt thích, dislike,...
+ *
+ * @param request yêu cầu tìm kiếm (nội dung, idChapter, idUser, thời gian,...)
+ * @param pageable phân trang kết quả
+ * @return danh sách bình luận phù hợp dưới dạng phân trang
+ */
 	@PostMapping("/search")
 	public ResponseEntity<Page<CommentRespone>> searchComments(
 			@RequestBody CommentSearchRequest request,
@@ -64,7 +80,12 @@ public class CommentController {
 		Page<CommentRespone> comments = commentService.searchComments(request, pageable);
 		return ResponseEntity.ok(comments);
 	}
-
+/**
+ * API lấy danh sách bình luận theo truyện.
+ *
+ * @param idNovel ID truyện cần lấy tất cả bình luận từ các chương
+ * @return danh sách các bình luận theo chương trong truyện, bọc trong ApiRespone
+ */
 	@GetMapping(value = "/getAllByNovel/{idNovel}")
 	@Operation(summary = "Lấy danh sách bình luận theo truyện", description = "Trả về tất cả bình luận thuộc các chương của truyện có ID tương ứng.")
 	public ApiRespone<List<CommentNovelRespone>> getAllCommentByNovel(@PathVariable(name = "idNovel") String idNovel) {
@@ -72,7 +93,12 @@ public class CommentController {
 				.result(commentService.getListCommentByNovel(idNovel))
 				.build();
 	}
-
+/**
+ * API tạo mới một bình luận cho chương truyện.
+ *
+ * @param request thông tin tạo bình luận (idUser, idChapter, nội dung,...)
+ * @return bình luận vừa được tạo, bọc trong ApiRespone
+ */
 	@PostMapping("/create")
 	@Operation(summary = "Tạo bình luận mới", description = "Tạo mới một bình luận cho chương truyện.")
 	public ApiRespone<CommentRespone> createChapter(@RequestBody CommentCreationRequest request) {
@@ -80,7 +106,12 @@ public class CommentController {
 				.result(commentService.createComment(request))
 				.build();
 	}
-
+/**
+ * API cập nhật nội dung một bình luận đã có.
+ *
+ * @param request thông tin cần cập nhật (idComment, nội dung mới)
+ * @return bình luận sau khi cập nhật, bọc trong ApiRespone
+ */
 	@PutMapping("/update")
 	@Operation(summary = "Cập nhật bình luận", description = "Chỉnh sửa nội dung bình luận hiện có.")
 	public ApiRespone<CommentRespone> updateChapter(@RequestBody CommentUpdateRequest request) {
@@ -88,7 +119,12 @@ public class CommentController {
 				.result(commentService.updateComment(request))
 				.build();
 	}
-
+/**
+ * API tăng lượt like cho một bình luận.
+ *
+ * @param request chứa idUser và idComment cần tăng like
+ * @return bình luận sau khi đã tăng like, bọc trong ApiRespone
+ */
 	@PutMapping("/updatelike")
 	@Operation(summary = "Tăng lượt like cho bình luận", description = "Tăng số lượt thích (like) cho bình luận.")
 	public ApiRespone<CommentRespone> upLike(@RequestBody CommentUpdateLikeRequest request) {
@@ -97,7 +133,12 @@ public class CommentController {
 				.build();
 	}
 	
-
+/**
+ * API tăng lượt dislike cho một bình luận.
+ *
+ * @param request chứa idUser và idComment cần tăng dislike
+ * @return bình luận sau khi đã tăng dislike, bọc trong ApiRespone
+ */
 	@PutMapping("/updatedislike")
 	@Operation(summary = "Tăng lượt dislike cho bình luận", description = "Tăng số lượt không thích (dislike) cho bình luận.")
 	public ApiRespone<CommentRespone> upDislike(@RequestBody CommentUpdateLikeRequest request) {
@@ -105,7 +146,12 @@ public class CommentController {
 				.result(commentService.updatedislikeComment(request))
 				.build();
 	}
-
+/**
+ * API xoá bình luận theo ID.
+ *
+ * @param idComment ID bình luận cần xoá
+ * @return ID của bình luận đã xoá (hoặc mã trạng thái), bọc trong ApiRespone
+ */
 	@DeleteMapping(value = "/{idComment}")
 	@Operation(summary = "Xoá bình luận", description = "Xoá bình luận theo ID.")
 	public ApiRespone<Integer> deleteComment(@PathVariable(name = "idComment") Integer idComment) {

@@ -37,6 +37,19 @@ public class TtsJobAsyncService {
 	@NonFinal
 	@Value("${server.base-url}")
 	private String serverBaseUrl;
+
+	/**
+	 * <!--
+	 * ĐÃ COMMENT LẠI KHÔNG ĐƯỢC SỬA
+	 * -->
+	 * 
+	 * Asynchronously splits a long text into smaller chunks and creates a parent {@link TtsJob}
+	 * along with its associated {@link TtsSubJob}s, then begins processing.
+	 *
+	 * @param longText  The full text that needs to be spoken.
+	 * @param idChapter The identifier of the chapter this TTS job is associated with.
+	 * @return A map containing the parent job ID and status check URL.
+	 */
 //	@Async
 //	public Map<String, String> speakLongText(String longText, String idChapter) {
 //		final int MAX_CHUNK_LENGTH = 1000; // Giới hạn cho mỗi request FPT
@@ -81,7 +94,19 @@ public class TtsJobAsyncService {
 //		return response;
 //
 //	}
-	
+
+	/**
+	 * Asynchronously handles long text-to-speech processing by:
+	 * <ul>
+	 *   <li>Splitting the input text into smaller chunks</li>
+	 *   <li>Creating and saving a parent {@link TtsJob} with status PROCESSING</li>
+	 *   <li>Creating and saving multiple {@link TtsSubJob}s with status PENDING</li>
+	 *   <li>Delegating the processing of sub-jobs to the {@link TextService}</li>
+	 * </ul>
+	 *
+	 * @param longText  The full text to convert to speech.
+	 * @param idChapter The identifier for the chapter associated with this TTS job.
+	 */
 	@Async
 	public void speakLongTextAsync(String longText, String idChapter) {
 	    final int MAX_CHUNK_LENGTH = 1000;
@@ -115,5 +140,5 @@ public class TtsJobAsyncService {
 	    // Bắt đầu xử lý các job con
 	    textService.processSubJobs(subJobs, serverBaseUrl);
 	}
-
 }
+

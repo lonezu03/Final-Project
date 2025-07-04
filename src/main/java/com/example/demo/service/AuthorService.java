@@ -40,7 +40,12 @@ public class AuthorService {
 	IAuthorRepository authorRepository;
 	UploadFileService uploadFileService;
 	INovelMapper novelMapper;
-
+/**
+ * Lấy danh sách tất cả tác giả cùng với thông tin liên quan (nếu có).
+ *
+ * @return danh sách tác giả dưới dạng AuthorRespone
+ * @throws AppException nếu có lỗi không xác định trong quá trình truy xuất
+ */
 	public List<AuthorRespone> getAll() {
 		try {
 			  List<Author> authors = authorRepository.findAllWithNovels();
@@ -62,6 +67,13 @@ public class AuthorService {
 	}
 
 
+/**
+ * Lấy thông tin chi tiết của một tác giả theo ID.
+ *
+ * @param idAuthor ID của tác giả cần lấy
+ * @return thông tin tác giả dưới dạng AuthorRespone
+ * @throws AppException nếu tác giả không tồn tại
+ */
 	public AuthorRespone getAuthor(String idAuthor) {
 		Author author = authorRepository.findById(idAuthor).get();
 		Set<Novel> novels = author.getNovels();
@@ -73,6 +85,14 @@ public class AuthorService {
 		return authorRespone;
 	}
 
+/**
+ * Tạo mới một tác giả, có thể kèm theo ảnh chân dung và danh sách truyện liên quan.
+ *
+ * @param request thông tin yêu cầu tạo tác giả
+ * @param file file ảnh đại diện của tác giả (nếu có)
+ * @return tác giả vừa được tạo dưới dạng AuthorRespone
+ * @throws IOException nếu có lỗi khi upload file ảnh
+ */
 	public AuthorRespone createAuthor(AuthorCreationRequest request, MultipartFile file) throws IOException {
 		Author author = authorMapper.toAuthor(request);
 
@@ -92,7 +112,15 @@ public class AuthorService {
 
 		return authorMapper.toAuthorRespone(author);
 	}
-
+/**
+ * Cập nhật thông tin của tác giả, bao gồm cập nhật ảnh đại diện (nếu có) 
+ * và cập nhật các truyện liên quan.
+ *
+ * @param request thông tin yêu cầu cập nhật tác giả
+ * @param file file ảnh mới của tác giả (nếu có)
+ * @return tác giả sau khi được cập nhật dưới dạng AuthorRespone
+ * @throws IOException nếu có lỗi khi xử lý file
+ */
 	public AuthorRespone updateAuthor(AuthorUpdateRequest request, MultipartFile file) throws IOException {
 
 		Author author = authorMapper.toAuthorUpdate(request);
@@ -120,7 +148,15 @@ public class AuthorService {
 
 		return authorMapper.toAuthorRespone(author);
 	}
-
+/**
+ * Xoá tác giả khỏi hệ thống theo ID. 
+ * Trước khi xoá sẽ xoá liên kết giữa tác giả và các truyện, 
+ * đồng thời xoá ảnh đại diện nếu có.
+ *
+ * @param idAuthor ID của tác giả cần xoá
+ * @return ID của tác giả đã bị xoá
+ * @throws AppException nếu tác giả không tồn tại hoặc có ràng buộc không thể xoá
+ */
 	@Transactional
 	public String deleteById(String idAuthor) {
 		try {

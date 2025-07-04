@@ -25,7 +25,15 @@ public class MailService {
 	private static final SecureRandom random = new SecureRandom();
 
 	
-
+/**
+ * Gửi email có chứa mã OTP dưới dạng HTML.
+ * Nếu gửi HTML thất bại sẽ gửi dưới dạng văn bản thuần (plain text).
+ *
+ * @param to      Địa chỉ email người nhận
+ * @param subject Tiêu đề email
+ * @param otp     Mã OTP cần gửi
+ * @throws RuntimeException nếu không thể gửi được email
+ */
     public void sendOTPEmail(String to, String subject, String otp) {
     	  try {
     	        MimeMessage message = emailSender.createMimeMessage();
@@ -47,7 +55,13 @@ public class MailService {
         message.setText("Your OTP code is: " + otp);
         emailSender.send(message); 
     }
-
+/**
+ * Tạo nội dung email dạng HTML chứa mã OTP và tên người nhận.
+ *
+ * @param otp  Mã OTP cần hiển thị
+ * @param name Tên người nhận (phần trước dấu @ trong địa chỉ email)
+ * @return Nội dung HTML hoàn chỉnh của email
+ */
     String buildOtpHtmlContent(String otp, String name) {
         return """
             <html>
@@ -65,7 +79,12 @@ public class MailService {
             """.formatted(name, otp);
     }
 
-    
+    /**
+ * Sinh ngẫu nhiên một chuỗi OTP chỉ gồm số với độ dài được chỉ định.
+ *
+ * @param length Độ dài của mã OTP cần tạo
+ * @return Mã OTP gồm các ký tự số
+ */
     public String generateOTP(int length) {
         StringBuilder otp = new StringBuilder(length);
         for (int i = 0; i < length; i++) {

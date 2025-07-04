@@ -47,7 +47,15 @@ public class AuthenticationService {
 	@NonFinal
 	@Value("${app.security.singer-key}")
 	protected String SIGNER_KEY;
-
+/**
+ * Phân tích và kiểm tra tính hợp lệ của JWT token.
+ * Kiểm tra chữ ký và thời gian hết hạn của token.
+ *
+ * @param request đối tượng chứa token cần kiểm tra
+ * @return đối tượng IntrospectRespone cho biết token có hợp lệ hay không
+ * @throws JOSEException nếu có lỗi trong quá trình xác thực chữ ký
+ * @throws ParseException nếu token không đúng định dạng
+ */
 	public IntrospectRespone introspect(IntrospectRequest request) throws JOSEException, ParseException {
 		var token = request.getToken();
 
@@ -63,24 +71,13 @@ public class AuthenticationService {
 							.Valid(verified && expiryTime.after(new Date()))
 							.build();
 	}
-
-//	public AuthenticationResponse authenticate(LoginRequest request) {
-//		PasswordEncoder passwordEncoder=new BCryptPasswordEncoder(10);
-//		
-//		var user=userRepository.findByEmail(request.getEmail())
-//				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-//		boolean authenticated=passwordEncoder.matches(request.getPassword(), user.getPassword());
-//		
-//		if(!authenticated)
-//			throw new AppException(ErrorCode.INVALID_PASSWORD);
-//		
-//		var token=generateToken(user);
-//		
-//		return AuthenticationResponse.builder()
-//									 .authenticated(authenticated)
-//									 .token(token).build();
-//	}
-	
+	/**
+ * Sinh JWT token mới cho người dùng với thông tin gồm: email, username, vai trò, thời gian phát hành, thời gian hết hạn.
+ *
+ * @param user người dùng muốn cấp phát token
+ * @return chuỗi token đã ký hợp lệ
+ * @throws RuntimeException nếu có lỗi khi ký token
+ */
 	public String generateToken(User user) {
 
 		JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
@@ -103,31 +100,12 @@ public class AuthenticationService {
 		}
 
 	}
-	
-//	public String generateToken(LoginRequest request) {
-//
-//		User user=userRepository.findByEmail(request.getEmail()).get();
-//		JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
-//
-//		JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-//				.subject(user.getUsername())
-//				.issuer("Duong inter")
-//				.issueTime(new Date())
-//				.expirationTime(new Date(Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()))
-//				.claim("scope", buildScope(user)).build();
-//		Payload payload = new Payload(jwtClaimsSet.toJSONObject());
-//		JWSObject jwsObject = new JWSObject(header, payload);
-//
-//		try {
-//			jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
-//			return jwsObject.serialize();
-//		} catch (JOSEException e) {
-//			log.error("Cannot create token", e);
-//			throw new RuntimeException(e);
-//		}
-//
-//	}
-
+/**
+ * Tạo chuỗi scope (phạm vi quyền hạn) từ vai trò của người dùng.
+ *
+ * @param user người dùng cần tạo scope
+ * @return chuỗi scope được phân cách bằng dấu cách
+ */
 	private String buildScope(User user) {
 		StringJoiner stringJoiner = new StringJoiner(" ");
 		stringJoiner.add(user.getRole() + "");

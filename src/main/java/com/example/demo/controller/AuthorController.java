@@ -36,19 +36,35 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthorController {
 
 	AuthorService authorService;
-	
+	/**
+ * API lấy danh sách tất cả tác giả hiện có trong hệ thống.
+ *
+ * @return danh sách các tác giả được bọc trong đối tượng ApiRespone
+ */
 	@GetMapping("/getAll")
 	@Operation(summary = "Lấy danh sách tất cả tác giả", description = "Trả về danh sách đầy đủ các tác giả đang có trong hệ thống.")
 	public ApiRespone<List<AuthorRespone>> getAll() {
 		return ApiRespone.<List<AuthorRespone>>builder().result(authorService.getAll()).build();
 	}
-
+/**
+ * API lấy thông tin chi tiết của một tác giả theo ID.
+ *
+ * @param idAuthor ID của tác giả cần lấy thông tin
+ * @return thông tin tác giả dưới dạng ApiRespone
+ */
 	@GetMapping(value = "/{idAuthor}")
 	@Operation(summary = "Lấy thông tin chi tiết tác giả", description = "Trả về thông tin chi tiết của một tác giả theo ID.")
 	public ApiRespone<AuthorRespone> getAuthorRespone(@PathVariable String idAuthor) {
 		return ApiRespone.<AuthorRespone>builder().result(authorService.getAuthor(idAuthor)).build();
 	}
-
+/**
+ * API tạo mới một tác giả. Cho phép upload ảnh đại diện kèm theo nếu cần.
+ *
+ * @param request thông tin tạo mới tác giả
+ * @param image file ảnh đại diện (tùy chọn)
+ * @return thông tin tác giả vừa được tạo dưới dạng ApiRespone
+ * @throws IOException nếu xảy ra lỗi khi xử lý file ảnh
+ */
 	@PostMapping(value = "/create", consumes = { "multipart/form-data" })
 	@Operation(summary = "Tạo mới tác giả", description = "Tạo một tác giả mới trong hệ thống, có thể kèm theo ảnh đại diện.")
 	public ApiRespone<AuthorRespone> createAuthor(
@@ -56,7 +72,14 @@ public class AuthorController {
 			@RequestParam(required = false) MultipartFile image) throws IOException {
 		return ApiRespone.<AuthorRespone>builder().result(authorService.createAuthor(request, image)).build();
 	}
-
+/**
+ * API cập nhật thông tin tác giả. Cho phép thay đổi ảnh đại diện nếu có file mới được cung cấp.
+ *
+ * @param request thông tin cập nhật tác giả
+ * @param image file ảnh mới (tùy chọn)
+ * @return thông tin tác giả sau khi cập nhật dưới dạng ApiRespone
+ * @throws IOException nếu xảy ra lỗi khi xử lý file ảnh
+ */
 	@PutMapping(value = "/update", consumes = { "multipart/form-data" })
 	@Operation(summary = "Cập nhật thông tin tác giả", description = "Cập nhật thông tin của tác giả, có thể kèm theo ảnh đại diện mới.")
 	public ApiRespone<AuthorRespone> updateAuthor(
@@ -64,7 +87,12 @@ public class AuthorController {
 			@RequestParam(required = false) MultipartFile image) throws IOException {
 		return ApiRespone.<AuthorRespone>builder().result(authorService.updateAuthor(request, image)).build();
 	}
-
+/**
+ * API xoá một tác giả ra khỏi hệ thống theo ID.
+ *
+ * @param idAuthor ID của tác giả cần xoá
+ * @return ID của tác giả đã được xoá, bọc trong ApiRespone
+ */
 	@DeleteMapping(value = "/{idAuthor}")
 	@Operation(summary = "Xoá tác giả", description = "Xoá một tác giả ra khỏi hệ thống theo ID.")
 	public ApiRespone<String> deleteAuthor(@PathVariable String idAuthor) {

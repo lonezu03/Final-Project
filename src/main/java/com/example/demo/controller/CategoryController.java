@@ -31,7 +31,11 @@ public class CategoryController {
 
 	CategoryService categoryService;
 
-
+/**
+ * API lấy danh sách tất cả thể loại trong hệ thống.
+ *
+ * @return danh sách các thể loại dưới dạng ApiRespone
+ */
 	@GetMapping("/getAll")
 	@Operation(summary = "Lấy danh sách tất cả thể loại", description = "Trả về danh sách đầy đủ các thể loại hiện có trong hệ thống.")
 	public ApiRespone<List<CategoryRespone>> getAllCategory() {
@@ -39,7 +43,12 @@ public class CategoryController {
 				.result(categoryService.getAllCategory())
 				.build();
 	}
-
+/**
+ * API tạo mới một thể loại.
+ *
+ * @param request thông tin yêu cầu tạo thể loại, bao gồm tên, mô tả,...
+ * @return thể loại vừa được tạo dưới dạng ApiRespone
+ */
 	@PostMapping("/create")
 	@Operation(summary = "Tạo mới thể loại", description = "Tạo một thể loại mới với các thông tin như tên, mô tả,...")
 	public ApiRespone<CategoryRespone> createCatehory(@RequestBody CategoryCreationRequest request) {
@@ -47,7 +56,12 @@ public class CategoryController {
 				.result(categoryService.createCategory(request))
 				.build();
 	}
-
+/**
+ * API cập nhật thông tin của một thể loại đã có.
+ *
+ * @param request thông tin cập nhật thể loại
+ * @return thể loại sau khi được cập nhật dưới dạng ApiRespone
+ */
 	@PutMapping("/update")
 	@Operation(summary = "Cập nhật thể loại", description = "Cập nhật thông tin của một thể loại đã tồn tại.")
 	public ApiRespone<CategoryRespone> updateCategory(@RequestBody CategoryUpdateRequest request) {
@@ -55,7 +69,12 @@ public class CategoryController {
 				.result(categoryService.updateCategory(request))
 				.build();
 	}
-
+/**
+ * API xoá một thể loại ra khỏi hệ thống theo ID.
+ *
+ * @param idCategory ID của thể loại cần xoá
+ * @return ID của thể loại đã xoá, bọc trong ApiRespone
+ */
 	@DeleteMapping(value = "/{idCategory}")
 	@Operation(summary = "Xoá thể loại", description = "Xoá một thể loại ra khỏi hệ thống theo ID.")
 	public ApiRespone<String> deleteCategory(@PathVariable String idCategory) {

@@ -32,11 +32,22 @@ public class CategoryService {
 	ICategoryMapper categoryMapper;
 	ICategoryRepository categoryRepository;
 	INovelRepository novelRepository;
-
+/**
+ * Lấy danh sách tất cả thể loại có trong hệ thống.
+ *
+ * @return danh sách thể loại dưới dạng CategoryRespone
+ */
 	public List<CategoryRespone> getAllCategory() {
 		return categoryRepository.findAll().stream().map(t -> categoryMapper.toCategoryRespone(t)).toList();
 	}
-
+/**
+ * Tạo mới một thể loại.
+ * Kiểm tra nếu tên thể loại đã tồn tại thì báo lỗi.
+ *
+ * @param request thông tin yêu cầu tạo thể loại
+ * @return thể loại vừa được tạo dưới dạng CategoryRespone
+ * @throws AppException nếu tên thể loại đã tồn tại
+ */
 	public CategoryRespone createCategory(CategoryCreationRequest request) {
 		if (categoryRepository.existsByNameCategory(request.getNameCategory())) {
 			throw new AppException(ErrorCode.CATEGORY_ALREADY_IN);
@@ -47,7 +58,14 @@ public class CategoryService {
 
 		return categoryMapper.toCategoryRespone(category);
 	}
-
+/**
+ * Xoá một thể loại theo ID.
+ * Đồng thời xoá liên kết giữa thể loại và các truyện có liên quan trước khi xoá thể loại.
+ *
+ * @param idCategory ID của thể loại cần xoá
+ * @return ID của thể loại đã xoá
+ * @throws AppException nếu thể loại không tồn tại hoặc có ràng buộc không thể xoá
+ */
 	public String deleteCategory(String idCategory) {
 		Category category = categoryRepository.findById(idCategory)
 				.orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
@@ -67,7 +85,13 @@ public class CategoryService {
 		}
 		return idCategory;
 	}
-
+/**
+ * Cập nhật thông tin của một thể loại.
+ *
+ * @param request thông tin yêu cầu cập nhật thể loại
+ * @return thể loại sau khi được cập nhật dưới dạng CategoryRespone
+ * @throws AppException nếu thể loại không tồn tại
+ */
 	public CategoryRespone updateCategory(CategoryUpdateRequest request) {
 		Category category = categoryMapper.toCategoryUpdate(request);
 		if (!categoryRepository.existsById(request.getIdCategory())) {

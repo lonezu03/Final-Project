@@ -41,12 +41,15 @@ public class TTSController {
 	@Value("${server.base-url}")
 	private String serverBaseUrl;
 
-	/**
-	 * Nếu như 1 câu đơn dài hơn 80 ký tự không có dấu ngắt câu hay nghỉ câu thì nó sẽ không gen ra được
-	 * @param longText
-	 * @return
-	 */
-	
+/**
+ * API xử lý văn bản dài để tạo các đoạn âm thanh nhỏ (TTS).
+ *
+ * Văn bản sẽ được chia thành các đoạn nhỏ phù hợp và mỗi đoạn được tạo thành một sub-job.
+ * Khi tất cả các sub-job hoàn tất, âm thanh sẽ được ghép lại thành một file hoàn chỉnh.
+ *
+ * @param longText Văn bản đầu vào cần chuyển thành âm thanh.
+ * @return ResponseEntity chứa thông báo chấp nhận xử lý và ID của job cha để kiểm tra trạng thái.
+ */
 	@PostMapping("/speak-long-text")
 	public ResponseEntity<?> speakLongText(@RequestBody String longText) {
 		final int MAX_CHUNK_LENGTH = 1000; // Giới hạn cho mỗi request FPT
@@ -88,7 +91,16 @@ public class TTSController {
 				"parentJobId", parentJob.getId(), "status_check_url", "/api/tts/status/" + parentJob.getId());
 		return ResponseEntity.accepted().body(response);
 	}
-
+/**
+ * API nhận callback từ hệ thống xử lý âm thanh (ví dụ: FPT.AI) cho từng sub-job.
+ *
+ * Dựa vào kết quả callback (thành công hoặc thất bại), hệ thống sẽ cập nhật trạng thái sub-job
+ * và nếu tất cả sub-job hoàn thành, sẽ bắt đầu tiến hành ghép file âm thanh lại.
+ *
+ * @param callbackPayload Payload chứa thông tin kết quả xử lý (success, message,...).
+ * @param subJobId ID của sub-job đang callback.
+ * @return ResponseEntity báo thành công hoặc lỗi nếu không tìm thấy sub-job.
+ */
 	@PostMapping("/sub-callback")
 	public ResponseEntity<?> handleSubJobCallback(@RequestBody Map<String, Object> callbackPayload,
 			@RequestParam("subJobId") Long subJobId) {
@@ -123,7 +135,15 @@ public class TTSController {
 			return ResponseEntity.badRequest().build();
 		});
 	}
-
+/**
+ * API kiểm tra trạng thái của một job chính (TtsJob).
+ *
+ * Job chính có thể ở các trạng thái như: PENDING, PROCESSING, ASSEMBLING, COMPLETED, FAILED.
+ * Nếu job đã hoàn thành thì trả về link audio cuối cùng, nếu thất bại thì trả về thông báo lỗi.
+ *
+ * @param parentJobId ID của job chính cần kiểm tra trạng thái.
+ * @return ResponseEntity chứa thông tin trạng thái job, URL audio hoặc lỗi nếu có.
+ */
 	@GetMapping("/status/{parentJobId}")
 	public ResponseEntity<?> getJobStatus(@PathVariable String parentJobId) {
 		return ttsJobRepository.findById(parentJobId).map(job -> {

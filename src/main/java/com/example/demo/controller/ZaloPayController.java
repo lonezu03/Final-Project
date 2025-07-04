@@ -33,7 +33,14 @@ public class ZaloPayController {
 	ZaloPayService zaloPayService;
 	ObjectMapper objectMapper;
 //	Shipping shipping;
-
+/**
+ * Tạo đơn hàng thanh toán qua ZaloPay và trả về URL thanh toán.
+ *
+ * @param request Thông tin yêu cầu thanh toán từ client (bao gồm thông tin đơn hàng, số tiền, mô tả,...).
+ * @return Đường dẫn (URL) để người dùng thực hiện thanh toán qua ZaloPay.
+ * @throws JsonProcessingException Nếu xảy ra lỗi khi xử lý JSON.
+ * @throws UnsupportedEncodingException Nếu xảy ra lỗi khi giải mã chuỗi.
+ */
 	@PostMapping("/create")
 	public String createPaymentOrder(@RequestBody ZaloPayRequest request)
 			throws JsonProcessingException, UnsupportedEncodingException {

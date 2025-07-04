@@ -30,7 +30,19 @@ public class AudioAssemblyService {
     private final ITtsSubJobRepository ttsSubJobRepository;
     private final UploadFileService cloudinaryService;
     private final HttpClient httpClient = HttpClient.newBuilder().build();
-
+/**
+ * Kích hoạt quá trình ghép các file audio nhỏ lại thành một file audio hoàn chỉnh nếu tất cả sub-job đã hoàn thành.
+ * Phương thức này được gọi bất đồng bộ để không chặn luồng chính.
+ * 
+ * Quá trình gồm:
+ * - Kiểm tra trạng thái job cha.
+ * - Kiểm tra toàn bộ các sub-job đã hoàn thành.
+ * - Tải từng phần âm thanh về bộ nhớ và ghép nối lại.
+ * - Upload file audio hoàn chỉnh lên Cloudinary.
+ * - Cập nhật trạng thái của job cha thành COMPLETED hoặc FAILED nếu lỗi xảy ra.
+ *
+ * @param parentJobId ID của job cha (TtsJob) cần kiểm tra và xử lý
+ */
     @Async
     public void triggerAssemblyIfReady(String parentJobId) {
         // Sử dụng synchronized để tránh trường hợp nhiều callback đến cùng lúc và cố gắng ghép file
@@ -79,7 +91,13 @@ public class AudioAssemblyService {
             }
         }
     }
-
+/**
+ * Tải nội dung file từ một URL về bộ nhớ dưới dạng mảng byte.
+ * Được sử dụng để tải các đoạn âm thanh tạm từ các sub-job.
+ *
+ * @param url đường dẫn đến file cần tải
+ * @return mảng byte chứa nội dung file nếu tải thành công, null nếu thất bại
+ */
     private byte[] downloadFileToMemory(String url) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
