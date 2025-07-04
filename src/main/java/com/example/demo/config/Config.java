@@ -143,14 +143,14 @@ public class Config {
      *
      * @return a configured {@link ResourceBundleMessageSource}.
      */
-    @Bean
-    public MessageSource messageSource() {
-        ResourceBundleMessageSource source = new ResourceBundleMessageSource();
-        source.setBasename("errorMessages"); // Automatically finds errorMessages_vi.properties, etc.
-        source.setDefaultEncoding("UTF-8");  // Critical for reading Vietnamese properly
-        source.setUseCodeAsDefaultMessage(true);
-        return source;
-    }
+//    @Bean
+//    public MessageSource messageSource() {
+//        ResourceBundleMessageSource source = new ResourceBundleMessageSource();
+//        source.setBasename("errorMessages"); // Automatically finds errorMessages_vi.properties, etc.
+//        source.setDefaultEncoding("UTF-8");  // Critical for reading Vietnamese properly
+//        source.setUseCodeAsDefaultMessage(true);
+//        return source;
+//    }
     
 
     /**
@@ -167,10 +167,10 @@ public class Config {
      *
      * @return a {@link LocaleResolver} implementation
      */
-    @Bean
-    public LocaleResolver localeResolver() {
-        return new CustomLocaleResolver(); // Custom strategy to resolve locale based on Accept-Language
-    }
+//    @Bean
+//    public LocaleResolver localeResolver() {
+//        return new CustomLocaleResolver(); // Custom strategy to resolve locale based on Accept-Language
+//    }
 
 
 

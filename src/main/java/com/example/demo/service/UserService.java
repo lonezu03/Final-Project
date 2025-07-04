@@ -3,7 +3,9 @@ package com.example.demo.service;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,10 +20,12 @@ import com.example.demo.dto.request.UserCreationRequest;
 import com.example.demo.dto.request.UserLoginByEmailRequest;
 import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
-import com.example.demo.dto.respone.HistoryReadRespone;
+import com.example.demo.dto.respone.HistoryReadNovelRespone;
+import com.example.demo.dto.respone.HistoryReadSubRespone;
 import com.example.demo.dto.respone.UploadFileRespone;
 import com.example.demo.dto.respone.UserLoginRespone;
 import com.example.demo.dto.respone.UserRespone;
+import com.example.demo.entity.Chapter;
 import com.example.demo.entity.HistoryId;
 import com.example.demo.entity.HistoryRead;
 import com.example.demo.entity.Novel;
@@ -32,6 +36,7 @@ import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.IHistoryReadMapper;
 import com.example.demo.mapper.IUserMapper;
+import com.example.demo.repository.IChapterRepository;
 import com.example.demo.repository.IHistoryReadRepository;
 import com.example.demo.repository.INovelRepository;
 import com.example.demo.repository.IUserRepository;
@@ -59,6 +64,8 @@ public class UserService {
 	HistoryReadService historyReadService;
 	AuthenticationService authenticationService;
 	RefreshTokenRepository refreshTokenRepository;
+	IChapterRepository chapterRepository;
+
 	/**
 	 * Lấy danh sách tất cả người dùng từ database và map sang DTO UserRespone.
 	 *
@@ -138,15 +145,16 @@ public class UserService {
 		}
 
 		UserRespone userRespone = userMapper.toUserRespone(user);
-		List<HistoryReadRespone> historyReadRespones = historyReadService.getHistoryRead(userRespone.getIdUser());
-		userRespone.setHistoryRead(historyReadRespones);
+		List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
+		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
+
 		userRespone.setToken(authenticationService.generateToken(user));
 		return userRespone;
 	}
 
 	/**
-	 * Đăng nhập người dùng bằng email (ví dụ qua Google).
-	 * Nếu chưa tồn tại, tự động tạo tài khoản.
+	 * Đăng nhập người dùng bằng email (ví dụ qua Google). Nếu chưa tồn tại, tự động
+	 * tạo tài khoản.
 	 *
 	 * @param request yêu cầu đăng nhập bằng email
 	 * @return UserRespone chứa thông tin người dùng, lịch sử đọc và token
@@ -158,146 +166,161 @@ public class UserService {
 		}
 
 		UserRespone userRespone = userMapper.toUserRespone(user);
-		List<HistoryReadRespone> historyReadRespones = historyReadService.getHistoryRead(userRespone.getIdUser());
-		userRespone.setHistoryRead(historyReadRespones);
+		List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
+		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
+
 		userRespone.setToken(authenticationService.generateToken(user));
 
 		return userRespone;
 	}
 
-
-	
 	/**
- * Cấp quyền MANAGER cho người dùng theo ID.
- *
- * @param idUser ID của người dùng cần cấp quyền
- * @return UserRespone sau khi cập nhật quyền kèm token mới
- * @throws AppException nếu không tìm thấy người dùng
- */
-public UserRespone grantRole(String idUser) {
-	User user = userRepository.findByIdUser(idUser)
-			.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+	 * Cấp quyền MANAGER cho người dùng theo ID.
+	 *
+	 * @param idUser ID của người dùng cần cấp quyền
+	 * @return UserRespone sau khi cập nhật quyền kèm token mới
+	 * @throws AppException nếu không tìm thấy người dùng
+	 */
+	public UserRespone grantRole(String idUser) {
+		User user = userRepository.findByIdUser(idUser).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-	user.setRole(Role.MANAGER);
-	user = userRepository.save(user);
-
-	UserRespone userRespone = userMapper.toUserRespone(user);
-	userRespone.setToken(authenticationService.generateToken(user));
-	return userRespone;
-}
-
-/**
- * Cập nhật thông tin người dùng dựa theo email.
- *
- * @param request Dữ liệu cập nhật từ người dùng
- * @return UserRespone sau khi cập nhật
- * @throws IOException nếu có lỗi khi xử lý dữ liệu
- * @throws AppException nếu không tìm thấy người dùng
- */
-public UserRespone updateUser(UserUpdateRequest request) throws IOException {
-	User user = userRepository.findByEmailUser(request.getEmailUser());
-
-	if (user == null) {
-		throw new AppException(ErrorCode.USER_NOT_EXISTED);
-	}
-
-	userMapper.updateUser(request, user);
-
-	return userMapper.toUserRespone(userRepository.save(user));
-}
-
-/**
- * Cập nhật avatar người dùng bằng cách upload ảnh mới.
- *
- * @param avatar File ảnh mới
- * @param email Email người dùng
- * @return UserRespone sau khi cập nhật avatar
- * @throws IOException nếu có lỗi khi xử lý file
- * @throws AppException nếu không tìm thấy người dùng
- */
-public UserRespone uploadUser(MultipartFile avatar, String email) throws IOException {
-	User user = userRepository.findByEmailUser(email);
-
-	if (user == null) {
-		throw new AppException(ErrorCode.USER_NOT_EXISTED);
-	}
-	if (user.getAvatarUser() != null && !user.getAvatarUser().isEmpty()) {
-		uploadFileService.deleteImage(user.getPublicIdAvartarUser());
-	}
-	UploadFileRespone respone = uploadFileService.uploadFile(avatar);
-	user.setAvatarUser(respone.getUrl());
-	user.setPublicIdAvartarUser(respone.getPublic_id());
-	return userMapper.toUserRespone(userRepository.save(user));
-}
-
-/**
- * Xóa người dùng theo ID.
- *
- * @param idUser ID người dùng cần xóa
- * @return ID người dùng đã bị xóa
- * @throws AppException nếu không tìm thấy người dùng
- */
-public String deleteUser(String idUser) {
-	User user = userRepository.findByIdUser(idUser)
-			.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-	if (user == null) {
-		throw new AppException(ErrorCode.USER_NOT_EXISTED);
-	}
-	userRepository.deleteById(idUser);
-	return idUser;
-}
-
-/**
- * Tạo hoặc cập nhật lịch sử đọc truyện của người dùng.
- *
- * @param readRequest Thông tin lịch sử đọc được gửi từ client
- * @return UserRespone sau khi cập nhật hoặc tạo lịch sử đọc, kèm danh sách lịch sử đọc hiện tại
- * @throws AppException nếu không tìm thấy người dùng
- */
-public UserRespone createHistoryRead(CreateHistoryReadRequest readRequest) {
-	User user = userRepository.findByEmailUser(readRequest.getEmail());
-	Novel novel = novelRepository.findById(readRequest.getIdNovel()).get();
-
-	HistoryId historyId = HistoryId.builder()
-			.idNovel(readRequest.getIdNovel())
-			.idUser(user.getIdUser())
-			.build();
-
-	HistoryRead historyRead = HistoryRead.builder()
-			.id(historyId)
-			.novel(novel)
-			.readingTime(LocalDateTime.now())
-			.idChapter(readRequest.getIdChapter())
-			.titleChapter(readRequest.getTitleChapter())
-			.readPlace(readRequest.getReadPlace())
-			.user(user)
-			.build();
-
-	Optional<HistoryRead> historyReadPast = historyReadRepository.findByUserAndIdChapter(user, readRequest.getIdChapter());
-
-	if (!historyReadPast.isEmpty()) {
-		historyReadMapper.updateHistoryRead(historyRead, historyReadPast.get());
-		historyRead = historyReadRepository.save(historyReadPast.get());
+		user.setRole(Role.MANAGER);
+		user = userRepository.save(user);
 
 		UserRespone userRespone = userMapper.toUserRespone(user);
-		userRespone.setHistoryRead(
-				historyReadRepository.findByIDUser(user.getIdUser()).stream()
-						.map(t -> historyReadMapper.toHistoryReadRespone(t)).toList()
-		);
+		userRespone.setToken(authenticationService.generateToken(user));
 		return userRespone;
 	}
 
-	historyRead = historyReadRepository.save(historyRead);
-	UserRespone userRespone = userMapper.toUserRespone(user);
-	userRespone.setHistoryRead(
-			historyReadRepository.findByIDUser(user.getIdUser()).stream()
-					.map(t -> historyReadMapper.toHistoryReadRespone(t)).toList()
-	);
-	return userRespone;
-}
+	/**
+	 * Cập nhật thông tin người dùng dựa theo email.
+	 *
+	 * @param request Dữ liệu cập nhật từ người dùng
+	 * @return UserRespone sau khi cập nhật
+	 * @throws IOException  nếu có lỗi khi xử lý dữ liệu
+	 * @throws AppException nếu không tìm thấy người dùng
+	 */
+	public UserRespone updateUser(UserUpdateRequest request) throws IOException {
+		User user = userRepository.findByEmailUser(request.getEmailUser());
+
+		if (user == null) {
+			throw new AppException(ErrorCode.USER_NOT_EXISTED);
+		}
+
+		userMapper.updateUser(request, user);
+
+		return userMapper.toUserRespone(userRepository.save(user));
+	}
+
+	/**
+	 * Cập nhật avatar người dùng bằng cách upload ảnh mới.
+	 *
+	 * @param avatar File ảnh mới
+	 * @param email  Email người dùng
+	 * @return UserRespone sau khi cập nhật avatar
+	 * @throws IOException  nếu có lỗi khi xử lý file
+	 * @throws AppException nếu không tìm thấy người dùng
+	 */
+	public UserRespone uploadUser(MultipartFile avatar, String email) throws IOException {
+		User user = userRepository.findByEmailUser(email);
+
+		if (user == null) {
+			throw new AppException(ErrorCode.USER_NOT_EXISTED);
+		}
+		if (user.getAvatarUser() != null && !user.getAvatarUser().isEmpty()) {
+			uploadFileService.deleteImage(user.getPublicIdAvartarUser());
+		}
+		UploadFileRespone respone = uploadFileService.uploadFile(avatar);
+		user.setAvatarUser(respone.getUrl());
+		user.setPublicIdAvartarUser(respone.getPublic_id());
+		return userMapper.toUserRespone(userRepository.save(user));
+	}
+
+	/**
+	 * Xóa người dùng theo ID.
+	 *
+	 * @param idUser ID người dùng cần xóa
+	 * @return ID người dùng đã bị xóa
+	 * @throws AppException nếu không tìm thấy người dùng
+	 */
+	public String deleteUser(String idUser) {
+		User user = userRepository.findByIdUser(idUser).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+		if (user == null) {
+			throw new AppException(ErrorCode.USER_NOT_EXISTED);
+		}
+		userRepository.deleteById(idUser);
+		return idUser;
+	}
+
+	/**
+	 * Tạo hoặc cập nhật lịch sử đọc truyện của người dùng.
+	 *
+	 * @param readRequest Thông tin lịch sử đọc được gửi từ client
+	 * @return UserRespone sau khi cập nhật hoặc tạo lịch sử đọc, kèm danh sách lịch
+	 *         sử đọc hiện tại
+	 * @throws AppException nếu không tìm thấy người dùng
+	 */
+	public UserRespone createHistoryRead(CreateHistoryReadRequest readRequest) {
+		User user = userRepository.findByEmailUser(readRequest.getEmail());
+		Chapter chapter = chapterRepository.findById(readRequest.getIdChapter())
+				.orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
+
+		HistoryId historyId = HistoryId.builder().idChapter(readRequest.getIdChapter()).idUser(user.getIdUser())
+				.build();
+
+		HistoryRead historyRead = HistoryRead.builder().id(historyId).chapter(chapter).readingTime(LocalDateTime.now())
+
+				.readPlace(readRequest.getReadPlace()).user(user).build();
 
 
+		Optional<HistoryRead> historyReadPast = historyReadRepository.findByUser_IdUserAndChapter_IdChapter(user.getIdUser(),chapter.getIdChapter());
+		if (!historyReadPast.isEmpty()) {
+			historyReadMapper.updateHistoryRead(historyRead, historyReadPast.get());
+			historyRead = historyReadRepository.save(historyReadPast.get());
 
+			UserRespone userRespone = userMapper.toUserRespone(user);
+			
+			List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
+			userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
+
+			return userRespone;
+		}
+
+		historyRead = historyReadRepository.save(historyRead);
+		UserRespone userRespone = userMapper.toUserRespone(user);
+		
+		List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
+		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
+
+		return userRespone;
+	}
+
+	private List<HistoryReadNovelRespone> buildHistoryGroupedByNovel(List<HistoryRead> histories) {
+	    return histories.stream()
+	        .collect(Collectors.groupingBy(hr -> hr.getChapter().getNovel()))
+	        .entrySet().stream()
+	        .map((Map.Entry<Novel, List<HistoryRead>> entry) -> {
+	            Novel novel = entry.getKey();
+	            List<HistoryRead> chapterHistories = entry.getValue();
+
+	            List<HistoryReadSubRespone> subs = chapterHistories.stream().map(hr -> {
+	                HistoryReadSubRespone sub = historyReadMapper.toHistoryReadRespone(hr);
+	                sub.setNameNovel(novel.getNameNovel());
+	                sub.setUrlNovel(novel.getImageNovel());
+	                sub.setTitleChapter(hr.getChapter().getTitleChapter());
+	                return sub;
+	            }).collect(Collectors.toList());
+
+	            return HistoryReadNovelRespone.builder()
+	                    .nameNovel(novel.getNameNovel())
+	                    .historyReadRespones(subs)
+	                    .build();
+	        }).collect(Collectors.toList());
+	}
+
+
+	
+	
 ///**
 // * Generate a new accessToken from a valid refreshToken.
 // *
@@ -327,5 +350,5 @@ public UserRespone createHistoryRead(CreateHistoryReadRequest readRequest) {
 //		throw new AppException("UNCATEGORIZED_EXCEPTION");
 //	}
 //}
-	
+
 }

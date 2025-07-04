@@ -35,6 +35,6 @@ public class UserRespone {
 	Integer coin;
 	
 	List<CommentRespone> commentRespones;
-	List<HistoryReadRespone> historyRead;
+	List<HistoryReadNovelRespone> historyRead;
 
 }

@@ -27,7 +27,8 @@ import com.example.demo.dto.request.UserLoginByEmailRequest;
 import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
-import com.example.demo.dto.respone.HistoryReadRespone;
+import com.example.demo.dto.respone.HistoryReadNovelRespone;
+import com.example.demo.dto.respone.HistoryReadSubRespone;
 import com.example.demo.dto.respone.UserRespone;
 import com.example.demo.entity.HistoryId;
 import com.example.demo.service.HistoryReadService;
@@ -153,8 +154,8 @@ public class UserController {
 
 	@GetMapping("/getHistory")
 	@Operation(summary = "Lấy lịch sử đọc", description = "Trả về danh sách các chương truyện đã đọc của người dùng theo ID.")
-	public ApiRespone<List<HistoryReadRespone>> getHistory(@RequestParam String idUser) {
-		return ApiRespone.<List<HistoryReadRespone>>builder().result(historyReadService.getHistoryRead(idUser)).build();
+	public ApiRespone<List<HistoryReadNovelRespone>> getHistory(@RequestParam String idUser) {
+		return ApiRespone.<List<HistoryReadNovelRespone>>builder().result(historyReadService.getHistoryRead(idUser)).build();
 	}
 
 	@PutMapping(value = "/grantRole/{idUser}")

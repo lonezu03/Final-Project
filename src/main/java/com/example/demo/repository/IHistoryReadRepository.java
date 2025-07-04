@@ -20,8 +20,12 @@ public interface IHistoryReadRepository extends JpaRepository<HistoryRead, Histo
 	@Query(value = "SELECT * FROM history_read WHERE id_User = :idUser", nativeQuery = true)
 	List<HistoryRead> findByIDUser(String idUser);
 
-	List<HistoryRead> findByNovel(Novel novel);
+	 // Lấy danh sách lịch sử đọc theo chapter
+    List<HistoryRead> findByChapter_IdChapter(String idChapter);
+
+    // Lấy đúng 1 bản ghi lịch sử đọc theo user và chapter
+    Optional<HistoryRead> findByUser_IdUserAndChapter_IdChapter(String idUser, String idChapter);
 	
-    Optional<HistoryRead> findByUserAndIdChapter(User user, String idChapter);
+
 
 }

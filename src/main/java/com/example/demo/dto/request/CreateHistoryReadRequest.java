@@ -17,12 +17,12 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateHistoryReadRequest {
 
-	String idNovel;
+//	String idNovel;
 	String email;
 	String idChapter;
 
 	Integer readPlace;
 
-	String titleChapter;
+//	String titleChapter;
 
 }
