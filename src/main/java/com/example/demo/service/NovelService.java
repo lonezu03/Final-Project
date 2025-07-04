@@ -64,15 +64,32 @@ public class NovelService {
 	IHistoryNotifyRepository historyNotifyRepository;
 
 	static Logger logger = LoggerFactory.getLogger(NovelService.class);
-
+/**
+ * Lấy tất cả truyện từ cơ sở dữ liệu.
+ *
+ * @return Danh sách các đối tượng NovelRespone
+ */
 	public List<NovelRespone> getAll() {
 		return novelRepository.findAll().stream().map(t -> novelMapper.toNovelRespone(t)).toList();
 	}
 
+/**
+ * Lấy thông tin truyện theo ID.
+ *
+ * @param idNovel ID của truyện cần lấy
+ * @return Đối tượng NovelRespone tương ứng
+ */
 	public NovelRespone getNovel(String idNovel) {
 		return novelMapper.toNovelRespone(novelRepository.findById(idNovel).get());
 	}
-
+/**
+ * Tạo mới một truyện và (nếu có) upload ảnh đại diện.
+ *
+ * @param request Thông tin truyện cần tạo
+ * @param file    File ảnh đại diện (tùy chọn)
+ * @return Đối tượng NovelRespone sau khi tạo thành công
+ * @throws IOException Nếu xảy ra lỗi trong quá trình upload ảnh
+ */
 	public NovelRespone createNovel(NovelCreatationRequest request, MultipartFile file) throws IOException {
 		Novel novel = novelMapper.toNovel(request);
 
@@ -84,7 +101,14 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
 	}
-
+/**
+ * Cập nhật thông tin truyện và (nếu có) cập nhật ảnh đại diện.
+ *
+ * @param request Thông tin truyện cần cập nhật
+ * @param file    File ảnh đại diện mới (tùy chọn)
+ * @return Đối tượng NovelRespone sau khi cập nhật thành công
+ * @throws IOException Nếu có lỗi khi upload hoặc xóa ảnh
+ */
 	public NovelRespone updateNovel(NovelUpdateRequest request, MultipartFile file) throws IOException {
 
 		Novel novel = novelMapper.toNovelUpdate(request);
@@ -102,7 +126,13 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
 	}
-
+/**
+ * Xóa một truyện theo ID, bao gồm cả ảnh nếu có.
+ *
+ * @param idNovel ID của truyện cần xóa
+ * @return ID của truyện đã bị xóa
+ * @throws AppException Nếu vi phạm ràng buộc (constraint) khóa ngoại
+ */
 	public String deleteById(String idNovel) {
 		try {
 			Novel novel = novelRepository.findById(idNovel).get();
@@ -117,7 +147,12 @@ public class NovelService {
 		}
 
 	}
-
+/**
+ * Xóa một tác giả khỏi truyện.
+ *
+ * @param request Yêu cầu chứa ID truyện và ID tác giả cần xóa
+ * @return Đối tượng NovelRespone sau khi cập nhật
+ */
 	public NovelRespone removeAuthor(NovelRemoveAuthorRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -130,7 +165,12 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-
+/**
+ * Thêm một tác giả vào truyện.
+ *
+ * @param request Yêu cầu chứa ID truyện và ID tác giả cần thêm
+ * @return Đối tượng NovelRespone sau khi cập nhật
+ */
 	public NovelRespone addAuthor(NovelAddAuthorRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -143,7 +183,12 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-
+/**
+ * Xóa một thể loại khỏi truyện.
+ *
+ * @param request Yêu cầu chứa ID truyện và ID thể loại cần xóa
+ * @return Đối tượng NovelRespone sau khi cập nhật
+ */
 	public NovelRespone removeCategory(NovelRemoveCategoryRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -160,7 +205,12 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-
+/**
+ * Thêm một thể loại vào truyện.
+ *
+ * @param request Yêu cầu chứa ID truyện và ID thể loại cần thêm
+ * @return Đối tượng NovelRespone sau khi cập nhật
+ */
 	public NovelRespone addCategory(NovelAddCategoryRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -173,7 +223,14 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-
+/**
+ * Tìm kiếm truyện dựa trên nhiều tiêu chí: tên, rating, số chương, trạng thái,
+ * tên tác giả, tên thể loại,... và có phân trang.
+ *
+ * @param criteria  Tiêu chí tìm kiếm
+ * @param pageable  Thông tin phân trang
+ * @return Trang chứa các truyện phù hợp dạng NovelRespone
+ */
 	@Transactional(readOnly = true) // Dùng readOnly để tối ưu hóa hiệu năng cho các truy vấn đọc
 	public Page<NovelRespone> searchNovels(NovelSearchCriteriaRequest criteria, Pageable pageable) {
 		// Bắt đầu với một Specification không có điều kiện (luôn đúng)
@@ -251,12 +308,21 @@ public class NovelService {
 		});
 	}
 
+/**
+ * Lấy danh sách tất cả các truyện mà người dùng đã follow.
+ *
+ * @return Danh sách các đối tượng FollowNovel
+ */
 	public List<FollowNovel> getAllFollowNovel() {
 		logger.info("Gọi danh sách follow novel");
 		return followNovelRepository.findAll();
 	}
 
-	
+	/**
+ * Lấy toàn bộ lịch sử thông báo.
+ *
+ * @return Danh sách các đối tượng HistoryNotify
+ */
 
 	public List<HistoryNotify> getAllHistoryNotify() {
 		return historyNotifyRepository.findAll();

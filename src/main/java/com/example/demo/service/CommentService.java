@@ -48,29 +48,46 @@ public class CommentService {
 	ICommentLikeRepository commentLikeRepository;
 	ICommentDislikeRepository commentDislikeRepository;
 
-	/**
-	 * 
-	 * @param idChapter
-	 * @return
-	 */
+/**
+ * Lấy danh sách tất cả comment theo ID chương.
+ *
+ * @param idChapter ID của chương
+ * @return Danh sách các comment dưới dạng CommentRespone
+ */
 	public List<CommentRespone> getListCommentByChapter(String idChapter) {
 		List<Comment> comments = commentRepository.findByChapter_IdChapter(idChapter);
 
 		return comments.stream().map(t -> commentMapper.toCommentRespone(t)).toList();
 	}
-
+/**
+ * Lấy danh sách comment mà một người dùng đã viết.
+ *
+ * @param idUser ID của người dùng
+ * @return Danh sách comment của người dùng
+ */
 	public List<CommentRespone> getListCommentByUser(String idUser) {
 		List<Comment> comments = commentRepository.findByUser_IdUser(idUser);
 
 		return comments.stream().map(t -> commentMapper.toCommentRespone(t)).toList();
 	}
-
+/**
+ * Lấy danh sách tất cả comment thuộc một truyện (theo ID truyện).
+ *
+ * @param idNovel ID của truyện
+ * @return Danh sách comment dưới dạng CommentNovelRespone
+ */
 	public List<CommentNovelRespone> getListCommentByNovel(String idNovel) {
 		List<Comment> comments = commentRepository.findAllByNovelId(idNovel);
 
 		return comments.stream().map(t -> commentMapper.toCommentNovelRespone(t)).toList();
 	}
-
+/**
+ * Tạo một comment mới, có thể thuộc chương hoặc phản hồi một comment khác.
+ *
+ * @param request Yêu cầu tạo comment mới
+ * @return Comment sau khi đã lưu
+ * @throws AppException nếu người dùng, chương hoặc comment cha không tồn tại
+ */
 	public CommentRespone createComment(CommentCreationRequest request) {
 		User user = userRepository.findByIdUser(request.getUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -96,7 +113,12 @@ public class CommentService {
 		comment = commentRepository.save(comment);
 		return commentMapper.toCommentRespone(comment);
 	}
-
+/**
+ * Cập nhật nội dung comment.
+ *
+ * @param request Yêu cầu cập nhật comment
+ * @return Comment sau khi cập nhật
+ */
 	public CommentRespone updateComment(CommentUpdateRequest request) {
 		User user = userRepository.findByIdUser(request.getUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -109,46 +131,12 @@ public class CommentService {
 		comment = commentRepository.save(comment);
 		return commentMapper.toCommentRespone(comment);
 	}
-
-//	public CommentRespone updatelikeComment(CommentUpdateLikeRequest request) {
-//		User user = userRepository.findByIdUser(request.getIdUser())
-//				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-//
-//		Comment comment = commentRepository.findById(request.getIdComment()).get();
-//
-//		Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
-//		Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
-//
-//		if (!existingDislikeOpt.isPresent()) {
-//			if (existingLikeOpt.isPresent()) {
-//				CommentLike commentLike = existingLikeOpt.get();
-//
-//				comment.setLikeComment(comment.getLikeComment() - 1);
-//
-//				comment.getLikes().remove(commentLike);
-//			} else {
-//				comment.setLikeComment(comment.getLikeComment() + 1);
-//				comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
-//			}
-//		}else {
-//			CommentDislike commentDislike = existingDislikeOpt.get();
-//
-//			comment.setDislikeComment(comment.getDislikeComment() - 1);
-//
-//			comment.getDislikes().remove(commentDislike);
-//			
-//			comment.setLikeComment(comment.getLikeComment() + 1);
-//			
-//			comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
-//		}
-//		
-//		
-//
-//		comment = commentRepository.save(comment);
-//
-//		return commentMapper.toCommentRespone(comment);
-//	}
-	
+	/**
+ * Thêm hoặc bỏ lượt thích cho comment. Nếu đang dislike thì sẽ bỏ dislike trước.
+ *
+ * @param request Yêu cầu cập nhật like
+ * @return Comment sau khi xử lý
+ */
 	public CommentRespone updatelikeComment(CommentUpdateLikeRequest request) {
 	    User user = userRepository.findByIdUser(request.getIdUser())
 	            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -182,47 +170,13 @@ public class CommentService {
 	}
 
 
-//	public CommentRespone updatedislikeComment(CommentUpdateLikeRequest request) {
-//		User user = userRepository.findByIdUser(request.getIdUser())
-//				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-//
-//		Comment comment = commentRepository.findById(request.getIdComment()).get();
-//
-//		Optional<CommentDislike> existingDislikeOpt = commentDislikeRepository.findByUserAndComment(user, comment);
-//		Optional<CommentLike> existingLikeOpt = commentLikeRepository.findByUserAndComment(user, comment);
-//
-//		if (!existingLikeOpt.isPresent()) {
-//			if (existingDislikeOpt.isPresent()) {
-//				CommentDislike commentDislike = existingDislikeOpt.get();
-//
-//				comment.setDislikeComment(comment.getDislikeComment() - 1);
-//
-//				comment.getDislikes().remove(commentDislike);
-//
-//			} else
-//
-//			{
-//				comment.setDislikeComment(comment.getDislikeComment()+1);
-//
-//				comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
-//			}
-//		}else {
-//			CommentLike commentLike = existingLikeOpt.get();
-//
-//			comment.setLikeComment(comment.getLikeComment()-1);;
-//
-//			comment.getLikes().remove(commentLike);
-//
-//			comment.setLikeComment(comment.getDislikeComment() + 1);
-//
-//			comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
-//		}
-//
-//		comment = commentRepository.save(comment);
-//
-//		return commentMapper.toCommentRespone(comment);
-//
-//	}
+
+/**
+ * Thêm hoặc bỏ lượt không thích (dislike) cho comment. Nếu đang like thì sẽ bỏ like trước.
+ *
+ * @param request Yêu cầu cập nhật dislike
+ * @return Comment sau khi xử lý
+ */
 	public CommentRespone updatedislikeComment(CommentUpdateLikeRequest request) {
 	    User user = userRepository.findByIdUser(request.getIdUser())
 	            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -255,7 +209,13 @@ public class CommentService {
 	    return commentMapper.toCommentRespone(comment);
 	}
 
-
+/**
+ * Xóa comment theo ID. Nếu có lỗi khi xóa sẽ ném ra AppException.
+ *
+ * @param idComment ID của comment cần xóa
+ * @return ID comment đã xóa
+ * @throws AppException nếu có lỗi xảy ra khi xóa
+ */
 	public Integer deleteComment(Integer idComment) {
 		try {
 			commentRepository.deleteById(idComment);
@@ -264,7 +224,14 @@ public class CommentService {
 		}
 		return idComment;
 	}
-
+/**
+ * Tìm kiếm comment theo nhiều tiêu chí: nội dung, chương, truyện, lượt thích, dislike,...
+ * Hỗ trợ phân trang.
+ *
+ * @param request  Yêu cầu tìm kiếm
+ * @param pageable Đối tượng phân trang
+ * @return Page chứa danh sách comment phù hợp
+ */
 	@Transactional(readOnly = true)
 	public Page<CommentRespone> searchComments(CommentSearchRequest request, Pageable pageable) {
 		// Bắt đầu với một Specification không có điều kiện (tương đương với WHERE 1=1)

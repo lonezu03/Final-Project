@@ -22,7 +22,9 @@ import com.example.demo.repository.IUserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-
+/**
+ * Service xử lý logic liên quan đến việc người dùng theo dõi truyện.
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -31,7 +33,15 @@ public class FollowNovelService {
 	IUserRepository userRepository;
 	INovelRepository novelRepository;
 	IFollowNovelRepository followNovelRepository;
-	
+	  /**
+     * Cho phép người dùng theo dõi một truyện nếu chưa theo dõi trước đó.
+     * <p>
+     * Kiểm tra sự tồn tại của user và novel, sau đó kiểm tra xem người dùng
+     * đã theo dõi truyện hay chưa. Nếu chưa thì tạo mới một bản ghi FollowNovel.
+     *
+     * @param request Yêu cầu theo dõi truyện (chứa idUser và idNovel)
+     * @throws AppException nếu người dùng hoặc truyện không tồn tại, hoặc nếu đã theo dõi rồi
+     */
 	public void followNovel(FollowNovelRequest request) {
 		User user = userRepository.findById(request.getIdUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));

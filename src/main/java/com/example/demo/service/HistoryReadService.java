@@ -24,12 +24,23 @@ public class HistoryReadService {
 	IHistoryReadRepository historyReadRepository;
 	IUserRepository userRepository;
 	IHistoryReadMapper historyReadMapper;
-	
+	/**
+ * Xóa một bản ghi lịch sử đọc dựa trên ID của người dùng và truyện.
+ *
+ * @param historyId ID bao gồm idUser và idNovel
+ * @return Chuỗi xác nhận đã xóa, gồm idNovel và idUser
+ */
 	public String deleteHistoryRead(HistoryId historyId) {
 		historyReadRepository.deleteById(historyId);
 		return historyId.getIdNovel()+" "+historyId.getIdUser();
 	}
 	
+/**
+ * Lấy danh sách lịch sử đọc của người dùng, kèm thông tin tên và ảnh truyện.
+ *
+ * @param idUser ID của người dùng
+ * @return Danh sách các HistoryReadRespone tương ứng
+ */
 	public List<HistoryReadRespone> getHistoryRead(String idUser) {
 		return historyReadRepository.findByIDUser(idUser).stream().map(t -> {
 		

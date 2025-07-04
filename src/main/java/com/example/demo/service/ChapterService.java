@@ -76,7 +76,15 @@ public class ChapterService {
 	// return chapterRepository.getAll().stream().map(t ->
 	// chapterMapper.toChapterRespone(t)).toList();
 	// }
-
+/**
+ * Lấy tất cả các chương thuộc một truyện cụ thể. Nếu có token được cung cấp và hợp lệ,
+ * thì sẽ bao gồm thêm thông tin về audio nếu có.
+ *
+ * @param request yêu cầu chứa ID của truyện và token (nếu có)
+ * @return danh sách các chương, kèm theo URL audio nếu có
+ * @throws JOSEException nếu có lỗi khi phân tích token
+ * @throws ParseException nếu token không đúng định dạng
+ */
 	public List<ChapterRespone> getAllChapter(ChapterGetByIdNovelRequest request) throws JOSEException, ParseException {
 
 		if (request.getToken() != null) {
@@ -117,11 +125,26 @@ public class ChapterService {
 		}
 
 	}
-
+/**
+ * Lấy thông tin chi tiết của một chương theo ID.
+ *
+ * @param idChapter ID của chương
+ * @return đối tượng ChapterRespone tương ứng
+ */
 	public ChapterRespone getChapterById(String idChapter) {
 		return chapterMapper.toChapterRespone(chapterRepository.findById(idChapter).get());
 	}
-
+/**
+ * Tạo một chương mới cho truyện. Nếu có file văn bản đính kèm (.txt), nội dung sẽ được đọc và lưu vào chương.
+ * Ngoài ra, tự động tạo job chuyển văn bản thành giọng nói (TTS) nếu có nội dung.
+ * Cập nhật tổng số chương của truyện và gửi thông báo đến người theo dõi.
+ *
+ * @param request thông tin yêu cầu tạo chương
+ * @param textFile file văn bản (.txt) chứa nội dung chương
+ * @return chương vừa được tạo dưới dạng ChapterRespone
+ * @throws IOException nếu xảy ra lỗi khi đọc file
+ * @throws InterruptedException nếu bị gián đoạn khi xử lý bất đồng bộ
+ */
 	@Transactional
 	public ChapterRespone createChapter(ChapterCreationRequest request, MultipartFile textFile)
 			throws IOException, InterruptedException {
@@ -182,7 +205,13 @@ public class ChapterService {
 
 		return chapterMapper.toChapterRespone(chapter);
 	}
-
+/**
+ * Xoá một chương khỏi truyện và cập nhật lại tổng số chương.
+ *
+ * @param idChapter ID của chương cần xoá
+ * @return ID của chương vừa bị xoá
+ * @throws AppException nếu chương không tồn tại hoặc có ràng buộc không thể xoá
+ */
 	public String deleteChapter(String idChapter) {
 		Chapter chapter = chapterRepository.findById(idChapter)
 				.orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
@@ -196,14 +225,26 @@ public class ChapterService {
 		}
 		return idChapter;
 	}
-
+/**
+ * Tăng số lượt xem cho một chương.
+ *
+ * @param idChapter ID của chương
+ * @return tổng số lượt xem sau khi tăng
+ */
 	public Integer increaseView(String idChapter) {
 		Chapter chapter = chapterRepository.findById(idChapter).get();
 		chapter.setViewChapter(chapter.getViewChapter() + 1);
 		chapterRepository.save(chapter);
 		return chapter.getViewChapter();
 	}
-
+/**
+ * Cập nhật thông tin của một chương. Nếu có file văn bản (.txt) mới được tải lên, nội dung chương sẽ được cập nhật lại.
+ *
+ * @param request thông tin yêu cầu cập nhật chương
+ * @param textFile file văn bản (.txt) mới (nếu có)
+ * @return chương sau khi được cập nhật dưới dạng ChapterRespone
+ * @throws IOException nếu xảy ra lỗi khi đọc file
+ */
 	public ChapterRespone updateChapter(ChapterUpdateRequest request, MultipartFile textFile) throws IOException {
 		Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter()).get();
 		Chapter chapter = chapterMapper.toChapterUpdate(request);
@@ -233,7 +274,12 @@ public class ChapterService {
 
 		return chapterMapper.toChapterRespone(chapterOgirin);
 	}
-
+/**
+ * Tạo thông báo lịch sử cho người dùng khi có chương mới.
+ *
+ * @param request thông tin để tạo thông báo (gồm user, tên truyện, tiêu đề chương)
+ * @return true nếu tạo thành công, false nếu có lỗi xảy ra
+ */
 	public Boolean createHistoryNotify(HistoryNotityCreationRequest request) {
 		try {
 
