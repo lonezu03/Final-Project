@@ -48,6 +48,15 @@ const SearchResultsPage = () => {
     };
     const paginationAndSortParams = { page, size };
     // console.log("Dispatching searchNovels with:", { searchCriteria, paginationAndSortParams });
+    // Chặn việc gọi lại dispatch nếu tham số không thay đổi
+    if (
+      novels.length > 0 &&
+      currentSearchTerm === term.trim() &&
+      paginationInfoFromStore?.pageNumber === page &&
+      paginationInfoFromStore?.pageSize === size
+    ) {
+      return;
+    }
     dispatch(searchNovels({ searchCriteria, paginationAndSortParams }));
   };
 

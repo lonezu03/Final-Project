@@ -41,19 +41,19 @@ const ReadingPage = () => {
 
   const { currentNovel, loading: novelLoading, error: novelError } = useSelector((state) => state.novels);
 
-  const {
-    currentChapterContent,
-    // chaptersForReadingPageDropdown sẽ được lấy từ state.chapters.chaptersForReadingPageDropdown
-    // mà getNovelChaptersList action cập nhật vào
-    chaptersForReadingPageDropdown,
-    loadingContent,
-    errorContent,
-    loadingListForReading, // Corresponds to loadingDropdownChapters in slice
-    errorListForReading,   // Corresponds to errorDropdownChapters in slice
+ // Tách ra thành các selector riêng lẻ để tối ưu hóa và tránh cảnh báo
+const currentChapterContent = useSelector((state) => state.chapters.currentChapterContent);
+const chaptersForReadingPageDropdown = useSelector((state) => state.chapters.chaptersForReadingPageDropdown);
+const loadingContent = useSelector((state) => state.chapters.loadingContent);
+const errorContent = useSelector((state) => state.chapters.errorContent);
+const loadingListForReading = useSelector((state) => state.chapters.loadingDropdownChapters);
+const errorListForReading = useSelector((state) => state.chapters.errorDropdownChapters);
 
-  } = useSelector((state) => state.chapters);
+// Phần lấy user vẫn giữ nguyên như đã sửa
+const currentUser = useSelector((state) => state.user.currentUser); 
+const userHistory = useSelector((state) => state.user.userHistory);
 
-  const {currentUser,userHistory} = useSelector((state) => state.user || {});
+//   const {currentUser,userHistory} = useSelector((state) => state.user || {});
 
   const [showChapterListDropdown, setShowChapterListDropdown] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -63,7 +63,6 @@ const ReadingPage = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('readingTheme') || 'xam-nhat');
   const [showContinueDialog, setShowContinueDialog] = useState(false);
   const [savedScrollPosition, setSavedScrollPosition] = useState(null);
-  const contentRef = useRef(null);
   const mainContentAreaRef = useRef(null);
   const [showAudioPlayer, setShowAudioPlayer] = useState(true);
   const urlAudio = currentChapterContent?.urlAudio || null;
@@ -78,131 +77,202 @@ const ReadingPage = () => {
   const pagePaddingBottom = showAudioPlayer ? `${AUDIO_PLAYER_ACTUAL_HEIGHT_PX}px` : '0px';
   const readingHeaderStickyTop = `${NAVBAR_MAIN_HEIGHT_PX}px`;
   const lastKnownPosition = useRef(0);
+ const contentRef = useRef(null); 
+const debounceTimerRef = useRef(null);
 
   const getPositionKey = () => `reading_position_${novelId}_${chapterId}`;
-
+//  const latestDataRef = useRef({});
+//   useEffect(() => {
+//     latestDataRef.current = {
+//       currentUser,
+//       currentChapterContent,
+//       novelId,
+//       chapterId,
+//     };
+//   }, [currentUser, currentChapterContent, novelId, chapterId]);
   useEffect(() => {
     localStorage.setItem('readingFontSize', fontSize.toString());
     localStorage.setItem('readingLineHeight', lineHeight.toString());
     localStorage.setItem('readingFontFamily', fontFamily);
     localStorage.setItem('readingTheme', theme);
   }, [fontSize, lineHeight, fontFamily, theme]);
-  // Effect #1: Tải dữ liệu chính khi vào trang (chạy 1 lần hoặc khi novelId đổi)
-  // Effect #1: Tải dữ liệu chính khi vào trang (chạy 1 lần hoặc khi novelId đổi)
-  useEffect(() => {
-    if (novelId) {
-      dispatch(getNovelById(novelId));
-      dispatch(getNovelChaptersList(novelId));
-    }
-  }, [dispatch, novelId]);
-
-  // Effect #2: Xử lý khi vào một chương MỚI (khi chapterId đổi)
-  useEffect(() => {
-    if (novelId && chapterId) {
-      // 1. Tăng lượt xem
-      dispatch(increaseChapterView(chapterId));
-      
-      // 2. Tải nội dung chương
-      dispatch(getChapterContentById({ novelId, chapterId }));
-      
-      // 3. Tải lịch sử đọc (nếu đã đăng nhập)
-      if (currentUser?.idUser) {
-        dispatch(getAllHistoryByUser(currentUser.idUser));
-      }
-      
-      // 4. Reset giao diện
-      if (contentRef.current) contentRef.current.scrollTop = 0;
-      lastKnownPosition.current = 0; // Reset vị trí đã biết
-      setShowContinueDialog(false);
-    }
-  }, [dispatch, novelId, chapterId, currentUser]);
-
-  // Effect #3: Hỏi "Đọc tiếp?" - Logic duy nhất, dựa vào Redux
-  useEffect(() => {
-    if (currentUser && userHistory.length > 0 && !loadingContent && currentChapterContent) {
-      const historyForThisChapter = userHistory.find(
-        (h) => h.id?.idNovel === novelId && String(h.idChapter) === chapterId
-      );
-      if (historyForThisChapter && historyForThisChapter.readPlace > 100) {
-        setSavedScrollPosition(historyForThisChapter.readPlace);
-        setShowContinueDialog(true);
-      }
-    }
-  }, [userHistory, loadingContent, currentChapterContent, currentUser, novelId, chapterId]);
-
-  // Effect #4: Theo dõi cuộn và lưu vị trí đọc (duy nhất và hợp nhất)
-  useEffect(() => {
-  const scrollContainer = contentRef.current;
-  if (!scrollContainer) return;
-
-  // A. Theo dõi sự kiện cuộn để cập nhật vị trí đọc liên tục
-  let debounceTimer;
-  const handleScroll = () => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      const currentPosition = Math.round(scrollContainer.scrollTop);
-      if (currentPosition > 100) {
-        lastKnownPosition.current = currentPosition;
-      }
-    }, 500); // Debounce để tối ưu hiệu suất
-  };
-
-  // B. Logic lưu lịch sử vào API khi rời trang
-  const saveHistoryToApi = () => {
-    if (!currentUser || !currentChapterContent?.titleChapter) return;
-    
-    const finalReadPlace = lastKnownPosition.current;
-    console.log('Saving history with payload:', {
-          idNovel: currentNovel.idNovel,
-          email: currentUser.emailUser,
-          idChapter: currentChapterIndex,
-          readPlace: finalReadPlace,
-          titleChapter: currentChapterContent.titleChapter,
-    });
-    if (finalReadPlace > 100) {
-      const payload = {
-        idNovel,
-        email: currentUser.emailUser,
-        idChapter: Number(chapterId),
-        readPlace: finalReadPlace,
-        titleChapter: currentChapterContent.titleChapter,
-      };
-
-      // Gửi lịch sử đọc qua API (sendBeacon nếu có thể)
-      if (navigator.sendBeacon) {
-        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json; charset=UTF-8' });
-        const url = `${apiClient.defaults.baseURL}/user/createHistory`;
-        if (navigator.sendBeacon(url, blob)) {
-          console.log("History sent via Beacon:", payload);
-          return;
-        }
-      }
-
-      // Dự phòng dùng dispatch nếu sendBeacon thất bại
-      dispatch(createHistory(payload))
-        .unwrap()
-        .then((response) => {
-          console.log('API response:', response);
-        })
-        .catch((error) => {
-          console.error('API error:', error);
-        });      
-      console.log("History sent via dispatch:", payload);
-    }
-  };
-
-  // Gán các sự kiện
-  scrollContainer.addEventListener('scroll', handleScroll);
-  window.addEventListener('pagehide', saveHistoryToApi);
-
-  // Hàm dọn dẹp khi component unmount (chuyển chương/rời trang)
+  // Effect #1: Tải dữ liệu chính khi vào trang (chạy khi novelId đổi)
+ // Effect #1: Tải dữ liệu NỀN TẢNG của truyện (chỉ chạy khi novelId thay đổi)
+useEffect(() => {
+  if (novelId) {
+    console.log("[Effect #1] Tải dữ liệu nền tảng cho novelId:", novelId);
+    dispatch(getNovelById(novelId));
+    dispatch(getNovelChaptersList(novelId));
+  }
+  
+  // Dọn dẹp state cũ khi rời khỏi truyện
   return () => {
-    scrollContainer.removeEventListener('scroll', handleScroll);
-    window.removeEventListener('pagehide', saveHistoryToApi);
-    clearTimeout(debounceTimer);
-    saveHistoryToApi();  // Gửi lịch sử cuối khi đóng trang
+    dispatch(clearChapterState());
   };
-}, [novelId, chapterId, currentUser, dispatch, currentChapterContent]);
+}, [dispatch, novelId]); // Chỉ phụ thuộc vào novelId
+
+// Effect #2: Tải dữ liệu của CHƯƠNG CỤ THỂ (chạy khi chapterId hoặc novelId thay đổi)
+useEffect(() => {
+  if (novelId && chapterId) {
+    console.log("[Effect #2] Tải nội dung cho chapterId:", chapterId);
+    dispatch(increaseChapterView(chapterId));
+    dispatch(getChapterContentById({ novelId, chapterId }));
+    
+    // Reset các state liên quan đến chương cũ
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+    setShowContinueDialog(false);
+    setSavedScrollPosition(null);
+    setProcessedChapterContent(null);
+  }
+}, [dispatch, novelId, chapterId]); // Phụ thuộc vào cả novelId và chapterId
+
+// Effect #3: Tải và xử lý LỊCH SỬ của người dùng (chạy khi có user hoặc chapterId thay đổi)
+useEffect(() => {
+  if (currentUser?.idUser && novelId && chapterId) {
+    console.log("[Effect #3] Tải lịch sử cho user và chapterId:", chapterId);
+    dispatch(getAllHistoryByUser(currentUser.idUser));
+  }
+}, [dispatch, currentUser, novelId, chapterId]); // Phụ thuộc vào user và chapter
+
+// Effect #4: Hiển thị dialog "ĐỌC TIẾP?" (chạy khi có lịch sử hoặc nội dung chương)
+
+
+useEffect(() => {
+  // 1. Điều kiện tiên quyết: chỉ chạy khi có đủ dữ liệu
+  if (loadingContent || !currentChapterContent || !Array.isArray(userHistory) || userHistory.length === 0) {
+    return;
+  }
+
+  console.log("[Effect #4] Bắt đầu kiểm tra dialog (chỉ tìm theo chapterId)...");
+  
+  let chapterHistoryFound = null;
+
+  // 2. Duyệt qua từng nhóm truyện trong lịch sử
+  for (const novelGroup of userHistory) {
+    // Nếu nhóm truyện có mảng các chương đã đọc
+    if (novelGroup && Array.isArray(novelGroup.historyReadRespones)) {
+      // 3. Tìm chương có id khớp trong mảng này
+      const found = novelGroup.historyReadRespones.find(
+        (chap) => String(chap.id?.idChapter) === String(chapterId)
+      );
+      
+      // 4. Nếu tìm thấy, gán kết quả và thoát khỏi vòng lặp ngay lập tức
+      if (found) {
+        chapterHistoryFound = found;
+        break; 
+      }
+    }
+  }
+
+  // 5. Nếu đã tìm thấy lịch sử của chương này và có vị trí đọc hợp lệ -> hiển thị dialog
+  if (chapterHistoryFound && chapterHistoryFound.readPlace > 50) {
+    console.log(`[Effect #4] TÌM THẤY! Vị trí đọc là ${chapterHistoryFound.readPlace}. Hiển thị dialog.`);
+    setSavedScrollPosition(chapterHistoryFound.readPlace);
+    setShowContinueDialog(true);
+  } else {
+    console.log(`[Effect #4] Không tìm thấy lịch sử cho chương có chapterId: ${chapterId}`);
+  }
+
+}, [userHistory, loadingContent, currentChapterContent, chapterId]);
+// Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC (trước đây là Effect #4)
+let vitrilandau=100
+
+useEffect(() => {
+  // THAY ĐỔI Ở ĐÂY:
+  // Thay vì lắng nghe trên `contentRef.current`, chúng ta sẽ lắng nghe trên `window`.
+  // `window` là đối tượng đáng tin cậy nhất cho sự kiện cuộn trang toàn cục.
+  const scrollContainer = contentRef.current; // Vẫn giữ ref này để lấy chiều cao nếu cần
+
+  // Điều kiện để gắn listener vẫn giữ nguyên
+  if (!scrollContainer || !currentUser || !currentChapterContent?.titleChapter) {
+    return;
+  }
+  const handleScroll = () => {
+    // --- THÊM LOG DEBUG ---
+    const windowScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const divScrollTop = scrollContainer.scrollTop;
+    console.log(`[Scroll Debug] Window ScrollTop: ${windowScrollTop}, Div ScrollTop: ${divScrollTop}`);
+    // ----------------------
+
+    clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      // SỬA Ở ĐÂY: Luôn sử dụng `windowScrollTop` để có giá trị chính xác.
+      const readPlace = Math.round(windowScrollTop); 
+      
+      // Giữ nguyên điều kiện > 100
+        if (readPlace > vitrilandau && chapterId) { // <-- Đảm bảo chapterId không phải null/undefined
+          console.log(currentChapterContent)
+        const payload = {
+          email: currentUser.emailUser,
+          // Giờ đây chapterId đã được đảm bảo có giá trị
+          idChapter: currentChapterContent.idChapter  , // Gửi đi dưới dạng chuỗi là an toàn nhất
+          readPlace,
+        };
+        console.log(`[Effect #5 - Debounced Save] Dispatching createHistory... Position: ${readPlace}`);
+        vitrilandau = readPlace+400; // CẬP NHẬT VỊ TRÍ ĐỌC LẦN ĐẦU
+        dispatch(createHistory(payload));
+      }
+    }, 2000)
+  };
+
+  console.log(`[Effect #5] Gắn listener cuộn chuột cho chapterId: ${chapterId}`);
+  // Lắng nghe sự kiện trên `window`
+  window.addEventListener('scroll', handleScroll);
+
+  // Hàm dọn dẹp
+  return () => {
+    console.log(`[Effect #5] Dọn dẹp listener cuộn chuột cho chapterId: ${chapterId}`);
+    // Gỡ listener khỏi `window`
+    window.removeEventListener('scroll', handleScroll);
+    clearTimeout(debounceTimerRef.current);
+  };
+}, [dispatch, currentUser, currentChapterContent, novelId, chapterId]);
+// Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC Thoat(sử dụng ref để tránh lặp lại)
+//  useEffect(() => {
+//   // Chỉ thực hiện logic này nếu người dùng đã đăng nhập
+//   if (!currentUser) {
+//     return;
+//   }
+
+//   const handleBeforeUnload = (event) => {
+//     const currentScrollPosition = Math.round(window.pageYOffset || document.documentElement.scrollTop);
+
+//     // Kiểm tra nếu các điều kiện hợp lệ để gửi dữ liệu lịch sử đọc
+//     if (currentScrollPosition > 100 && novelId && chapterId && currentChapterContent?.titleChapter) {
+//       const payload = {
+//         email: currentUser.emailUser,
+//         idChapter: currentChapterContent.idChapter,
+//         readPlace: currentScrollPosition,
+//       };
+
+//       console.log('[Effect Beacon] Đang chuẩn bị gửi lịch sử đọc:', payload);
+
+//       // Gửi yêu cầu bằng apiClient (axios)
+//       const beaconURL = `${apiClient.defaults.baseURL}/user/createHistory`;
+
+//       apiClient.post(beaconURL, payload)
+//         .then(response => {
+//           if (response.status === 200) {
+//             console.log('[Axios] Dữ liệu lịch sử đã được gửi thành công.');
+//           } else {
+//             console.error('[Axios] Lỗi khi gửi dữ liệu lịch sử:', response.status);
+//           }
+//         })
+//         .catch(error => {
+//           console.error('[Axios] Không thể gửi dữ liệu lịch sử:', error.message);
+//         });
+//     }
+//   };
+
+//   // Gắn sự kiện `beforeunload` để lưu lịch sử đọc khi người dùng rời khỏi trang
+//   window.addEventListener('beforeunload', handleBeforeUnload);
+
+//   // Dọn dẹp sự kiện khi component unmount
+//   return () => {
+//     window.removeEventListener('beforeunload', handleBeforeUnload);
+//   };
+// }, [currentUser, novelId, chapterId, currentChapterContent]);
+
   useEffect(() => {
     if (currentChapterContent?.contentChapter && mainContentAreaRef.current && canvasContainerWidth > 0) {
       const originalText = currentChapterContent.contentChapter;
@@ -369,9 +439,9 @@ const ReadingPage = () => {
     if (!novelLoading) return <div className="flex justify-center items-center min-h-screen text-xl">Không tìm thấy thông tin truyện.</div>;
     return <div className="flex justify-center items-center min-h-screen text-xl">Đang chuẩn bị dữ liệu truyện...</div>;
   }
-  if (loadingListForReading && (!chaptersForReadingPageDropdown || chaptersForReadingPageDropdown.length === 0)) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải danh sách chương...</div>;
-  if (errorListForReading && (!chaptersForReadingPageDropdown || chaptersForReadingPageDropdown.length === 0)) return renderErrorText(errorListForReading, "danh sách chương");
-  if (chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length === 0 && !loadingListForReading && !errorListForReading) return <div className="flex justify-center items-center min-h-screen text-xl">Truyện này chưa có chương nào.</div>;
+  // if (loadingListForReading && (!chaptersForReadingPageDropdown || chaptersForReadingPageDropdown.length === 0)) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải danh sách chương...</div>;
+  // if (errorListForReading && (!chaptersForReadingPageDropdown || chaptersForReadingPageDropdown.length === 0)) return renderErrorText(errorListForReading, "danh sách chương");
+  // if (chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length === 0 && !loadingListForReading && !errorListForReading) return <div className="flex justify-center items-center min-h-screen text-xl">Truyện này chưa có chương nào.</div>;
   if (loadingContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải nội dung chương...</div>;
   if (errorContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return renderErrorText(errorContent, "nội dung chương");
   if (!currentChapterContent) {
@@ -395,7 +465,7 @@ const ReadingPage = () => {
               <Link to={`/novel/${novelId}`} className={`${theme === 'den' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} hover:underline`}>{currentNovel.nameNovel || 'Tên truyện'}</Link>
             </h1>
             <p className={`text-sm ${theme === 'den' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Chương {currentindexChapter ?? 'N/A'}: {currentChapterContent?.titleChapter || 'Tiêu đề chương'}
+              Chương {currentindexChapter !== null && currentindexChapter !== undefined ? currentindexChapter - 1 : 'N/A'}: {currentChapterContent?.titleChapter || 'Tiêu đề chương'}
             </p>
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2">
@@ -404,7 +474,7 @@ const ReadingPage = () => {
             </button>
             <div className="relative">
               <button onClick={() => setShowChapterListDropdown(prev => !prev)} className="px-2 py-1.5 sm:px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm w-28 sm:w-32 text-center flex items-center justify-center">
-                <FaListUl className="inline mr-1" />  Chương {currentindexChapter ?? '?'}
+                <FaListUl className="inline mr-1" />  Chương {currentindexChapter !== null && currentindexChapter !== undefined ? currentindexChapter - 1 : '?'}
                 <svg className={`w-3 h-3 sm:w-4 sm:h-4 ml-1 transition-transform duration-200 ${showChapterListDropdown ? 'transform rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
               </button>
               {showChapterListDropdown && chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length > 0 && (

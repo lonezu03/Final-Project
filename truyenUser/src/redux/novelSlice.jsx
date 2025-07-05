@@ -162,21 +162,24 @@ export const followNovel = createAsyncThunk('novels/followNovel', async (payload
 
 export const fetchHotNovels = createAsyncThunk(
   'novels/fetchHot', // Đổi tên action type
-  async ({ page, size }, { rejectWithValue }) => {
+  async ({ page, size, idUser }, { rejectWithValue }) => {
     try {
       // Payload cho API search
       const searchCriteria = {}; // Không có điều kiện tìm kiếm cụ thể
       const paginationAndSortParams = {
         page,
         size,
-        sort: ['rating,desc'] // Sắp xếp theo rating giảm dần
+        // sort: ['rating,desc'] // Sắp xếp theo rating giảm dần
       };
 
       // Xây dựng query string
       const params = new URLSearchParams();
       params.append('page', paginationAndSortParams.page);
       params.append('size', paginationAndSortParams.size);
-      params.append('sort', paginationAndSortParams.sort);
+      //  params.append('sort', paginationAndSortParams.sort);
+      if (idUser) {
+        params.append('idUser', idUser); // Thêm idUser nếu có
+      }
       const queryString = `?${params.toString()}`;
 
       // Gọi API search
@@ -191,7 +194,35 @@ export const fetchHotNovels = createAsyncThunk(
     }
   }
 );
+// --- API lấy ds tuyện yêu thích ---
+export const LyberiNovels = createAsyncThunk(
+  'novels/lyberi',
+  async ({ idUser }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post(`${publicApiBaseNovel}/search`, { idUser }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
+      // Kiểm tra xem có trả về dữ liệu hợp lệ không
+      if (response.data && Array.isArray(response.data.content)) {
+        // Lọc các truyện có `isFollow: true`
+        const followedNovels = response.data.content.filter(novel => novel.isFollow);
+        if (followedNovels.length === 0) {
+          return rejectWithValue('Bạn chưa theo dõi truyện nào.');
+        }
+        return followedNovels; // Trả về danh sách truyện yêu thích
+      } else {
+        console.error("Dữ liệu trả về không đúng cấu trúc.", response.data);
+        return rejectWithValue('Dữ liệu trả về không hợp lệ.');
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách truyện yêu thích:", error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi lấy danh sách truyện yêu thích.');
+    }
+  }
+);
 
 // --- SLICE DEFINITION ---
 const initialPaginationState = {
@@ -209,6 +240,7 @@ const initialPaginationState = {
 const initialState = {
   novels: [], // << State mới để lưu danh sách truyện gốc từ getAllNovels
   searchedNovels: [], 
+
   hotNovels: {
     list: [],
     totalPages: 0,
@@ -265,19 +297,19 @@ const novelSlice = createSlice({
       })
 
       // --- getNovelById ---
-      .addCase(getNovelById.pending, (state) => {
-        state.loading = true; // Hoặc loadingCurrentNovel = true
+       .addCase(getNovelById.pending, (state) => {
+        state.getByIdLoading = true;
         state.error = null;
-      })
-      .addCase(getNovelById.fulfilled, (state, action) => {
-        state.loading = false;
+    })
+    .addCase(getNovelById.fulfilled, (state, action) => {
+        state.getByIdLoading = false;
         state.currentNovel = action.payload;
-      })
-      .addCase(getNovelById.rejected, (state, action) => {
-        state.loading = false;
+    })
+    .addCase(getNovelById.rejected, (state, action) => {
+        state.getByIdLoading = false;
         state.error = action.payload;
         state.currentNovel = null;
-      })
+    })
 
       // --- createNovel ---
       .addCase(createNovel.pending, (state) => {
@@ -322,7 +354,7 @@ const novelSlice = createSlice({
         state.error = action.payload;
       })
       // --- fetchHotNovels ---
-      .addCase(fetchHotNovels.pending, (state) => {
+     .addCase(fetchHotNovels.pending, (state) => {
         state.hotNovels.loading = true;
         state.hotNovels.error = null;
       })
@@ -394,6 +426,14 @@ const novelSlice = createSlice({
       .addCase(followNovel.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message; // Xử lý lỗi khi có vấn đề
+      })
+      .addCase(LyberiNovels.fulfilled, (state, action) => {
+        // Lưu truyện yêu thích vào `followedNovels`
+        state.followedNovels = action.payload;
+      })
+      .addCase(LyberiNovels.rejected, (state, action) => {
+        state.error = action.payload;
+        state.followedNovels = [];
       });
     
   }

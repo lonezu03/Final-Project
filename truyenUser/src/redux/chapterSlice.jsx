@@ -153,8 +153,8 @@ const initialState = {
   errorAllChapters: null,
   loadingDropdownChapters: false,
   errorDropdownChapters: null,
-  loadingSpecificContent: false,
-  errorSpecificContent: null,
+  loadingContent: false,      // <-- Đổi tên từ loadingSpecificContent
+  errorContent: null,         // <-- Đổi tên từ errorSpecificContent
 };
 
 const chapterSlice = createSlice({
@@ -197,19 +197,44 @@ const chapterSlice = createSlice({
       })
 
       // getChapterContentById
-      .addCase(getChapterContentById.pending, (state) => {
-        state.loadingSpecificContent = true;
-        state.errorSpecificContent = null;
+      .addCase(getChapterContentById.pending, (state, action) => {
+        const requestedChapterId = action.meta.arg.chapterId;
+        // Chỉ đặt trạng thái loading nếu chúng ta đang tải một chương MỚI
+        // hoặc chưa có chương nào được tải.
+        if (!state.currentChapterContent || String(state.currentChapterContent.idChapter) !== String(requestedChapterId)) {
+          state.loadingContent = true;
+          state.errorContent = null;
+        }
       })
       .addCase(getChapterContentById.fulfilled, (state, action) => {
-        state.loadingSpecificContent = false;
-        state.currentChapterContent = action.payload;
-        state.errorSpecificContent = null;
+        state.loadingContent = false;
+        state.errorContent = null;
+        const newContent = action.payload;
+
+        // --- LOGIC QUAN TRỌNG ĐỂ TRÁNH RE-RENDER ---
+        // Chỉ cập nhật state nếu:
+        // 1. Chưa có chương nào (lần tải đầu tiên).
+        // 2. ID của chương mới khác với chương hiện tại.
+        // 3. ID giống nhau, nhưng nội dung (contentChapter) đã thay đổi (ví dụ: từ placeholder sang nội dung thật).
+        if (
+          !state.currentChapterContent ||
+          String(state.currentChapterContent.idChapter) !== String(newContent.idChapter) ||
+          state.currentChapterContent.contentChapter !== newContent.contentChapter
+        ) {
+          console.log('[Reducer] Cập nhật currentChapterContent vì dữ liệu mới hoặc khác biệt.');
+          state.currentChapterContent = newContent;
+        } else {
+          console.log('[Reducer] Bỏ qua cập nhật currentChapterContent vì dữ liệu giống hệt.');
+        }
       })
       .addCase(getChapterContentById.rejected, (state, action) => {
-        state.loadingSpecificContent = false;
-        state.errorSpecificContent = action.payload;
-        state.currentChapterContent = null;
+        state.loadingContent = false;
+        state.errorContent = action.payload;
+        // Chỉ xóa nội dung nếu lỗi thuộc về chương đang xem
+        const requestedChapterId = action.meta.arg.chapterId;
+        if (state.currentChapterContent && String(state.currentChapterContent.idChapter) === String(requestedChapterId)) {
+          state.currentChapterContent = null;
+        }
       })
       // increaseChapterView
        .addCase(increaseChapterView.pending, (state) => {
@@ -239,7 +264,7 @@ export const selectLoadingAllChapters = (state) => state.chapters.loadingAllChap
 export const selectErrorAllChapters = (state) => state.chapters.errorAllChapters;
 export const selectLoadingDropdownChapters = (state) => state.chapters.loadingDropdownChapters;
 export const selectErrorDropdownChapters = (state) => state.chapters.errorDropdownChapters;
-export const selectLoadingSpecificContent = (state) => state.chapters.loadingSpecificContent;
-export const selectErrorSpecificContent = (state) => state.chapters.errorSpecificContent;
+export const selectLoadingSpecificContent = (state) => state.chapters.loadingContent;
+export const selectErrorSpecificContent = (state) => state.chapters.errorContent;
 
 export default chapterSlice.reducer;

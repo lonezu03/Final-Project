@@ -6,7 +6,7 @@ import { fetchHotNovels } from '../redux/novelSlice'; // Import thunk mới
 import NovelCard from './NovelCard';
 import Pagination from './Pagination'; // Import component phân trang
 
-const HotStories = () => {
+const Stories = () => {
   const dispatch = useDispatch();
   
   // Lấy dữ liệu từ state hotNovels mới
@@ -24,7 +24,9 @@ const HotStories = () => {
 
   // Hàm xử lý khi người dùng chuyển trang
   const handlePageChange = (page) => {
-    dispatch(fetchHotNovels({ page, size: PAGE_SIZE }));
+    if (page !== currentPage && !loading) {
+      dispatch(fetchHotNovels({ page, size: PAGE_SIZE }));
+    }
     // Cuộn lên đầu section khi chuyển trang
     window.scrollTo({ top: document.getElementById('hot-stories-section')?.offsetTop || 0, behavior: 'smooth' });
   };
@@ -88,4 +90,4 @@ const HotStories = () => {
   );
 };
 
-export default HotStories;
+export default Stories;

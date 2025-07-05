@@ -50,7 +50,7 @@ const AppContent = () => {
   return (
     <Router>
       <Navbar />
-      <NotificationWebSocket token={localStorage.getItem('authToken')} onMessage={handleNotificationMessage} /> 
+      {/* <NotificationWebSocket token={localStorage.getItem('authToken')} onMessage={handleNotificationMessage} />  */}
       
       <div>
         {/* Hiển thị các thông báo nhận được */}

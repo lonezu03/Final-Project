@@ -143,15 +143,13 @@ export const uploadAvatar = createAsyncThunk(
 export const createHistory = createAsyncThunk(
   'user/createHistory',
   // Payload giờ sẽ là một object chứa các thông tin cần thiết
-  async ({ idNovel, email, idChapter, readPlace, titleChapter }, { rejectWithValue }) => {
+  async ({  email, idChapter, readPlace }, { rejectWithValue }) => {
     try {
       // Tạo payload JSON như trong Postman
       const payload = {
-        idNovel,
         email,
         idChapter,
         readPlace, // Vị trí đọc
-        titleChapter
       };
       console.log("Attempting to create/update history with payload:", JSON.stringify(payload, null, 2)); // Log payload
 
@@ -222,14 +220,6 @@ export const getAllHistoryByUser = createAsyncThunk(
 );
 //10
 
-// ====================================================================
-// === BẮT ĐẦU CẬP NHẬT LOGIC DỰA TRÊN API MỚI ===
-// ====================================================================
-
-/**
- * THUNK: Cập nhật thông tin người dùng (tên, ngày sinh).
- * Sẽ gọi endpoint PUT /user/updateUser.
- */
 export const updateUserProfile = createAsyncThunk(
   'user/updateProfile',
   async ({ userNameUser, dobUser }, { getState, rejectWithValue }) => {
@@ -239,8 +229,7 @@ export const updateUserProfile = createAsyncThunk(
         return rejectWithValue('Người dùng chưa đăng nhập.');
       }
 
-      // ======================= BẮT ĐẦU SỬA LỖI =======================
-      // CHUYỂN ĐỔI ĐỊNH DẠNG NGÀY THÁNG
+      
       let formattedDob = null;
       if (dobUser && dobUser.match(/^\d{4}-\d{2}-\d{2}$/)) {
         // Nếu dobUser là một chuỗi hợp lệ dạng 'YYYY-MM-DD'
@@ -249,7 +238,6 @@ export const updateUserProfile = createAsyncThunk(
         // toISOString() sẽ chuyển nó về giờ UTC.
         formattedDob = new Date(dobUser).toISOString();
       }
-      // ======================= KẾT THÚC SỬA LỖI =======================
 
       const payload = {
         ...currentUser,
@@ -277,13 +265,7 @@ export const updateUserProfile = createAsyncThunk(
   }
 );
 
-/**
- * THUNK: Thay đổi mật khẩu người dùng.
- * Cũng sẽ gọi endpoint PUT /user/updateUser.
- * LƯU Ý: API của bạn không yêu cầu `oldPassword`, nó chỉ ghi đè `passwordUser`.
- * Việc kiểm tra `oldPassword` sẽ phải được thực hiện ở backend hoặc chúng ta bỏ qua nó.
- * Dialog của chúng ta vẫn hỏi mật khẩu cũ để tăng tính bảo mật ở phía client.
- */
+
 export const changeUserPassword = createAsyncThunk(
   'user/changePassword',
   async ({ newPassword }, { getState, rejectWithValue }) => {
@@ -321,11 +303,6 @@ export const changeUserPassword = createAsyncThunk(
 );
 
 
-/**
- * THUNK: Cập nhật avatar.
- * Giả sử API này vẫn riêng biệt vì nó xử lý file upload (multipart/form-data),
- * khác với API /user/updateUser chỉ nhận JSON.
- */
 export const updateUserAvatar = createAsyncThunk(
   'user/updateAvatar',
   async (avatarFile, { rejectWithValue }) => {
@@ -349,6 +326,38 @@ export const updateUserAvatar = createAsyncThunk(
     }
   }
 );
+//api createReviewNovel
+// API tạo đánh giá tiểu thuyết
+export const createReviewNovel = createAsyncThunk(
+  'user/createReviewNovel',
+  async ({ idUser, idNovel, rating, reviewMC, reviewSC, reviewWorld, reviewPersonal }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post(
+        `${rooturl}/user/createReviewNovel`,
+        {
+          idUser,
+          idNovel,
+          rating,
+          reviewMC,
+          reviewSC,
+          reviewWorld,
+          reviewPersonal
+        },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (response.data && response.data.code === 200) {
+        return response.data.result; // Trả về kết quả đánh giá mới
+      } else {
+        // Kiểm tra nếu API trả về lỗi khác
+        return rejectWithValue(response.data?.message || 'Lỗi khi tạo đánh giá.');
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tạo đánh giá.');
+    }
+  }
+);
+
  const handlePending = (state) => {
       state.loading = true;
       state.error = null;
@@ -358,9 +367,6 @@ export const updateUserAvatar = createAsyncThunk(
       state.loading = false;
       state.error = action.payload;
     };
-// ====================================================================
-// === KẾT THÚC CẬP NHẬT LOGIC ===
-// ====================================================================
 
 const handleLoginOrUpdateSuccess = (state, action) => {
       state.loading = false;
@@ -390,16 +396,17 @@ const initialState = {
   currentUser: null,
   token: localStorage.getItem('authToken') || null,
   usersList: [],
-  userHistory: [], // Sẽ được cập nhật bởi getAllHistoryByUser
-  loading: false, // Loading chung
-  historyLoading: false, // Loading cho các thao tác liên quan đến history (create, delete, get)
+  userHistory: [], 
+  loading: false, 
+  historyLoading: false,
   isOtpSending: false,
-  isUserHistoryLoading: false, // Đổi tên từ isHistoryLoading để rõ ràng hơn
+  isUserHistoryLoading: false, 
+  reviewData: null, 
   error: null,
   otpMessage: null,
-  historyActionStatus: null, // Lưu message từ create/delete history
+  historyActionStatus: null, 
   forgotPassword: {
-      status: 'idle', // 'idle' | 'sending_otp' | 'otp_sent' | 'resetting' | 'success' | 'error'
+      status: 'idle', 
       error: null,
       message: null,
   }
@@ -530,11 +537,13 @@ const userSlice = createSlice({
         //   state.userHistory.unshift(updatedHistoryItem);
         // }
       })
-      .addCase(createHistory.rejected, (state, action) => {
-        state.historyLoading = false;
-        state.error = action.payload; // Lưu lỗi
-        state.historyActionStatus = `Lỗi cập nhật lịch sử: ${action.payload}`;
-      })
+     .addCase(createHistory.rejected, (state, action) => {
+    state.historyLoading = false;
+    // THÊM LOG NÀY VÀO ĐỂ CHẮC CHẮN BẮT ĐƯỢC LỖI
+    console.error('[createHistory REJECTED]', action.payload); 
+    state.error = action.payload;
+    state.historyActionStatus = `Lỗi cập nhật lịch sử: ${action.payload}`;
+})
 
       // Delete History
       .addCase(deleteHistory.pending, (state) => {
@@ -575,10 +584,67 @@ const userSlice = createSlice({
         state.userHistory = [];
       }
     )
-     .addCase(updateUserProfile.pending, handlePending)
-      .addCase(updateUserProfile.fulfilled, handleLoginOrUpdateSuccess) // Dùng chung handler
+      .addCase(updateUserProfile.pending, handlePending)
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        const updatedUserData = action.payload; // Dữ liệu user mới từ API
+
+        if (state.currentUser) {
+          // TỐT NHẤT: Chỉ cập nhật các trường đã thay đổi.
+          // Không ghi đè toàn bộ object.
+          state.currentUser.userNameUser = updatedUserData.userNameUser;
+          state.currentUser.dobUser = updatedUserData.dobUser;
+          state.currentUser.imageUser = updatedUserData.imageUser; // Thêm các trường khác nếu có
+          // TUYỆT ĐỐI KHÔNG LÀM: state.currentUser = updatedUserData;
+
+          // Cập nhật localStorage với object đã được merge một cách an toàn
+          localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+        }
+      })
       .addCase(updateUserProfile.rejected, handleRejected)
-      
+
+      // Xử lý riêng cho changeUserPassword
+      // (cũng nên tách ra để tránh các hiệu ứng phụ không mong muốn)
+      .addCase(changeUserPassword.pending, handlePending)
+      .addCase(changeUserPassword.fulfilled, (state, action) => {
+          // Khi đổi mật khẩu thành công, ta nên xử lý giống như một lần login mới
+          // để đảm bảo mọi thông tin (kể cả token nếu có) đều được làm mới.
+          // Do đó, ở đây có thể dùng lại handleAuthSuccess hoặc một phiên bản của nó.
+          const userData = action.payload.user || action.payload;
+          const token = action.payload.token;
+
+          state.currentUser = userData;
+          if (token) {
+              state.token = token;
+              localStorage.setItem('authToken', token);
+          }
+          localStorage.setItem('currentUser', JSON.stringify(userData));
+          state.error = null;
+      })
+      .addCase(changeUserPassword.rejected, handleRejected)
+      .addCase(createReviewNovel.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createReviewNovel.fulfilled, (state, action) => {
+        state.loading = false;
+        state.reviewData = action.payload; // Lưu kết quả đánh giá mới vào state
+      })
+      .addCase(createReviewNovel.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload; // Lưu lỗi nếu có
+      })
+
+      // .addMatcher cho các hành động login vẫn giữ nguyên
+      .addMatcher(
+        (action) => [
+          loginUserWithPassword.fulfilled.type,
+          loginUserByEmailOnly.fulfilled.type,
+          createUserByEmailOnly.fulfilled.type,
+        ].includes(action.type),
+        handleAuthSuccess
+      )      
       .addMatcher(
         (action) => [
           loginUserWithPassword.fulfilled.type,

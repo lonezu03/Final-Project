@@ -180,7 +180,22 @@ export const deleteComment = createAsyncThunk(
 
 // GET /comment/getAllByUser/{idUser}
 export const getCommentsByUser = createAsyncThunk( /* ... giữ nguyên ... */ );
-
+// POST /comment/search
+export const searchComments = createAsyncThunk('comments/search', async (searchCriteria, { rejectWithValue }) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL_COMMENT_PUBLIC}/search`, searchCriteria, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
+      return response.data; // Trả về toàn bộ dữ liệu tìm kiếm bao gồm kết quả và phân trang
+    }
+    return rejectWithValue(response.data.message || 'Failed to fetch comments');
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || error.message || 'Error fetching comments');
+  }
+});
 
 const initialState = {
   commentsByChapter: [],
@@ -193,6 +208,8 @@ const initialState = {
     dislike: {}, // { [commentId]: boolean }
   },
   error: null,
+  pagination: {}, // Dữ liệu phân trang từ tìm kiếm bình luận
+
 };
 
 const commentSlice = createSlice({
@@ -340,6 +357,18 @@ const commentSlice = createSlice({
       .addCase(deleteComment.rejected, (state, action) => {
         state.actionLoading.delete = false;
         state.error = action.payload || 'Failed to delete comment';
+      })
+       .addCase(searchComments.pending, (state) => {
+        state.loading = true; // Đang chờ yêu cầu
+      })
+      .addCase(searchComments.fulfilled, (state, action) => {
+        state.loading = false;
+        state.comments = action.payload.content; // Lưu kết quả tìm kiếm
+        state.pagination = action.payload.pageable; // Lưu thông tin phân trang
+      })
+      .addCase(searchComments.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message; // Xử lý lỗi khi có vấn đề
       });
 
       // Loại bỏ các addMatcher nếu đã xử lý riêng lẻ từng action

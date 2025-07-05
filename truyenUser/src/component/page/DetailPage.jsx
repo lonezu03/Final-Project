@@ -2,13 +2,15 @@
 import React, { useState, useEffect, useMemo } from 'react'; // Thêm useMemo
 import { useParams, Link, useNavigate } from 'react-router-dom'; // Thêm useNavigate
 import { useDispatch, useSelector } from 'react-redux';
-import { getNovelById } from '../../redux/novelSlice';
+import { getNovelById,followNovel } from '../../redux/novelSlice';
 import { getAllChapters } from '../../redux/chapterSlice'; // Action này lấy danh sách chương cho tab
-
-import { FaStar, FaBookOpen, FaListUl, FaPlusSquare, FaRegHeart, FaInfoCircle, FaThList, FaAngleRight } from 'react-icons/fa';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { FaStar, FaBookOpen, FaListUl, FaPlusSquare, FaRegHeart, FaHeart, FaInfoCircle, FaThList, FaAngleRight, FaPenSquare } from 'react-icons/fa';
 import GoToChapterInput from '../GoToChapterInput'; // Đường dẫn component
 import PaginationControls from '../PaginationChapter'; // Đường dẫn component
 import ChapterListDisplay from '../ChapterListDisplay'; // Đường dẫn component
+import ReviewDialog from '../ReviewDialog'; // Import component dialog
 
 const DetailPage = () => {
   const { novelId } = useParams();
@@ -18,20 +20,54 @@ const DetailPage = () => {
   const { currentNovel: novelDetailData, loading: novelLoading, error: novelError } = useSelector((state) => state.novels);
   const { chapters: chaptersFromApiForDetailPage, loading: chaptersLoading, error: chaptersError } = useSelector((state) => state.chapters);
   // chaptersFromApiForDetailPage là danh sách chương cho tab "Danh Sách"
-
+  const [showReviewDialog, setShowReviewDialog] = useState(false); // THÊM: State để quản lý dialog
   const [activeTab, setActiveTab] = useState('summary');
   const [currentChapterListPage, setCurrentChapterListPage] = useState(1); // Đổi tên để rõ ràng
   const chaptersPerPageInList = 50;
+  const { currentUser } = useSelector((state) => state.user);
 
   useEffect(() => {
     if (novelId) {
-      setActiveTab('summary');
-      setCurrentChapterListPage(1);
-      dispatch(getNovelById(novelId));
-      dispatch(getAllChapters(novelId)); // Lấy danh sách chương cho tab
+        setActiveTab('summary');
+        setCurrentChapterListPage(1);
+        if (!novelDetailData || novelDetailData.idNovel !== novelId) { // Kiểm tra xem dữ liệu đã có chưa
+            dispatch(getNovelById(novelId));
+        }
+        if (!chaptersFromApiForDetailPage || chaptersFromApiForDetailPage.length === 0) { // Kiểm tra xem đã có chapters chưa
+            dispatch(getAllChapters(novelId));
+        }
     }
-  }, [dispatch, novelId]);
+}, [dispatch, novelId, novelDetailData, chaptersFromApiForDetailPage]);
 
+  const isFollowing = useMemo(() => {
+    return currentUser?.followedNovels?.includes(novelId);
+  }, [currentUser, novelId]);
+  
+   const handleFollowToggle = () => {
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để theo dõi truyện!");
+      navigate('/');
+      return;
+    }
+    const actionPayload = { idUser: currentUser.idUser, idNovel: novelId };
+    
+    const actionToDispatch = isFollowing ? unfollowNovel(actionPayload) : followNovel(actionPayload);
+    const successMessage = isFollowing ? "Đã bỏ theo dõi truyện." : "Đã theo dõi truyện thành công!";
+    
+    dispatch(actionToDispatch)
+      .unwrap()
+      .then(() => toast.success(successMessage))
+      .catch(err => toast.error(`Lỗi: ${err.message || err}`));
+  };
+
+  const handleOpenReviewDialog = () => {
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để đánh giá!");
+      navigate('/');
+      return;
+    }
+    setShowReviewDialog(true);
+  };
   const renderErrorText = (err) => (typeof err === 'string' ? err : err?.message || 'Đã có lỗi xảy ra.');
 
   // Sắp xếp và ghi nhớ danh sách chương cho DetailPage
@@ -170,8 +206,22 @@ const DetailPage = () => {
               <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
                 <button onClick={() => setActiveTab('summary')} className={`flex items-center ${activeTab === 'summary' ? 'bg-slate-500' : 'bg-slate-700'} hover:bg-slate-600 text-white py-2 px-3 rounded text-xs`}><FaInfoCircle className="mr-1 md:mr-2" /> Giới thiệu</button>
                 <button onClick={() => setActiveTab('chapters')} className={`flex items-center ${activeTab === 'chapters' ? 'bg-slate-500' : 'bg-slate-700'} hover:bg-slate-600 text-white py-2 px-3 rounded text-xs`}><FaThList className="mr-1 md:mr-2" /> Danh Sách</button>
-                <button className="flex items-center bg-slate-700 hover:bg-slate-600 text-white py-2 px-3 rounded text-xs"><FaRegHeart className="mr-1 md:mr-2" /> Theo dõi</button>
-              </div>
+                <button 
+                            onClick={handleFollowToggle}
+                            className={`flex items-center ${isFollowing ? 'bg-pink-600 hover:bg-pink-700' : 'bg-slate-700 hover:bg-slate-600'} text-white py-2 px-3 rounded text-xs transition-colors`}
+                          >
+                            {isFollowing ? <FaHeart className="mr-1 md:mr-2" /> : <FaRegHeart className="mr-1 md:mr-2" />}
+                            {isFollowing ? 'Đã theo dõi' : 'Theo dõi'}
+                          </button>
+                          
+                          {/* NÚT ĐÁNH GIÁ MỚI */}
+                          <button 
+                            onClick={() => setShowReviewDialog(true)}
+                            className="flex items-center bg-slate-700 hover:bg-slate-600 text-white py-2 px-3 rounded text-xs"
+                          >
+                            <FaPenSquare className="mr-1 md:mr-2" /> Đánh giá
+                          </button>              
+          </div>
             </div>
           </div>
         </div>
@@ -235,6 +285,13 @@ const DetailPage = () => {
             {storyDetails.ads.map(ad => (
               <div key={ad.id} className="bg-[#2d3038] p-1 rounded-lg shadow-lg mb-6">
                 <a href="#" aria-label={`Quảng cáo ${ad.id}`}><img src={ad.image} alt={`Quảng cáo ${ad.id}`} className="w-full h-auto rounded-md object-contain"/></a>
+                {showReviewDialog && (
+        <ReviewDialog 
+          novelId={novelId} 
+          novelTitle={novelDetailData.nameNovel} 
+          onClose={() => setShowReviewDialog(false)} 
+        />
+      )}
               </div>
             ))}
           </div>

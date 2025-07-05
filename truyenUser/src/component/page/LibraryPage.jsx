@@ -1,60 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, BookX, Trash2 } from 'lucide-react';
+import { useSelector, useDispatch } from 'react-redux'; // Import useSelector và useDispatch
+import { LyberiNovels } from '../../redux/novelSlice'; // Import action LyberiNovels
+import NovelCard from '../NovelCard';
 
-// Bước 1: Import NovelCard
-import NovelCard from '../NovelCard'; // <<<< ĐIỀU CHỈNH ĐƯỜNG DẪN NẾU CẦN
-
-// --- DỮ LIỆU GIẢ (MOCK DATA) ---
-// Thêm một vài trường dữ liệu để khớp với những gì NovelCard mong đợi
-const mockFollowedNovels = [
-  {
-    idNovel: '1',
-    nameNovel: 'Linh Vũ Thiên Hạ',
-    imageNovel: 'https://img.dtruyen.com/public/images/large/linhvuthienha1PWuOKu.jpg',
-    authors: [{ nameAuthor: 'Vũ Phong' }],
-    categories: [{ nameCategory: 'Tiên Hiệp' }, { nameCategory: 'Huyền Huyễn' }],
-    rating: 4.8,
-    totalChapter: 5210,
-  },
-  {
-    idNovel: '2',
-    nameNovel: 'Đấu Phá Thương Khung',
-    imageNovel: 'https://img.dtruyen.com/public/images/large/dauphathuongkhung2aDlrGn.jpg',
-    authors: [{ nameAuthor: 'Thiên Tằm Thổ Đậu' }],
-    categories: [{ nameCategory: 'Dị Giới' }],
-    rating: 4.9,
-    totalChapter: 1663,
-  },
-  {
-    idNovel: '5',
-    nameNovel: 'Võ Luyện Đỉnh Phong',
-    imageNovel: 'https://img.dtruyen.com/public/images/large/voluyendinhphong1eYjA8v.jpg',
-    authors: [{ nameAuthor: 'Mạc Mặc' }],
-    categories: [{ nameCategory: 'Huyền Huyễn' }],
-    rating: 4.7,
-    totalChapter: 6009,
-  },
-  {
-    idNovel: '4',
-    nameNovel: 'Phàm Nhân Tu Tiên',
-    imageNovel: 'https://img.dtruyen.com/public/images/large/phamnhantutien1VpD8ee.jpg',
-    authors: [{ nameAuthor: 'Vong Ngữ' }],
-    categories: [{ nameCategory: 'Tiên Hiệp' }],
-    rating: 4.8,
-    totalChapter: 2446,
-  },
-  // Thêm một vài truyện nữa nếu muốn
-];
-
-
-// Bước 2: Tạo một Wrapper Component để thêm nút "Bỏ theo dõi"
+// Component Bỏ theo dõi
 const LibraryCardWrapper = ({ novel, onUnfollow }) => (
   <div className="relative group">
-    {/* Component NovelCard gốc */}
     <NovelCard novel={novel} />
-    
-    {/* Nút Bỏ theo dõi được đặt chồng lên trên */}
     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
       <button 
         onClick={() => onUnfollow(novel.idNovel)}
@@ -68,35 +22,32 @@ const LibraryCardWrapper = ({ novel, onUnfollow }) => (
   </div>
 );
 
-
 const LibraryPage = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const currentUser = useSelector((state) => state.user.currentUser);
 
-  // Giả lập trạng thái người dùng đã đăng nhập
-  const currentUser = { id: 'mock-user-id' }; 
-
-  const [followedNovels, setFollowedNovels] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Lấy dữ liệu truyện yêu thích từ Redux
+  const { followedNovels, loading, error } = useSelector((state) => state.novels);
 
   useEffect(() => {
     if (!currentUser) {
-      navigate('/login');
+      navigate('/');
       return;
     }
 
-    const timer = setTimeout(() => {
-      setFollowedNovels(mockFollowedNovels);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [currentUser, navigate]);
+    // Lấy danh sách truyện yêu thích khi người dùng đã đăng nhập
+    if (currentUser && followedNovels.length === 0 && !loading) {
+      dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+    }
+  }, [dispatch, currentUser, navigate]);
 
   const handleUnfollow = (idNovel) => {
-    if(window.confirm('Bạn có chắc muốn bỏ theo dõi truyện này không?')) {
-        setFollowedNovels(currentNovels => currentNovels.filter(novel => novel.idNovel !== idNovel));
+    if (window.confirm('Bạn có chắc muốn bỏ theo dõi truyện này không?')) {
+      // Gọi action từ Redux để bỏ theo dõi
+      dispatch({ type: 'novels/unfollow', payload: idNovel });
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -107,18 +58,25 @@ const LibraryPage = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-20 bg-gray-800 rounded-lg">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 dark text-white p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-sky-400 mb-2 border-b-2 border-sky-500/30 pb-3">Tủ truyện của tôi</h1>
         <p className="text-gray-400 mb-8">
-            {followedNovels.length} truyện đang được theo dõi.
+          {followedNovels.length} truyện đang được theo dõi.
         </p>
 
         {followedNovels.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
             {followedNovels.map((novel) => (
-              // Bước 3: Sử dụng Wrapper Component
               <LibraryCardWrapper key={novel.idNovel} novel={novel} onUnfollow={handleUnfollow} />
             ))}
           </div>
@@ -136,5 +94,4 @@ const LibraryPage = () => {
     </div>
   );
 };
-
 export default LibraryPage;
