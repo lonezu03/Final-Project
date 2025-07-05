@@ -2,6 +2,8 @@ package com.example.demo.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.example.demo.JsonSchemaValidator;
 import com.example.demo.dto.request.CategoryCreationRequest;
 import com.example.demo.dto.request.CategoryUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
@@ -52,6 +54,7 @@ public class CategoryController {
 	@PostMapping("/create")
 	@Operation(summary = "Tạo mới thể loại", description = "Tạo một thể loại mới với các thông tin như tên, mô tả,...")
 	public ApiRespone<CategoryRespone> createCatehory(@RequestBody CategoryCreationRequest request) {
+		JsonSchemaValidator.validate(request, "CategoryCreationSchema.json");
 		return ApiRespone.<CategoryRespone>builder()
 				.result(categoryService.createCategory(request))
 				.build();
@@ -65,6 +68,8 @@ public class CategoryController {
 	@PutMapping("/update")
 	@Operation(summary = "Cập nhật thể loại", description = "Cập nhật thông tin của một thể loại đã tồn tại.")
 	public ApiRespone<CategoryRespone> updateCategory(@RequestBody CategoryUpdateRequest request) {
+		JsonSchemaValidator.validate(request, "CategoryUpdateSchema.json");
+
 		return ApiRespone.<CategoryRespone>builder()
 				.result(categoryService.updateCategory(request))
 				.build();

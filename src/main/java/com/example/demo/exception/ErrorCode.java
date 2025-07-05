@@ -25,7 +25,7 @@ public enum ErrorCode {
 	USER_ALREADY_FOLLOW_NOVEL(1028, "User already follow user"), AUDIO_FILE_NOT_EXISTS(1029, "Audio file not exists"),
 	USER_ALREADY_REVIEW_THIS_NOVEL(1030, "User already review this novel"),
 	REVIEW_NOVEL_NOT_EXISTS(1031, "Review novel not exists"),INVALID_SORT_FIELD(1032,"Invaild sort field"), 
-	INVALID_JSON(1033,"Invalid json"),UNKNOW_ERROR(9999, "Unknow error");
+	INVALID_JSON(1033,"Invalid json"),INVALID_JSON_SCHEMA(1034,"Invaild json schema"),UNKNOW_ERROR(9999, "Unknow error");
 
 	private int code;
 	private String message;
