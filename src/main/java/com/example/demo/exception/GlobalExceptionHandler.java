@@ -2,6 +2,7 @@ package com.example.demo.exception;
 
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -44,4 +45,23 @@ public class GlobalExceptionHandler {
 	        log.error("Invalid sort field: {}", ex.getPropertyName(), ex);
 	        return ResponseEntity.badRequest().body(apiRespone);
 	    }
+	   
+	   @ExceptionHandler(HttpMessageNotReadableException.class)
+	   public ResponseEntity<ApiRespone> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+	       String detailedMessage = "Invalid JSON format in request body.";
+	       
+	       // Lấy chi tiết lỗi nếu có
+	       Throwable rootCause = ex.getMostSpecificCause();
+	       if (rootCause != null && rootCause.getMessage() != null) {
+	           detailedMessage += " Details: " + rootCause.getMessage();
+	       }
+
+	       ApiRespone apiRespone = ApiRespone.builder()
+	           .code(ErrorCode.INVALID_JSON.getCode())
+	           .message(detailedMessage)
+	           .build();
+
+	       log.error("Malformed JSON request: {}", detailedMessage, ex);
+	       return ResponseEntity.badRequest().body(apiRespone);
+	   }
 }
