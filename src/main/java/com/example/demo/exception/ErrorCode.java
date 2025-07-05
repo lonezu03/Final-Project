@@ -24,7 +24,7 @@ public enum ErrorCode {
 	CHAPTER_EMPTY(1027, "Chapter empty"), USER_ALREADY_LIKE(1028, "User already like this comment"),
 	USER_ALREADY_FOLLOW_NOVEL(1028, "User already follow user"), AUDIO_FILE_NOT_EXISTS(1029, "Audio file not exists"),
 	USER_ALREADY_REVIEW_THIS_NOVEL(1030, "User already review this novel"),
-	REVIEW_NOVEL_NOT_EXISTS(1031, "Review novel not exists"), UNKNOW_ERROR(9999, "Unknow error");
+	REVIEW_NOVEL_NOT_EXISTS(1031, "Review novel not exists"),INVALID_SORT_FIELD(1032,"Invaild sort field"), UNKNOW_ERROR(9999, "Unknow error");
 
 	private int code;
 	private String message;

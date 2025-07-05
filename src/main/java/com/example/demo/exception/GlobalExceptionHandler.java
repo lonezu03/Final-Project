@@ -1,5 +1,6 @@
 package com.example.demo.exception;
 
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,4 +34,14 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.badRequest().body(apiRespone);
 	}
 	
+	   @ExceptionHandler(PropertyReferenceException.class)
+	    public ResponseEntity<ApiRespone> handlePropertyReferenceException(PropertyReferenceException ex) {
+	        ApiRespone apiRespone = ApiRespone.builder()
+	                .code(ErrorCode.INVALID_SORT_FIELD.getCode())
+	                .message("Invalid sort field: " + ex.getPropertyName())
+	                .build();
+
+	        log.error("Invalid sort field: {}", ex.getPropertyName(), ex);
+	        return ResponseEntity.badRequest().body(apiRespone);
+	    }
 }
