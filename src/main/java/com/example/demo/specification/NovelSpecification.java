@@ -43,12 +43,12 @@ public class NovelSpecification {
      * trên mọi DB. Tốt nhất nên đổi kiểu cột thành số.
      * Dưới đây là cách làm giả định cột là số (cần cast).
      */
-    public static Specification<Novel> ratingGreaterThanOrEqual(Double rating) {
-        // Lưu ý: Cột rating của bạn là String, so sánh số có thể không chính xác
-        // trên mọi DB. Tốt nhất nên đổi kiểu cột thành số.
-        // Dưới đây là cách làm giả định cột là số (cần cast).
-        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("rating").as(Double.class), rating);
-    }
+//    public static Specification<Novel> ratingGreaterThanOrEqual(Double rating) {
+//        // Lưu ý: Cột rating của bạn là String, so sánh số có thể không chính xác
+//        // trên mọi DB. Tốt nhất nên đổi kiểu cột thành số.
+//        // Dưới đây là cách làm giả định cột là số (cần cast).
+//        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("rating").as(Double.class), rating);
+//    }
 
     /**
      * Tạo Specification để lọc các tiểu thuyết có tổng số chương > count.
@@ -56,9 +56,9 @@ public class NovelSpecification {
      * @param count Số chương tối thiểu
      * @return Specification lọc theo tổng chương
      */
-    public static Specification<Novel> totalChapterGreaterThan(Integer count) {
-        return (root, query, cb) -> cb.greaterThan(root.get("totalChapter"), count);
-    }
+//    public static Specification<Novel> totalChapterGreaterThan(Integer count) {
+//        return (root, query, cb) -> cb.greaterThan(root.get("totalChapter"), count);
+//    }
 
     /**
      * Tạo Specification để lọc các tiểu thuyết có tổng số chương < count.
@@ -66,9 +66,9 @@ public class NovelSpecification {
      * @param count Số chương tối đa
      * @return Specification lọc theo tổng chương
      */
-    public static Specification<Novel> totalChapterLessThan(Integer count) {
-        return (root, query, cb) -> cb.lessThan(root.get("totalChapter"), count);
-    }
+//    public static Specification<Novel> totalChapterLessThan(Integer count) {
+//        return (root, query, cb) -> cb.lessThan(root.get("totalChapter"), count);
+//    }
 
     /**
      * Tạo Specification để lọc các tiểu thuyết theo danh sách status.

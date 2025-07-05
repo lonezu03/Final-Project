@@ -49,8 +49,7 @@ public class Novel {
 	String nameNovel;
 	String descriptionNovel;
 	Integer totalChapter;
-	@Column(name = "rating", length = 6)
-	String rating;
+
 	@Enumerated(EnumType.STRING)
 	Status statusNovel;
 	String imageNovel;

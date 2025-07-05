@@ -132,7 +132,20 @@ public class ChapterService {
  * @return đối tượng ChapterRespone tương ứng
  */
 	public ChapterRespone getChapterById(String idChapter) {
-		return chapterMapper.toChapterRespone(chapterRepository.findById(idChapter).get());
+		
+		Chapter chapters=chapterRepository.findById(idChapter).orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
+		
+		ChapterRespone chapterRespone=chapterMapper.toChapterRespone(chapters);
+		
+		if (ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter()).isPresent()) {
+			TtsJob ttsJobOpt = ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter())
+					.get();
+			logger.info(ttsJobOpt.getFinalAudioUrl());
+			chapterRespone.setUrlAudio(ttsJobOpt.getFinalAudioUrl());
+		}
+
+		
+		return chapterRespone;
 	}
 /**
  * Tạo một chương mới cho truyện. Nếu có file văn bản đính kèm (.txt), nội dung sẽ được đọc và lưu vào chương.

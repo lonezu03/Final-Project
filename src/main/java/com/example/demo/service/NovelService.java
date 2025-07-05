@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,8 +44,10 @@ import com.example.demo.repository.ICategoryRepository;
 import com.example.demo.repository.IFollowNovelRepository;
 import com.example.demo.repository.IHistoryNotifyRepository;
 import com.example.demo.repository.INovelRepository;
+import com.example.demo.repository.IReviewNovelRepository;
 import com.example.demo.repository.IUserRepository;
 import com.example.demo.specification.NovelSpecification;
+import com.example.demo.util.NovelRatingProjection;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -62,34 +65,59 @@ public class NovelService {
 	ICategoryRepository categoryRepository;
 	IFollowNovelRepository followNovelRepository;
 	IHistoryNotifyRepository historyNotifyRepository;
-
+	IReviewNovelRepository reviewNovelRepository;
 	static Logger logger = LoggerFactory.getLogger(NovelService.class);
-/**
- * Lấy tất cả truyện từ cơ sở dữ liệu.
- *
- * @return Danh sách các đối tượng NovelRespone
- */
+
+	/**
+	 * Lấy tất cả truyện từ cơ sở dữ liệu.
+	 *
+	 * @return Danh sách các đối tượng NovelRespone
+	 */
 	public List<NovelRespone> getAll() {
-		return novelRepository.findAll().stream().map(t -> novelMapper.toNovelRespone(t)).toList();
+	    List<NovelRatingProjection> avgRatings = reviewNovelRepository.findAverageRatingForAllNovels();
+	    Map<String, Double> ratingMap = avgRatings.stream()
+	            .collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
+
+	    
+		return novelRepository.findAll().stream().map(novel -> {
+			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
+			  Double avg = ratingMap.get(novel.getIdNovel());
+			  novelRespone.setRating(avg != null ? String.format("%.1f", avg) : "0");
+			
+			
+			return novelRespone;
+		}).toList();
+
 	}
 
-/**
- * Lấy thông tin truyện theo ID.
- *
- * @param idNovel ID của truyện cần lấy
- * @return Đối tượng NovelRespone tương ứng
- */
+	/**
+	 * Lấy thông tin truyện theo ID.
+	 *
+	 * @param idNovel ID của truyện cần lấy
+	 * @return Đối tượng NovelRespone tương ứng
+	 */
 	public NovelRespone getNovel(String idNovel) {
-		return novelMapper.toNovelRespone(novelRepository.findById(idNovel).get());
+		 Novel novel = novelRepository.findById(idNovel)
+		            .orElseThrow(() -> new RuntimeException("Novel not found"));
+
+		    NovelRespone respone = novelMapper.toNovelRespone(novel);
+
+		    // Gọi query lấy rating trung bình
+		    Double avg = reviewNovelRepository.findAverageRatingByNovelId(idNovel);
+		    respone.setRating(avg != null ? String.format("%.1f", avg) : "0");
+
+		    return respone;
+		
 	}
-/**
- * Tạo mới một truyện và (nếu có) upload ảnh đại diện.
- *
- * @param request Thông tin truyện cần tạo
- * @param file    File ảnh đại diện (tùy chọn)
- * @return Đối tượng NovelRespone sau khi tạo thành công
- * @throws IOException Nếu xảy ra lỗi trong quá trình upload ảnh
- */
+
+	/**
+	 * Tạo mới một truyện và (nếu có) upload ảnh đại diện.
+	 *
+	 * @param request Thông tin truyện cần tạo
+	 * @param file    File ảnh đại diện (tùy chọn)
+	 * @return Đối tượng NovelRespone sau khi tạo thành công
+	 * @throws IOException Nếu xảy ra lỗi trong quá trình upload ảnh
+	 */
 	public NovelRespone createNovel(NovelCreatationRequest request, MultipartFile file) throws IOException {
 		Novel novel = novelMapper.toNovel(request);
 
@@ -101,14 +129,15 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
 	}
-/**
- * Cập nhật thông tin truyện và (nếu có) cập nhật ảnh đại diện.
- *
- * @param request Thông tin truyện cần cập nhật
- * @param file    File ảnh đại diện mới (tùy chọn)
- * @return Đối tượng NovelRespone sau khi cập nhật thành công
- * @throws IOException Nếu có lỗi khi upload hoặc xóa ảnh
- */
+
+	/**
+	 * Cập nhật thông tin truyện và (nếu có) cập nhật ảnh đại diện.
+	 *
+	 * @param request Thông tin truyện cần cập nhật
+	 * @param file    File ảnh đại diện mới (tùy chọn)
+	 * @return Đối tượng NovelRespone sau khi cập nhật thành công
+	 * @throws IOException Nếu có lỗi khi upload hoặc xóa ảnh
+	 */
 	public NovelRespone updateNovel(NovelUpdateRequest request, MultipartFile file) throws IOException {
 
 		Novel novel = novelMapper.toNovelUpdate(request);
@@ -126,13 +155,14 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
 	}
-/**
- * Xóa một truyện theo ID, bao gồm cả ảnh nếu có.
- *
- * @param idNovel ID của truyện cần xóa
- * @return ID của truyện đã bị xóa
- * @throws AppException Nếu vi phạm ràng buộc (constraint) khóa ngoại
- */
+
+	/**
+	 * Xóa một truyện theo ID, bao gồm cả ảnh nếu có.
+	 *
+	 * @param idNovel ID của truyện cần xóa
+	 * @return ID của truyện đã bị xóa
+	 * @throws AppException Nếu vi phạm ràng buộc (constraint) khóa ngoại
+	 */
 	public String deleteById(String idNovel) {
 		try {
 			Novel novel = novelRepository.findById(idNovel).get();
@@ -147,12 +177,13 @@ public class NovelService {
 		}
 
 	}
-/**
- * Xóa một tác giả khỏi truyện.
- *
- * @param request Yêu cầu chứa ID truyện và ID tác giả cần xóa
- * @return Đối tượng NovelRespone sau khi cập nhật
- */
+
+	/**
+	 * Xóa một tác giả khỏi truyện.
+	 *
+	 * @param request Yêu cầu chứa ID truyện và ID tác giả cần xóa
+	 * @return Đối tượng NovelRespone sau khi cập nhật
+	 */
 	public NovelRespone removeAuthor(NovelRemoveAuthorRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -165,12 +196,13 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-/**
- * Thêm một tác giả vào truyện.
- *
- * @param request Yêu cầu chứa ID truyện và ID tác giả cần thêm
- * @return Đối tượng NovelRespone sau khi cập nhật
- */
+
+	/**
+	 * Thêm một tác giả vào truyện.
+	 *
+	 * @param request Yêu cầu chứa ID truyện và ID tác giả cần thêm
+	 * @return Đối tượng NovelRespone sau khi cập nhật
+	 */
 	public NovelRespone addAuthor(NovelAddAuthorRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -183,12 +215,13 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-/**
- * Xóa một thể loại khỏi truyện.
- *
- * @param request Yêu cầu chứa ID truyện và ID thể loại cần xóa
- * @return Đối tượng NovelRespone sau khi cập nhật
- */
+
+	/**
+	 * Xóa một thể loại khỏi truyện.
+	 *
+	 * @param request Yêu cầu chứa ID truyện và ID thể loại cần xóa
+	 * @return Đối tượng NovelRespone sau khi cập nhật
+	 */
 	public NovelRespone removeCategory(NovelRemoveCategoryRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -205,12 +238,13 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-/**
- * Thêm một thể loại vào truyện.
- *
- * @param request Yêu cầu chứa ID truyện và ID thể loại cần thêm
- * @return Đối tượng NovelRespone sau khi cập nhật
- */
+
+	/**
+	 * Thêm một thể loại vào truyện.
+	 *
+	 * @param request Yêu cầu chứa ID truyện và ID thể loại cần thêm
+	 * @return Đối tượng NovelRespone sau khi cập nhật
+	 */
 	public NovelRespone addCategory(NovelAddCategoryRequest request) {
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
@@ -223,14 +257,15 @@ public class NovelService {
 
 		return novelMapper.toNovelRespone(novel);
 	}
-/**
- * Tìm kiếm truyện dựa trên nhiều tiêu chí: tên, rating, số chương, trạng thái,
- * tên tác giả, tên thể loại,... và có phân trang.
- *
- * @param criteria  Tiêu chí tìm kiếm
- * @param pageable  Thông tin phân trang
- * @return Trang chứa các truyện phù hợp dạng NovelRespone
- */
+
+	/**
+	 * Tìm kiếm truyện dựa trên nhiều tiêu chí: tên, rating, số chương, trạng thái,
+	 * tên tác giả, tên thể loại,... và có phân trang.
+	 *
+	 * @param criteria Tiêu chí tìm kiếm
+	 * @param pageable Thông tin phân trang
+	 * @return Trang chứa các truyện phù hợp dạng NovelRespone
+	 */
 	@Transactional(readOnly = true) // Dùng readOnly để tối ưu hóa hiệu năng cho các truy vấn đọc
 	public Page<NovelRespone> searchNovels(NovelSearchCriteriaRequest criteria, Pageable pageable) {
 		// Bắt đầu với một Specification không có điều kiện (luôn đúng)
@@ -247,19 +282,6 @@ public class NovelService {
 		}
 
 		// (Bạn có thể thêm logic tương tự cho descriptionNovel ở đây nếu cần)
-
-		// 2. Lọc theo rating
-		if (criteria.getRatingGreaterThanOrEqual() != null) {
-			spec = spec.and(NovelSpecification.ratingGreaterThanOrEqual(criteria.getRatingGreaterThanOrEqual()));
-		}
-
-		// 3. Lọc theo tổng số chương
-		if (criteria.getTotalChapterGreaterThan() != null) {
-			spec = spec.and(NovelSpecification.totalChapterGreaterThan(criteria.getTotalChapterGreaterThan()));
-		}
-		if (criteria.getTotalChapterLessThan() != null) {
-			spec = spec.and(NovelSpecification.totalChapterLessThan(criteria.getTotalChapterLessThan()));
-		}
 
 		// 4. Lọc theo danh sách trạng thái (statuses)
 		if (criteria.getStatuses() != null && !criteria.getStatuses().isEmpty()) {
@@ -280,25 +302,21 @@ public class NovelService {
 		// Nhờ có @EntityGraph trong Repository, câu lệnh này sẽ được tối ưu để tránh
 		// N+1
 		Page<Novel> novelsPage = novelRepository.findAll(spec, pageable);
-		
-	
+
 		Set<String> followedNovelIds;
-		
+
 		if (StringUtils.hasText(criteria.getIdUser())) {
 			List<FollowNovel> followNovels = followNovelRepository.findByUserIdUser(criteria.getIdUser());
-			final Set<String> ids = followNovels.stream()
-				.map(f -> f.getNovel().getIdNovel())
-				.collect(Collectors.toSet());
+			final Set<String> ids = followNovels.stream().map(f -> f.getNovel().getIdNovel())
+					.collect(Collectors.toSet());
 			followedNovelIds = ids;
 		} else {
-			followedNovelIds = Collections.emptySet(); 
+			followedNovelIds = Collections.emptySet();
 		}
 
-
-		
 		// Chuyển đổi từ Page<Novel> sang Page<NovelDTO> để trả về cho client
-		return novelsPage.map(novel -> {
-			 Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
+		 novelsPage.map(novel -> {
+			Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
 
 			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
 			boolean isFollow = followedNovelIds.contains(novel.getIdNovel());
@@ -306,23 +324,51 @@ public class NovelService {
 			novelRespone.setTotalFollower(finalTotalFollower);
 			return novelRespone;
 		});
+		 
+		// Lấy danh sách idNovel trong trang hiện tại
+		 List<String> novelIdsInPage = novelsPage.getContent()
+		         .stream()
+		         .map(Novel::getIdNovel)
+		         .collect(Collectors.toList());
+
+		 // Lấy rating trung bình theo các novel trong trang này
+		 Map<String, Double> ratingMap = reviewNovelRepository.findAverageRatingByNovelIds(novelIdsInPage)
+		         .stream()
+		         .collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
+		 return novelsPage.map(novel -> {
+			    Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
+
+			    NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
+
+			    // Gán rating trung bình
+			    Double avgRating = ratingMap.get(novel.getIdNovel());
+			    novelRespone.setRating(avgRating != null ? String.format("%.1f", avgRating) : "0");
+
+			    // Gán follow và follower
+			    boolean isFollow = followedNovelIds.contains(novel.getIdNovel());
+			    novelRespone.setIsFollow(isFollow);
+			    novelRespone.setTotalFollower(finalTotalFollower);
+
+			    return novelRespone;
+			});
+
 	}
 
-/**
- * Lấy danh sách tất cả các truyện mà người dùng đã follow.
- *
- * @return Danh sách các đối tượng FollowNovel
- */
+	/**
+	 * Lấy danh sách tất cả các truyện mà người dùng đã follow.
+	 *
+	 * @return Danh sách các đối tượng FollowNovel
+	 */
 	public List<FollowNovel> getAllFollowNovel() {
 		logger.info("Gọi danh sách follow novel");
 		return followNovelRepository.findAll();
 	}
 
 	/**
- * Lấy toàn bộ lịch sử thông báo.
- *
- * @return Danh sách các đối tượng HistoryNotify
- */
+	 * Lấy toàn bộ lịch sử thông báo.
+	 *
+	 * @return Danh sách các đối tượng HistoryNotify
+	 */
 
 	public List<HistoryNotify> getAllHistoryNotify() {
 		return historyNotifyRepository.findAll();

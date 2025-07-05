@@ -20,8 +20,8 @@ import lombok.experimental.FieldDefaults;
 public class NovelCreatationRequest {
 	String nameNovel;
 	String descriptionNovel;
-	Integer totalChapter;
-	String rating;
+//	Integer totalChapter;
+//	String rating;
 	Status statusNovel;
   
 

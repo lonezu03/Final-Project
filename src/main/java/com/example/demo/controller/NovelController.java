@@ -28,8 +28,10 @@ import com.example.demo.dto.request.NovelSearchCriteriaRequest;
 import com.example.demo.dto.request.NovelUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.NovelRespone;
+import com.example.demo.dto.respone.ReviewNovelRespone;
 import com.example.demo.service.FollowNovelService;
 import com.example.demo.service.NovelService;
+import com.example.demo.service.ReviewNovelService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,6 +50,7 @@ public class NovelController {
 
 	NovelService novelService;
 	FollowNovelService followNovelService;
+	ReviewNovelService reviewNovelService;
 	/**
  * API lấy toàn bộ tiểu thuyết có trong hệ thống.
  *
@@ -183,5 +186,18 @@ public class NovelController {
 			e.printStackTrace();
 			return ApiRespone.<Boolean>builder().result(false).build();
 		}
+	}
+	
+	/**
+	 * Lấy tất cả đánh giá của một tiểu thuyết dựa trên ID.
+	 *
+	 * @param idNovel ID của tiểu thuyết cần lấy danh sách đánh giá.
+	 * @return Danh sách các đánh giá tương ứng với tiểu thuyết.
+	 */
+	@GetMapping("/getlAllReviewNovel")
+	@Operation(summary = "Lấy tất cả đánh giá theo tiểu thuyết", description = "Truyền vào ID của tiểu thuyết (idNovel dạng string), hệ thống sẽ trả về danh sách tất cả các đánh giá của tiểu thuyết đó.")
+	ApiRespone<List<ReviewNovelRespone>> getlAllReviewNovel(@RequestParam String idNovel) {
+		return ApiRespone.<List<ReviewNovelRespone>>builder()
+				.result(reviewNovelService.getAllReviewNovelByIdNovel(idNovel)).build();
 	}
 }

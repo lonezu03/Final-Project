@@ -50,8 +50,6 @@ public class Chapter {
 	@Column(nullable = false)
 	Long indexChapter;
 	
-	@Column(name = "audio_url")
-	String audioFile;
 
 	@ManyToOne
 	@JoinColumn(name = "id_Novel", nullable = false)
