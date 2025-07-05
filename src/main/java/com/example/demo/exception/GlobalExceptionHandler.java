@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
 		
 		apiRespone.setCode(ErrorCode.UNKNOW_ERROR.getCode());
 		apiRespone.setMessage(ErrorCode.UNKNOW_ERROR.getMessage());
-		log.info(exception.toString());
+	    log.error("Exception occurred in class: " + exception.getClass().getName(), exception);
 		return ResponseEntity.badRequest().body(apiRespone);
 	}
 	
