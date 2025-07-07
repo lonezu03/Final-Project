@@ -150,15 +150,7 @@ export const searchNovels = createAsyncThunk(
     }
   }
 );
-// api follow
-export const followNovel = createAsyncThunk('novels/followNovel', async (payload) => {
-  const response = await axios.post(`${apiBase}/followNovel`, payload, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  return response.data.result; // Trả về kết quả từ API
-});
+
 
 export const fetchHotNovels = createAsyncThunk(
   'novels/fetchHot', // Đổi tên action type
@@ -413,20 +405,7 @@ const novelSlice = createSlice({
       state.searchedNovels = []; // Reset state mới
       state.pagination = initialPaginationState;
     })
-     .addCase(followNovel.pending, (state) => {
-        state.loading = true; // Đang chờ yêu cầu
-      })
-      .addCase(followNovel.fulfilled, (state, action) => {
-        state.loading = false;
-        // Thêm truyện đã theo dõi vào danh sách followedNovels
-        if (action.payload) {
-          state.followedNovels.push(action.payload);
-        }
-      })
-      .addCase(followNovel.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message; // Xử lý lỗi khi có vấn đề
-      })
+    
       .addCase(LyberiNovels.fulfilled, (state, action) => {
         // Lưu truyện yêu thích vào `followedNovels`
         state.followedNovels = action.payload;

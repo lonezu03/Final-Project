@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo } from 'react'; // Thêm useMemo
 import { useParams, Link, useNavigate } from 'react-router-dom'; // Thêm useNavigate
 import { useDispatch, useSelector } from 'react-redux';
-import { getNovelById,followNovel } from '../../redux/novelSlice';
+import { getNovelById,LyberiNovels } from '../../redux/novelSlice';
+import {followNovel} from '../../redux/userSlice'
 import { getAllChapters } from '../../redux/chapterSlice'; // Action này lấy danh sách chương cho tab
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,7 +17,6 @@ const DetailPage = () => {
   const { novelId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
   const { currentNovel: novelDetailData, loading: novelLoading, error: novelError } = useSelector((state) => state.novels);
   const { chapters: chaptersFromApiForDetailPage, loading: chaptersLoading, error: chaptersError } = useSelector((state) => state.chapters);
   // chaptersFromApiForDetailPage là danh sách chương cho tab "Danh Sách"
@@ -24,7 +24,7 @@ const DetailPage = () => {
   const [activeTab, setActiveTab] = useState('summary');
   const [currentChapterListPage, setCurrentChapterListPage] = useState(1); // Đổi tên để rõ ràng
   const chaptersPerPageInList = 50;
-  const { currentUser } = useSelector((state) => state.user);
+  const { currentUser, followedNovels } = useSelector((state) => state.user);
 
   useEffect(() => {
     if (novelId) {
@@ -38,12 +38,19 @@ const DetailPage = () => {
         }
     }
 }, [dispatch, novelId, novelDetailData, chaptersFromApiForDetailPage]);
+ useEffect(() => {
+    // Khi component mount và có người dùng, tải danh sách truyện họ đã theo dõi
+    if (currentUser?.idUser&&followedNovels) {
+        dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+    }
+  }, [currentUser, dispatch]); // Chạy khi currentUser thay đổi
 
   const isFollowing = useMemo(() => {
-    return currentUser?.followedNovels?.includes(novelId);
-  }, [currentUser, novelId]);
-  
-   const handleFollowToggle = () => {
+    // Logic này giờ sẽ hoạt động đúng
+    return Array.isArray(followedNovels) && followedNovels.includes(novelId);
+  }, [followedNovels, novelId]);
+
+  const handleFollowToggle = () => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để theo dõi truyện!");
       navigate('/');
@@ -51,15 +58,25 @@ const DetailPage = () => {
     }
     const actionPayload = { idUser: currentUser.idUser, idNovel: novelId };
     
-    const actionToDispatch = isFollowing ? unfollowNovel(actionPayload) : followNovel(actionPayload);
-    const successMessage = isFollowing ? "Đã bỏ theo dõi truyện." : "Đã theo dõi truyện thành công!";
-    
-    dispatch(actionToDispatch)
-      .unwrap()
-      .then(() => toast.success(successMessage))
-      .catch(err => toast.error(`Lỗi: ${err.message || err}`));
+    if (isFollowing) {
+      // TẠM THỜI VÔ HIỆU HÓA
+      // Khi có API, bạn sẽ bỏ comment đoạn code này
+      // dispatch(unfollowNovel(actionPayload))
+      //   .unwrap()
+      //   .then(() => toast.success("Đã bỏ theo dõi truyện."))
+      //   .catch(err => toast.error(`Lỗi: ${err.message || err}`));
+      toast.warn("Chức năng Bỏ theo dõi đang được phát triển.");
+    } else {
+      dispatch(followNovel(actionPayload))
+        .unwrap()
+        .then(() => {
+            toast.success("Đã theo dõi truyện thành công!");
+            // Cập nhật lại số lượng follow trên UI mà không cần tải lại trang
+            dispatch(getNovelById(novelId));
+        })
+        .catch(err => toast.error(`Lỗi: ${err.message || err}`));
+    }
   };
-
   const handleOpenReviewDialog = () => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để đánh giá!");

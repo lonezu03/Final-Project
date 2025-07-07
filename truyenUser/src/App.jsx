@@ -21,6 +21,7 @@ import TransactionHistoryPage from './component/page/TransactionHistoryPage';
 import SearchResultsPage from './component/SearchResultsPage';
 import UserProfilePage from './component/page/UserProfilePage'; // Đổi tên route để khớp với đây
 import LibraryPage from './component/page/LibraryPage'; // Thêm trang Thư viện
+import PaymentCallbackPage from './component/PaymentCallbackPage'; // Import component mới
 
 // AppContent bây giờ chỉ chịu trách nhiệm fetch dữ liệu không thay đổi thường xuyên
 const AppContent = () => {
@@ -75,6 +76,8 @@ const AppContent = () => {
         <Route path="/search-results" element={<SearchResultsPage />} />
         <Route path="/user/profile" element={<UserProfilePage />} />
         <Route path="/user/my-bookshelf" element={<LibraryPage />} />
+        <Route path="/payment/callback" element={<PaymentCallbackPage />} />
+
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>

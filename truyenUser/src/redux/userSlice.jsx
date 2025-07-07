@@ -3,6 +3,8 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios'; // axios gốc vẫn được dùng cho các API không cần auth (như login, register)
 import apiClient from '../services/api'; // Import apiClient đã cấu hình
 import { rooturl } from './element'; // Import đường dẫn gốc từ file element
+import { LyberiNovels } from './novelSlice'; // <<-- THÊM IMPORT NÀY Ở ĐẦU FILE
+
 const userApiBase = `${rooturl}/user`; // Chỉ dùng cho các API không cần auth
 
 // --- API DEFINITIONS ---
@@ -357,6 +359,20 @@ export const createReviewNovel = createAsyncThunk(
     }
   }
 );
+export const followNovel = createAsyncThunk(
+  'user/followNovel',
+  async ({ idUser, idNovel }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post('/novel/followNovel', { idUser, idNovel });
+      if (response.data?.code === 1073741824 && response.data.result === true) {
+        return { idNovel };
+      }
+      return rejectWithValue(response.data?.message || 'Theo dõi thất bại');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi theo dõi truyện.');
+    }
+  }
+);
 
  const handlePending = (state) => {
       state.loading = true;
@@ -397,6 +413,8 @@ const initialState = {
   token: localStorage.getItem('authToken') || null,
   usersList: [],
   userHistory: [], 
+  followedNovels: [],
+
   loading: false, 
   historyLoading: false,
   isOtpSending: false,
@@ -635,6 +653,23 @@ const userSlice = createSlice({
         state.loading = false;
         state.error = action.payload; // Lưu lỗi nếu có
       })
+      .addCase(followNovel.fulfilled, (state, action) => {
+    state.loading = false;
+    if (!state.followedNovels.includes(action.payload.idNovel)) {
+      state.followedNovels.push(action.payload.idNovel);
+    }
+  })
+   .addCase(LyberiNovels.fulfilled, (state, action) => {
+      // action.payload là mảng các object truyện [{idNovel: "..."}, ...]
+      // Chúng ta chỉ cần lấy ra mảng các ID
+      if (Array.isArray(action.payload)) {
+        state.followedNovels = action.payload.map(novel => novel.idNovel);
+      }
+    })
+    .addCase(LyberiNovels.rejected, (state, action) => {
+      state.followedNovels = []; // Reset nếu lỗi
+      console.error("Lỗi LyberiNovels:", action.payload);
+    })
 
       // .addMatcher cho các hành động login vẫn giữ nguyên
       .addMatcher(
