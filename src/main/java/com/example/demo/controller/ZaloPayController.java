@@ -4,8 +4,10 @@ import com.example.demo.dto.request.ShippingOrderRequest;
 import com.example.demo.dto.request.ZaloPayCallback;
 import com.example.demo.dto.request.ZaloPayRequest;
 import com.example.demo.dto.request.ZaloPayWrapperRequest;
+import com.example.demo.dto.respone.ZaloPayPaymentResponse;
 import com.example.demo.dto.respone.ZaloPayResponseData;
 import com.example.demo.service.ZaloPayService;
+import com.example.demo.util.ZaloPayUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,66 +36,63 @@ import org.springframework.web.bind.annotation.*;
 public class ZaloPayController {
 	ZaloPayService zaloPayService;
 	ObjectMapper objectMapper;
+
 //	Shipping shipping;
-/**
- * Tạo đơn hàng thanh toán qua ZaloPay và trả về URL thanh toán.
- *
- * @param request Thông tin yêu cầu thanh toán từ client (bao gồm thông tin đơn hàng, số tiền, mô tả,...).
- * @return Đường dẫn (URL) để người dùng thực hiện thanh toán qua ZaloPay.
- * @throws JsonProcessingException Nếu xảy ra lỗi khi xử lý JSON.
- * @throws UnsupportedEncodingException Nếu xảy ra lỗi khi giải mã chuỗi.
- */
+	/**
+	 * Tạo đơn hàng thanh toán qua ZaloPay và trả về URL thanh toán.
+	 *
+	 * @param request Thông tin yêu cầu thanh toán từ client (bao gồm thông tin đơn
+	 *                hàng, số tiền, mô tả,...).
+	 * @return Đường dẫn (URL) để người dùng thực hiện thanh toán qua ZaloPay.
+	 * @throws JsonProcessingException      Nếu xảy ra lỗi khi xử lý JSON.
+	 * @throws UnsupportedEncodingException Nếu xảy ra lỗi khi giải mã chuỗi.
+	 */
 	@PostMapping("/create")
-	public String createPaymentOrder(@RequestBody ZaloPayRequest request)
+	public ZaloPayPaymentResponse createPaymentOrder(@RequestBody ZaloPayRequest request)
 			throws JsonProcessingException, UnsupportedEncodingException {
 
-//		ResponseEntity<?> order=shipping.createOrder(request.getShippingOrderRequest());
+		ZaloPayPaymentResponse responseEntity = zaloPayService.createPaymentOrderupdate(request);
 
-//		Map<String, Object> body=(Map<String, Object>) order.getBody();
-
-//		String orderId=body.get("orderCode").toString();
-
-		ResponseEntity<?> responseEntity = zaloPayService.createPaymentOrderupdate(request);
-
-		JsonNode rootNode = objectMapper.readTree(responseEntity.getBody().toString());
-
-		String responseDataString = rootNode.get("response_data").asText();
-
-		ZaloPayResponseData responseData = objectMapper.readValue(responseDataString, ZaloPayResponseData.class);
-
-		System.out.println("Mã giao dịch: " + responseData.getZp_trans_token());
-		System.out.println("Link thanh toán: " + responseData.getOrder_url());
-
-		return responseData.getOrder_url();
+		return responseEntity;
 	}
 
-	// @RequestBody String body
-//	@PostMapping("/call")
-//	public void call() {
-	// try {
-	// JsonNode callbackJson = objectMapper.readTree(body);
-	// String embedDataStr = callbackJson.get("embed_data").asText();
-	//
-	// JsonNode embedData = objectMapper.readTree(embedDataStr);
-	// JsonNode shippingOrderNode = embedData.get("shipping_order");
-	//
-	// // Deserialize thành ShippingOrderRequest
-	// ShippingOrderRequest request = objectMapper.treeToValue(shippingOrderNode,
-	// ShippingOrderRequest.class);
-	//
-	// // Gửi request sang GHN
-	// ResponseEntity<?> ghnResponse = shipping.createOrder(request);
-	// log.info("tao roi ne hehe");
-	// return ResponseEntity.ok("Đã tạo đơn GHN thành công: " +
-	// ghnResponse.getBody());
-	//
-	// } catch (Exception e) {
-	// e.printStackTrace();
-	// return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi
-	// callback: " + e.getMessage());
-	// }
-//		zaloPayService.checkCallback();
-//	}
+	@PostMapping("/call")
+	public ResponseEntity<String> handleZaloPayCallback(@RequestBody Map<String, Object> payload) {
+//		log.info("✅ Redirect sau thanh toán từ ZaloPay");
+//
+//		return ResponseEntity.ok("Thanh toán ZaloPay thành công! Cảm ơn bạn.");
+		
+		log.info("✅ Nhận callback từ ZaloPay: {}", payload);
+
+	    // (Optional) Xác minh MAC nếu ZaloPay gửi kèm
+	    // String mac = (String) payload.get("mac");
+	    // Verify MAC here if needed
+
+	    // Xử lý logic cập nhật trạng thái đơn hàng tại đây, ví dụ:
+	    String appTransId = (String) payload.get("app_trans_id");
+	    String returnCode = (String) payload.get("return_code");
+
+	    if ("1".equals(returnCode)) {
+	        log.info("✅ Thanh toán thành công cho giao dịch {}", appTransId);
+	        // Update DB, gửi thông báo, v.v.
+	    } else {
+	        log.warn("❌ Thanh toán thất bại, return_code={}", returnCode);
+	    }
+
+	    // ZaloPay yêu cầu trả về JSON có key "return_code"
+	    return ResponseEntity.ok("{\"return_code\": 1}");
+
+	}
+
+	@GetMapping("/callback-success")
+	public ResponseEntity<String> handleRedirectAfterPayment(@RequestParam("idHistoryDeposit") String idHistoryDeposit) {
+	    log.info("✅ Redirect sau thanh toán từ ZaloPay. ID lịch sử: {}", idHistoryDeposit);
+
+	    // Tùy logic của bạn: có thể load thêm thông tin giao dịch từ DB nếu cần
+	    return ResponseEntity.ok("Thanh toán thành công! Mã lịch sử nạp: " + idHistoryDeposit);
+	}
+
+
 	// @RequestParam("embed_data") String embedDataStr
 	// @GetMapping("/callback")
 	// public ResponseEntity<?> handleCallback(@RequestParam("shipping_order")
@@ -111,8 +112,8 @@ public class ZaloPayController {
 	// }
 	// }
 
-	@GetMapping("/callback")
+	@GetMapping("/call")
 	public void handleCallback() {
-
+		zaloPayService.checkCallback();
 	}
 }

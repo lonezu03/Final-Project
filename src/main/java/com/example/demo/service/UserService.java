@@ -14,12 +14,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.TokenRefreshRequest;
+import com.example.demo.dto.request.UserUpdateCoinRequest;
 import com.example.demo.dto.request.UpdateHistoryRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
 import com.example.demo.dto.request.UserLoginByEmailRequest;
 import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
+import com.example.demo.dto.respone.HistoryDepositRespone;
 import com.example.demo.dto.respone.HistoryReadNovelRespone;
 import com.example.demo.dto.respone.HistoryReadSubRespone;
 import com.example.demo.dto.respone.UploadFileRespone;
@@ -34,9 +36,11 @@ import com.example.demo.entity.User;
 import com.example.demo.enums.Role;
 import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
+import com.example.demo.mapper.IHistoryDepositMapper;
 import com.example.demo.mapper.IHistoryReadMapper;
 import com.example.demo.mapper.IUserMapper;
 import com.example.demo.repository.IChapterRepository;
+import com.example.demo.repository.IHistoryDepositRepository;
 import com.example.demo.repository.IHistoryReadRepository;
 import com.example.demo.repository.INovelRepository;
 import com.example.demo.repository.IUserRepository;
@@ -65,6 +69,8 @@ public class UserService {
 	AuthenticationService authenticationService;
 	RefreshTokenRepository refreshTokenRepository;
 	IChapterRepository chapterRepository;
+	IHistoryDepositRepository historyDepositRepository;
+	IHistoryDepositMapper historyDepositMapper;
 
 	/**
 	 * Lấy danh sách tất cả người dùng từ database và map sang DTO UserRespone.
@@ -147,8 +153,10 @@ public class UserService {
 		UserRespone userRespone = userMapper.toUserRespone(user);
 		List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
 		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
-
+		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
+		userRespone.setHistoryDeposit(historyDepositRespones);
 		userRespone.setToken(authenticationService.generateToken(user));
+		userRespone.setHistoryDeposit(historyDepositRespones);
 		return userRespone;
 	}
 
@@ -171,6 +179,9 @@ public class UserService {
 
 		userRespone.setToken(authenticationService.generateToken(user));
 
+		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
+		userRespone.setHistoryDeposit(historyDepositRespones);
+		
 		return userRespone;
 	}
 
@@ -206,6 +217,14 @@ public class UserService {
 		if (user == null) {
 			throw new AppException(ErrorCode.USER_NOT_EXISTED);
 		}
+
+		userMapper.updateUser(request, user);
+
+		return userMapper.toUserRespone(userRepository.save(user));
+	}
+	
+	public UserRespone updateCoinUser(UserUpdateCoinRequest request) {
+		User user = userRepository.findById(request.getIdUser()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
 		userMapper.updateUser(request, user);
 

@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ZaloPayRequest {
-    String amount;
+	String idUser;
+    Integer amount;
+//    Integer coin;
+    Double voucher;
     String orderInfo;
 }

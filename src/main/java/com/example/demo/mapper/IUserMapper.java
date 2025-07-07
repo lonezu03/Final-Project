@@ -4,6 +4,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
+import com.example.demo.dto.request.UserUpdateCoinRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
@@ -20,5 +21,6 @@ public interface IUserMapper {
 	UserRespone toUserRespone(User user);
 	 
 	void updateUser(UserUpdateRequest request,@MappingTarget User user);
+	void updateUser(UserUpdateCoinRequest request,@MappingTarget User user);
 
 }

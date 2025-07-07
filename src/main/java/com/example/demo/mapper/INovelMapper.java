@@ -15,7 +15,7 @@ public interface INovelMapper {
 	Novel toNovel(NovelCreatationRequest request);
 
 	@Mapping(target = "authors", ignore = true)
-	Novel toNovelUpdate(NovelUpdateRequest request);
+	Novel toNovelUpdate(NovelUpdateRequest request); 
 	
 //	@Mapping(target = "authors", ignore = true)
 	NovelRespone toNovelRespone(Novel novel);  

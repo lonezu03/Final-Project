@@ -20,21 +20,22 @@ public class UserRespone {
 
 	String userNameUser;
 
-	String passwordUser;
-
 	String emailUser;
 
 	String avatarUser;
 
 	String token;
-	
+
 	LocalDateTime dobUser;
 
 	String publicIdAvartarUser;
 
 	Integer coin;
-	
+
 	List<CommentRespone> commentRespones;
+	
 	List<HistoryReadNovelRespone> historyRead;
+	
+	List<HistoryDepositRespone> historyDeposit;
 
 }

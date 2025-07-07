@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.request.CreateHistoryReadRequest;
+import com.example.demo.dto.request.HistoryDepositUpdateRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
@@ -24,11 +25,13 @@ import com.example.demo.dto.request.UserLoginByEmailRequest;
 import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
+import com.example.demo.dto.respone.HistoryDepositRespone;
 import com.example.demo.dto.respone.HistoryReadNovelRespone;
 import com.example.demo.dto.respone.ReviewNovelRespone;
 import com.example.demo.dto.respone.UserRespone;
 import com.example.demo.entity.HistoryId;
 import com.example.demo.entity.ReviewNovelId;
+import com.example.demo.service.HistoryDepositService;
 import com.example.demo.service.HistoryReadService;
 import com.example.demo.service.MailService;
 import com.example.demo.service.ReviewNovelService;
@@ -53,6 +56,7 @@ public class UserController {
 	MailService mailService;
 	HistoryReadService historyReadService;
 	ReviewNovelService reviewNovelService;
+	HistoryDepositService historyDepositService;
 	private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	/**
@@ -188,7 +192,11 @@ public class UserController {
 	public ApiRespone<String> deleteUser(@RequestParam String idUser) {
 		return ApiRespone.<String>builder().result(userService.deleteUser(idUser)).build();
 	}
-
+	
+	@PutMapping("/updateHistoryDeposit")
+	public ApiRespone<HistoryDepositRespone> updateHistoryDeposit(@RequestBody HistoryDepositUpdateRequest request ) {
+		return ApiRespone.<HistoryDepositRespone>builder().result(historyDepositService.updateHistoryDeposit(request.getIdHistoryDeposit(),request.getStatusDeposit())).build();
+	}
 	/**
 	 * Tạo mới lịch sử đọc truyện của người dùng.
 	 *

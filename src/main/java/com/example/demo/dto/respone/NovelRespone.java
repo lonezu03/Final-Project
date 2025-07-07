@@ -2,7 +2,6 @@ package com.example.demo.dto.respone;
 
 import java.util.Set;
 
-import com.example.demo.entity.Author;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

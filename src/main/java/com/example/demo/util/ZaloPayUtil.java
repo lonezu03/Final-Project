@@ -7,6 +7,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 @RequiredArgsConstructor
 @Component
@@ -42,6 +43,12 @@ public class ZaloPayUtil {
             return null;
         }
     }
+    public String genAppTransId() {
+        String date = new java.text.SimpleDateFormat("yyMMdd").format(new Date());
+        int random = (int) (Math.random() * 1000000);
+        return String.format("%s_%06d", date, random);
+    }
+    
     public static String generateAppTransId(String transID) {
         // Lấy ngày hiện tại và định dạng theo mẫu YYMMDD
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMdd");
