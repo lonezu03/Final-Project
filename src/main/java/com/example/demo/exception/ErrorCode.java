@@ -26,7 +26,8 @@ public enum ErrorCode {
 	USER_ALREADY_REVIEW_THIS_NOVEL(1030, "User already review this novel"),
 	REVIEW_NOVEL_NOT_EXISTS(1031, "Review novel not exists"),INVALID_SORT_FIELD(1032,"Invaild sort field"), 
 	INVALID_JSON(1033,"Invalid json"),INVALID_JSON_SCHEMA(1034,"Invaild json schema"),
-	DEPOSIT_NOT_EXISTS(1035,"Deposit not exists"),UNKNOW_ERROR(9999, "Unknow error");
+	DEPOSIT_NOT_EXISTS(1035,"Deposit not exists"),USER_NOT_ENOUGH_COIN(1036,"User coin not exists")
+	,INVALID_TRANSACTION_TYPE(1037,"Invald transaction type"),UNKNOW_ERROR(9999, "Unknow error");
 
 	private int code;
 	private String message;

@@ -57,4 +57,8 @@ public class Chapter {
 	
 	@OneToMany(mappedBy = "chapter",cascade = CascadeType.ALL,orphanRemoval = true)
 	List<Comment> comments=new ArrayList<>();
+	
+	@OneToMany(mappedBy = "chapter")
+	List<Transaction> transactions;
+
 }

@@ -33,7 +33,7 @@ public class UserRespone {
 	Integer coin;
 
 	List<CommentRespone> commentRespones;
-	
+	List<String> chapterBought;
 	List<HistoryReadNovelRespone> historyRead;
 	
 	List<HistoryDepositRespone> historyDeposit;

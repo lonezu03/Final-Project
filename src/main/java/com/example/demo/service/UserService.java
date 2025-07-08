@@ -32,8 +32,10 @@ import com.example.demo.entity.HistoryId;
 import com.example.demo.entity.HistoryRead;
 import com.example.demo.entity.Novel;
 import com.example.demo.entity.RefreshToken;
+import com.example.demo.entity.Transaction;
 import com.example.demo.entity.User;
 import com.example.demo.enums.Role;
+import com.example.demo.enums.StatusDeposit;
 import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.IHistoryDepositMapper;
@@ -43,6 +45,7 @@ import com.example.demo.repository.IChapterRepository;
 import com.example.demo.repository.IHistoryDepositRepository;
 import com.example.demo.repository.IHistoryReadRepository;
 import com.example.demo.repository.INovelRepository;
+import com.example.demo.repository.ITransactionRepository;
 import com.example.demo.repository.IUserRepository;
 import com.example.demo.repository.RefreshTokenRepository;
 
@@ -71,7 +74,7 @@ public class UserService {
 	IChapterRepository chapterRepository;
 	IHistoryDepositRepository historyDepositRepository;
 	IHistoryDepositMapper historyDepositMapper;
-
+	ITransactionRepository transactionRepository;
 	/**
 	 * Lấy danh sách tất cả người dùng từ database và map sang DTO UserRespone.
 	 *
@@ -153,10 +156,18 @@ public class UserService {
 		UserRespone userRespone = userMapper.toUserRespone(user);
 		List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
 		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
+		
+		List<String> chapterBought = transactionRepository
+			    .findByUser_IdUserAndStatusDeposit(user.getIdUser(),StatusDeposit.SUCCESS).stream()
+			    .map(tr -> tr.getChapter().getIdChapter())
+			    .toList();
+		userRespone.setChapterBought(chapterBought);
+		
 		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
 		userRespone.setHistoryDeposit(historyDepositRespones);
 		userRespone.setToken(authenticationService.generateToken(user));
 		userRespone.setHistoryDeposit(historyDepositRespones);
+	
 		return userRespone;
 	}
 
@@ -178,7 +189,11 @@ public class UserService {
 		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
 
 		userRespone.setToken(authenticationService.generateToken(user));
-
+		List<String> chapterBought = transactionRepository
+			    .findByUser_IdUser(user.getIdUser()).stream()
+			    .map(tr -> tr.getChapter().getIdChapter())
+			    .toList();
+		userRespone.setChapterBought(chapterBought);
 		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
 		userRespone.setHistoryDeposit(historyDepositRespones);
 		

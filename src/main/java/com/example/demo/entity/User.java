@@ -71,4 +71,8 @@ public class User {
 	
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	Set<CommentDislike> dislikedComments = new HashSet<>();
+	
+	@OneToMany(mappedBy = "user")
+	List<Transaction> transactions;
+
 }

@@ -29,12 +29,12 @@ import lombok.experimental.FieldDefaults;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class HistoryDepositService {
-
+	IHistoryDepositMapper historyDepositMapper;
+	
 	IHistoryDepositRepository historyDepositRepository;
 	IUserRepository userRepository;
 	
-	IHistoryDepositMapper historyDepositMapper;
-	
+
 	List<HistoryDepositRespone> getAllHistoryDepositByUser(String idUser){
 		User user=userRepository.findById(idUser).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 		return historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
