@@ -1,176 +1,371 @@
+// // src/components/ChapterListDisplay.jsx
+// import React, { useState, useEffect } from 'react';
+// import { Link, useNavigate } from 'react-router-dom'; // Thêm useNavigate
+// import { useSelector } from 'react-redux'; // Để lấy thông tin currentUser
+
+// // Component Dialog xác nhận mua chương
+// const PurchaseChapterDialog = ({ chapterTitle, chapterPrice, onConfirm, onCancel }) => (
+//   <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]"> {/* z-index cao hơn */}
+//     <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800">
+//       <h3 className="text-xl font-semibold mb-4">Xác nhận mua chương</h3>
+//       <p className="mb-2">Bạn có muốn mua chương:</p>
+//       <p className="font-semibold text-blue-600 mb-4 truncate" title={chapterTitle}>{chapterTitle}</p>
+//       <p className="mb-6">với giá <span className="font-bold text-orange-500">{chapterPrice} xu</span>?</p>
+//       <div className="flex justify-end space-x-3">
+//         <button
+//           onClick={onCancel}
+//           className="px-5 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors"
+//         >
+//           Không
+//         </button>
+//         <button
+//           onClick={onConfirm}
+//           className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 transition-colors"
+//         >
+//           Có (Mua)
+//         </button>
+//       </div>
+//     </div>
+//   </div>
+// );
+
+
+// const ChapterListDisplay = ({
+//   chapters,
+//   novelId,
+//   currentPage = 1,
+//   chaptersPerPage = 50
+// }) => {
+//   const navigate = useNavigate();
+//   const currentUser = useSelector((state) => state.user.currentUser); // Lấy thông tin người dùng hiện tại
+
+//   const [purchasedChapters, setPurchasedChapters] = useState({}); // State để theo dõi các chương đã mua (key: chapterId, value: true)
+//   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
+//   const [chapterToPurchase, setChapterToPurchase] = useState(null); // { id, title, price }
+
+//   const CHAPTER_PRICE = 3; // Giá mỗi chương
+
+//   // Load trạng thái các chương đã mua từ localStorage khi component mount
+//   useEffect(() => {
+//     if (currentUser && novelId) {
+//       const key = `purchased_${currentUser.idUser}_${novelId}`;
+//       const storedPurchases = localStorage.getItem(key);
+//       if (storedPurchases) {
+//         setPurchasedChapters(JSON.parse(storedPurchases));
+//       }
+//     } else {
+//       // Nếu không có user hoặc novelId, reset purchasedChapters
+//       setPurchasedChapters({});
+//     }
+//   }, [currentUser, novelId]); // Chạy lại khi user hoặc novelId thay đổi
+
+//   const handlePurchaseClick = (chapter) => {
+//     if (!currentUser) {
+//       // Yêu cầu đăng nhập nếu chưa đăng nhập
+//       alert("Vui lòng đăng nhập để mua chương.");
+//       navigate('/login'); // Hoặc tới trang đăng nhập của bạn
+//       return;
+//     }
+//     setChapterToPurchase({
+//       id: chapter.idChapter,
+//       title: chapter.titleChapter || "Chưa có tiêu đề",
+//       price: CHAPTER_PRICE,
+//       novelId: novelId, // Thêm novelId để điều hướng
+//     });
+//     setShowPurchaseDialog(true);
+//   };
+
+//   const confirmPurchase = () => {
+//     if (chapterToPurchase) {
+//       // TODO: (TƯƠNG LAI) Gọi API trừ xu ở đây
+//       // Ví dụ: dispatch(deductCoinsAction(currentUser.idUser, chapterToPurchase.price))
+//       //       .then(() => {
+//       //         // Sau khi trừ xu thành công:
+//       //         markChapterAsPurchased(chapterToPurchase.id);
+//       //         navigate(`/novel/${chapterToPurchase.novelId}/chapter/${chapterToPurchase.id}`);
+//       //       })
+//       //       .catch(error => {
+//       //         console.error("Lỗi trừ xu:", error);
+//       //         alert("Không thể mua chương. Vui lòng thử lại.");
+//       //       });
+
+//       // HIỆN TẠI: Dùng cơ chế cũ (đánh dấu đã mua và điều hướng)
+//       console.log(`Đã "mua" chương: ${chapterToPurchase.title} với giá ${chapterToPurchase.price} xu.`);
+//       markChapterAsPurchased(chapterToPurchase.id);
+//       navigate(`/novel/${chapterToPurchase.novelId}/chapter/${chapterToPurchase.id}`);
+//     }
+//     setShowPurchaseDialog(false);
+//     setChapterToPurchase(null);
+//   };
+
+//   const cancelPurchase = () => {
+//     setShowPurchaseDialog(false);
+//     setChapterToPurchase(null);
+//   };
+
+//   const markChapterAsPurchased = (chapterIdToMark) => {
+//     if (currentUser && novelId) {
+//       const key = `purchased_${currentUser.idUser}_${novelId}`;
+//       const updatedPurchases = { ...purchasedChapters, [chapterIdToMark]: true };
+//       setPurchasedChapters(updatedPurchases);
+//       localStorage.setItem(key, JSON.stringify(updatedPurchases));
+//     }
+//   };
+
+
+//   if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
+//     return <p className="text-gray-400 text-center py-4">Chưa có chương nào.</p>;
+//   }
+//   if (!novelId) {
+//     return <p className="text-red-500 text-center py-4">Lỗi: Không thể tạo link chương.</p>;
+//   }
+
+//   const chapterNumberOffset = (currentPage - 1) * chaptersPerPage;
+
+//   return (
+//     <>
+//       <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 text-sm">
+//         {chapters.map((chapter, index) => {
+//           const chapterNumberDisplay = chapter.chapterNumber !== undefined && chapter.chapterNumber !== null
+//             ? `Chương ${chapter.chapterNumber}`
+//             : `Chương ${chapterNumberOffset + index + 1}`;
+          
+//           const chapterTitle = chapter.titleChapter || "Chưa có tiêu đề";
+//           const isPurchased = !!purchasedChapters[chapter.idChapter]; // Kiểm tra xem chương đã được mua chưa
+
+//           if (!chapter.idChapter) {
+//             return (
+//               <li key={`invalid-chapter-${index}`} className="flex items-stretch border-b border-gray-700 opacity-50">
+//                 <span className="w-20 md:w-24 flex-shrink-0 text-left py-2.5 border-r border-gray-700 mr-3 pl-2 text-gray-500">{chapterNumberDisplay}</span>
+//                 <span className="py-2.5 pr-2 flex-1 text-gray-500 truncate" title="Thiếu ID chương">{chapterTitle} (Lỗi ID)</span>
+//               </li>
+//             );
+//           }
+
+//           // Giả sử mọi chương đều là chương VIP cần mua, trừ khi isPurchased là true
+//           // Bạn có thể thêm một trường `isVip` hoặc `price` từ API cho từng chương để xác định chính xác hơn
+//           const isVipChapter = true; // Giả định tất cả đều là VIP để demo
+
+//           return (
+//             <li key={chapter.idChapter} className="flex items-center justify-between border-b border-gray-700">
+//               <div className="flex items-center flex-grow min-w-0"> {/* Cho phép thu nhỏ khi cần */}
+//                 <span className="w-20 md:w-24 flex-shrink-0 text-left py-2.5 border-r border-gray-700 mr-3 pl-2 text-gray-400">
+//                   {chapterNumberDisplay}
+//                 </span>
+//                 {isVipChapter && !isPurchased ? (
+//                   <span className="py-2.5 flex-1 text-gray-300 truncate" title={chapterTitle}>
+//                     {chapterTitle}
+//                   </span>
+//                 ) : (
+//                   <Link
+//                     to={`/novel/${novelId}/chapter/${chapter.idChapter}`}
+//                     className="py-2.5 flex-1 text-gray-200 hover:text-sky-400 truncate"
+//                     title={chapterTitle}
+//                   >
+//                     {chapterTitle}
+//                   </Link>
+//                 )}
+//               </div>
+
+//               {isVipChapter && !isPurchased && (
+//                 <button
+//                   onClick={() => handlePurchaseClick(chapter)}
+//                   className="ml-3 px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex-shrink-0 my-1" // my-1 để không bị dính sát border
+//                   title={`Mua chương ${chapterTitle}`}
+//                 >
+//                   {CHAPTER_PRICE} xu
+//                 </button>
+//               )}
+//             </li>
+//           );
+//         })}
+//       </ul>
+
+//       {showPurchaseDialog && chapterToPurchase && (
+//         <PurchaseChapterDialog
+//           chapterTitle={chapterToPurchase.title}
+//           chapterPrice={chapterToPurchase.price}
+//           onConfirm={confirmPurchase}
+//           onCancel={cancelPurchase}
+//         />
+//       )}
+//     </>
+//   );
+// };
+
+// export default ChapterListDisplay;
 // src/components/ChapterListDisplay.jsx
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Thêm useNavigate
-import { useSelector } from 'react-redux'; // Để lấy thông tin currentUser
 
-// Component Dialog xác nhận mua chương
-const PurchaseChapterDialog = ({ chapterTitle, chapterPrice, onConfirm, onCancel }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]"> {/* z-index cao hơn */}
-    <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800">
-      <h3 className="text-xl font-semibold mb-4">Xác nhận mua chương</h3>
-      <p className="mb-2">Bạn có muốn mua chương:</p>
-      <p className="font-semibold text-blue-600 mb-4 truncate" title={chapterTitle}>{chapterTitle}</p>
-      <p className="mb-6">với giá <span className="font-bold text-orange-500">{chapterPrice} xu</span>?</p>
-      <div className="flex justify-end space-x-3">
-        <button
-          onClick={onCancel}
-          className="px-5 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors"
-        >
-          Không
-        </button>
-        <button
-          onClick={onConfirm}
-          className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 transition-colors"
-        >
-          Có (Mua)
-        </button>
-      </div>
-    </div>
-  </div>
-);
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { toast } from 'react-toastify';
+import { Loader2 } from 'lucide-react'; // Icon loading
+
+// Import các action từ transactionSlice và userSlice
+import { createTransaction, confirmTransactions, resetTransactionState } from '../../redux/transactionSlice';
+import { logoutUser, loginUserWithPassword } from '../../redux/userSlice'; // Giả sử bạn có thông tin để login lại
+
+// Component Dialog xác nhận cuối cùng
+const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }) => {
+    if (!transactionDetails) return null;
+    const { chapters, totalCost } = transactionDetails;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800">
+                <h3 className="text-xl font-semibold mb-4">Xác Nhận Thanh Toán</h3>
+                <p className="mb-2">Bạn sắp dùng xu để mua {chapters.length} chương:</p>
+                <div className="max-h-24 overflow-y-auto bg-gray-100 p-2 rounded border mb-4">
+                    <ul className="text-sm list-disc list-inside">
+                        {chapters.map(ch => <li key={ch.id} className="truncate">{ch.title}</li>)}
+                    </ul>
+                </div>
+                <p className="mb-6 text-lg">Tổng cộng: <span className="font-bold text-orange-500">{totalCost} xu</span></p>
+                <div className="flex justify-end space-x-3">
+                    <button onClick={onCancel} disabled={loading} className="px-5 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+                        Hủy
+                    </button>
+                    <button onClick={onConfirm} disabled={loading} className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700">
+                        {loading && <Loader2 className="animate-spin mr-2" size={16}/>}
+                        Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 
-const ChapterListDisplay = ({
-  chapters,
-  novelId,
-  currentPage = 1,
-  chaptersPerPage = 50
-}) => {
+const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPage = 50 }) => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const currentUser = useSelector((state) => state.user.currentUser); // Lấy thông tin người dùng hiện tại
 
-  const [purchasedChapters, setPurchasedChapters] = useState({}); // State để theo dõi các chương đã mua (key: chapterId, value: true)
-  const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
-  const [chapterToPurchase, setChapterToPurchase] = useState(null); // { id, title, price }
+  // Lấy state cần thiết từ Redux
+  const { currentUser } = useSelector((state) => state.user);
+  const { status, error, lastTransaction } = useSelector((state) => state.transaction);
+  
+  // State cục bộ để quản lý dialog xác nhận
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [transactionDetails, setTransactionDetails] = useState(null);
 
   const CHAPTER_PRICE = 3; // Giá mỗi chương
 
-  // Load trạng thái các chương đã mua từ localStorage khi component mount
-  useEffect(() => {
-    if (currentUser && novelId) {
-      const key = `purchased_${currentUser.idUser}_${novelId}`;
-      const storedPurchases = localStorage.getItem(key);
-      if (storedPurchases) {
-        setPurchasedChapters(JSON.parse(storedPurchases));
-      }
-    } else {
-      // Nếu không có user hoặc novelId, reset purchasedChapters
-      setPurchasedChapters({});
-    }
-  }, [currentUser, novelId]); // Chạy lại khi user hoặc novelId thay đổi
-
-  const handlePurchaseClick = (chapter) => {
+  // Hàm xử lý khi người dùng click nút mua
+  const handlePurchaseClick = (chapterToBuy) => {
     if (!currentUser) {
-      // Yêu cầu đăng nhập nếu chưa đăng nhập
-      alert("Vui lòng đăng nhập để mua chương.");
-      navigate('/login'); // Hoặc tới trang đăng nhập của bạn
+      toast.info("Vui lòng đăng nhập để mua chương.");
+      navigate('/login');
       return;
     }
-    setChapterToPurchase({
-      id: chapter.idChapter,
-      title: chapter.titleChapter || "Chưa có tiêu đề",
-      price: CHAPTER_PRICE,
-      novelId: novelId, // Thêm novelId để điều hướng
-    });
-    setShowPurchaseDialog(true);
+    
+    // Dispatch action createTransaction
+    const transactionData = {
+      idUser: currentUser.idUser,
+      idChapters: [chapterToBuy.idChapter],
+      amountCoin: CHAPTER_PRICE,
+      typeTransaction: 'BUY',
+      dateEndRent: null,
+    };
+    
+    dispatch(createTransaction(transactionData))
+      .unwrap()
+      .then((result) => {
+        // Khi createTransaction thành công (pending trên server)
+        // Lưu thông tin để hiển thị trên dialog xác nhận
+        setTransactionDetails({
+            chapters: [{ id: chapterToBuy.idChapter, title: chapterToBuy.titleChapter }],
+            totalCost: CHAPTER_PRICE,
+        });
+        setShowConfirmDialog(true);
+      })
+      .catch((err) => {
+        toast.error(`Lỗi tạo giao dịch: ${err}`);
+      });
   };
 
-  const confirmPurchase = () => {
-    if (chapterToPurchase) {
-      // TODO: (TƯƠNG LAI) Gọi API trừ xu ở đây
-      // Ví dụ: dispatch(deductCoinsAction(currentUser.idUser, chapterToPurchase.price))
-      //       .then(() => {
-      //         // Sau khi trừ xu thành công:
-      //         markChapterAsPurchased(chapterToPurchase.id);
-      //         navigate(`/novel/${chapterToPurchase.novelId}/chapter/${chapterToPurchase.id}`);
-      //       })
-      //       .catch(error => {
-      //         console.error("Lỗi trừ xu:", error);
-      //         alert("Không thể mua chương. Vui lòng thử lại.");
-      //       });
+  // Hàm xử lý khi người dùng xác nhận mua trên dialog
+  const handleConfirmPurchase = () => {
+    if (!currentUser || !transactionDetails) return;
+    
+    const confirmationData = {
+      idUser: currentUser.idUser,
+      listIdChapter: transactionDetails.chapters.map(ch => ch.id),
+    };
+    
+    dispatch(confirmTransactions(confirmationData))
+      .unwrap()
+      .then(async () => {
+        toast.success("Mua chương thành công! Đang làm mới phiên đăng nhập...");
+        setShowConfirmDialog(false);
+        setTransactionDetails(null);
+        
+        // YÊU CẦU: Đăng xuất và đăng nhập lại
+        const userCredentials = {
+            emailUser: localStorage.getItem('userEmail'), // Cần lưu email/pass an toàn hơn
+            passwordUser: localStorage.getItem('userPassword'), 
+        };
 
-      // HIỆN TẠI: Dùng cơ chế cũ (đánh dấu đã mua và điều hướng)
-      console.log(`Đã "mua" chương: ${chapterToPurchase.title} với giá ${chapterToPurchase.price} xu.`);
-      markChapterAsPurchased(chapterToPurchase.id);
-      navigate(`/novel/${chapterToPurchase.novelId}/chapter/${chapterToPurchase.id}`);
-    }
-    setShowPurchaseDialog(false);
-    setChapterToPurchase(null);
+        if(userCredentials.emailUser && userCredentials.passwordUser) {
+            dispatch(logoutUser());
+            // Đợi một chút để đảm bảo state đã được xóa
+            await new Promise(resolve => setTimeout(resolve, 50)); 
+            dispatch(loginUserWithPassword(userCredentials));
+        } else {
+            // Nếu không có thông tin đăng nhập, chỉ đăng xuất và yêu cầu đăng nhập lại
+            dispatch(logoutUser());
+            navigate('/login');
+        }
+      })
+      .catch((err) => {
+        toast.error(`Xác nhận thất bại: ${err}`);
+      });
+  };
+  
+  const handleCancelConfirm = () => {
+    setShowConfirmDialog(false);
+    setTransactionDetails(null);
+    dispatch(resetTransactionState()); // Reset trạng thái transaction
   };
 
-  const cancelPurchase = () => {
-    setShowPurchaseDialog(false);
-    setChapterToPurchase(null);
-  };
-
-  const markChapterAsPurchased = (chapterIdToMark) => {
-    if (currentUser && novelId) {
-      const key = `purchased_${currentUser.idUser}_${novelId}`;
-      const updatedPurchases = { ...purchasedChapters, [chapterIdToMark]: true };
-      setPurchasedChapters(updatedPurchases);
-      localStorage.setItem(key, JSON.stringify(updatedPurchases));
-    }
-  };
-
-
-  if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
-    return <p className="text-gray-400 text-center py-4">Chưa có chương nào.</p>;
-  }
-  if (!novelId) {
-    return <p className="text-red-500 text-center py-4">Lỗi: Không thể tạo link chương.</p>;
-  }
-
-  const chapterNumberOffset = (currentPage - 1) * chaptersPerPage;
+  // ... (Phần render JSX bên dưới không thay đổi nhiều)
 
   return (
     <>
+      {/* Màn hình loading che phủ khi đang tạo giao dịch */}
+      {status === 'loading' && (
+        <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-[9998]">
+            <Loader2 className="animate-spin text-white" size={48} />
+            <p className="text-white mt-4">Đang tạo giao dịch...</p>
+        </div>
+      )}
+
       <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 text-sm">
         {chapters.map((chapter, index) => {
-          const chapterNumberDisplay = chapter.chapterNumber !== undefined && chapter.chapterNumber !== null
-            ? `Chương ${chapter.chapterNumber}`
-            : `Chương ${chapterNumberOffset + index + 1}`;
-          
+          const chapterNumberDisplay = `Chương ${chapter.chapterNumber || (currentPage - 1) * chaptersPerPage + index + 1}`;
           const chapterTitle = chapter.titleChapter || "Chưa có tiêu đề";
-          const isPurchased = !!purchasedChapters[chapter.idChapter]; // Kiểm tra xem chương đã được mua chưa
-
-          if (!chapter.idChapter) {
-            return (
-              <li key={`invalid-chapter-${index}`} className="flex items-stretch border-b border-gray-700 opacity-50">
-                <span className="w-20 md:w-24 flex-shrink-0 text-left py-2.5 border-r border-gray-700 mr-3 pl-2 text-gray-500">{chapterNumberDisplay}</span>
-                <span className="py-2.5 pr-2 flex-1 text-gray-500 truncate" title="Thiếu ID chương">{chapterTitle} (Lỗi ID)</span>
-              </li>
-            );
-          }
-
-          // Giả sử mọi chương đều là chương VIP cần mua, trừ khi isPurchased là true
-          // Bạn có thể thêm một trường `isVip` hoặc `price` từ API cho từng chương để xác định chính xác hơn
-          const isVipChapter = true; // Giả định tất cả đều là VIP để demo
+          
+          // Logic kiểm tra đã mua hay chưa bây giờ phải dựa vào currentUser.purchasedChapterIds (từ API login)
+          const isPurchased = currentUser?.purchasedChapterIds?.includes(chapter.idChapter);
 
           return (
             <li key={chapter.idChapter} className="flex items-center justify-between border-b border-gray-700">
-              <div className="flex items-center flex-grow min-w-0"> {/* Cho phép thu nhỏ khi cần */}
-                <span className="w-20 md:w-24 flex-shrink-0 text-left py-2.5 border-r border-gray-700 mr-3 pl-2 text-gray-400">
-                  {chapterNumberDisplay}
-                </span>
-                {isVipChapter && !isPurchased ? (
-                  <span className="py-2.5 flex-1 text-gray-300 truncate" title={chapterTitle}>
-                    {chapterTitle}
-                  </span>
-                ) : (
-                  <Link
-                    to={`/novel/${novelId}/chapter/${chapter.idChapter}`}
-                    className="py-2.5 flex-1 text-gray-200 hover:text-sky-400 truncate"
-                    title={chapterTitle}
-                  >
+              <div className="flex items-center flex-grow min-w-0">
+                <span className="w-20 md:w-24 flex-shrink-0 text-left py-2.5 border-r border-gray-700 mr-3 pl-2 text-gray-400">{chapterNumberDisplay}</span>
+                {isPurchased ? (
+                  <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className="py-2.5 flex-1 text-gray-200 hover:text-sky-400 truncate" title={chapterTitle}>
                     {chapterTitle}
                   </Link>
+                ) : (
+                  <span className="py-2.5 flex-1 text-gray-300 truncate" title={chapterTitle}>{chapterTitle}</span>
                 )}
               </div>
 
-              {isVipChapter && !isPurchased && (
+              {!isPurchased && (
                 <button
                   onClick={() => handlePurchaseClick(chapter)}
-                  className="ml-3 px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex-shrink-0 my-1" // my-1 để không bị dính sát border
+                  disabled={status === 'loading'}
+                  className="ml-3 px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex-shrink-0 my-1 disabled:opacity-50"
                   title={`Mua chương ${chapterTitle}`}
                 >
                   {CHAPTER_PRICE} xu
@@ -181,12 +376,13 @@ const ChapterListDisplay = ({
         })}
       </ul>
 
-      {showPurchaseDialog && chapterToPurchase && (
-        <PurchaseChapterDialog
-          chapterTitle={chapterToPurchase.title}
-          chapterPrice={chapterToPurchase.price}
-          onConfirm={confirmPurchase}
-          onCancel={cancelPurchase}
+      {/* Dialog xác nhận cuối cùng */}
+      {showConfirmDialog && (
+        <FinalConfirmDialog
+          transactionDetails={transactionDetails}
+          onConfirm={handleConfirmPurchase}
+          onCancel={handleCancelConfirm}
+          loading={status === 'loading'}
         />
       )}
     </>

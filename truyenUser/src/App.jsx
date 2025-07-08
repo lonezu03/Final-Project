@@ -76,7 +76,7 @@ const AppContent = () => {
         <Route path="/search-results" element={<SearchResultsPage />} />
         <Route path="/user/profile" element={<UserProfilePage />} />
         <Route path="/user/my-bookshelf" element={<LibraryPage />} />
-        <Route path="/payment/callback" element={<PaymentCallbackPage />} />
+        <Route path="/payment/callback-success" element={<PaymentCallbackPage />} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
