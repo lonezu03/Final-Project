@@ -22,6 +22,7 @@ import com.example.demo.repository.IUserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+
 /**
  * Service xử lý logic liên quan đến việc người dùng theo dõi truyện.
  */
@@ -33,40 +34,38 @@ public class FollowNovelService {
 	IUserRepository userRepository;
 	INovelRepository novelRepository;
 	IFollowNovelRepository followNovelRepository;
-	  /**
-     * Cho phép người dùng theo dõi một truyện nếu chưa theo dõi trước đó.
-     * <p>
-     * Kiểm tra sự tồn tại của user và novel, sau đó kiểm tra xem người dùng
-     * đã theo dõi truyện hay chưa. Nếu chưa thì tạo mới một bản ghi FollowNovel.
-     *
-     * @param request Yêu cầu theo dõi truyện (chứa idUser và idNovel)
-     * @throws AppException nếu người dùng hoặc truyện không tồn tại, hoặc nếu đã theo dõi rồi
-     */
+
+	/**
+	 * Cho phép người dùng theo dõi một truyện nếu chưa theo dõi trước đó.
+	 * <p>
+	 * Kiểm tra sự tồn tại của user và novel, sau đó kiểm tra xem người dùng đã theo
+	 * dõi truyện hay chưa. Nếu chưa thì tạo mới một bản ghi FollowNovel.
+	 *
+	 * @param request Yêu cầu theo dõi truyện (chứa idUser và idNovel)
+	 * @throws AppException nếu người dùng hoặc truyện không tồn tại, hoặc nếu đã
+	 *                      theo dõi rồi
+	 */
 	public void followNovel(FollowNovelRequest request) {
 		User user = userRepository.findById(request.getIdUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 		Novel novel = novelRepository.findById(request.getIdNovel())
 				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
 
-		Set<String> followedNovelIds;
-		if (StringUtils.hasText(request.getIdUser())) {
-			List<FollowNovel> followNovels = followNovelRepository.findByNovel_IdNovel(request.getIdNovel());
-			final Set<String> ids = followNovels.stream().map(f -> f.getUser().getIdUser()).collect(Collectors.toSet());
-			followedNovelIds = ids;
-		} else {
-			followedNovelIds = Collections.emptySet();
-		}
-
-		if (followedNovelIds.contains(request.getIdUser())) {
-			throw new AppException(ErrorCode.USER_ALREADY_FOLLOW_NOVEL);
-		}
-
 		FollowNovelId followNovelId = FollowNovelId.builder().idUser(request.getIdUser()).idNovel(request.getIdNovel())
 				.build();
+		
+		boolean followExist = followNovelRepository.existsById(followNovelId);
+		
 
-		FollowNovel followNovel = FollowNovel.builder().id(followNovelId).user(user).novel(novel).build();
+		if (followExist) {
 
-		followNovelRepository.save(followNovel);
+			followNovelRepository.deleteById(followNovelId);
+		} else {
+			FollowNovel followNovel = FollowNovel.builder().id(followNovelId).user(user).novel(novel).build();
+
+			followNovelRepository.save(followNovel);
+		}
 
 	}
+
 }
