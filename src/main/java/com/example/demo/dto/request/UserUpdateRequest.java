@@ -18,11 +18,6 @@ public class UserUpdateRequest {
 
 	String userNameUser;
 
-	String passwordUser;
-
-	String emailUser;
-
 	LocalDateTime dobUser;
 
-	Integer coin;
 }

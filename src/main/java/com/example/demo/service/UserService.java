@@ -227,11 +227,9 @@ public class UserService {
 	 * @throws AppException nếu không tìm thấy người dùng
 	 */
 	public UserRespone updateUser(UserUpdateRequest request) throws IOException {
-		User user = userRepository.findByEmailUser(request.getEmailUser());
+		User user = userRepository.findById(request.getIdUser()).orElseThrow(() ->  new AppException(ErrorCode.USER_NOT_EXISTED));
 
-		if (user == null) {
-			throw new AppException(ErrorCode.USER_NOT_EXISTED);
-		}
+		
 
 		userMapper.updateUser(request, user);
 
