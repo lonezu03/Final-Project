@@ -1,115 +1,141 @@
+// src/pages/UserProfilePage.jsx (hoặc nơi bạn lưu component)
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+
+// Import các actions từ userSlice
 import {
   updateUserProfile,
   updateUserAvatar,
 } from '../../redux/userSlice';
-import ChangePasswordDialog from '../ChangePasswordDialog'; // Đã sửa đường dẫn
+
+import ChangePasswordDialog from '../ChangePasswordDialog';
 import { User, Mail, Calendar, Edit3, Camera, KeyRound, Coins, BookOpen, Save, Loader2 as LucideSpinner } from 'lucide-react';
 
-// Component thông báo nhỏ
-const Notification = ({ message, type, onDismiss }) => {
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => onDismiss(), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [message, onDismiss]);
-
-  if (!message) return null;
-  const styles = {
-    success: "bg-green-100 text-green-800",
-    error: "bg-red-100 text-red-800",
-  };
-  return <div className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg z-[100] animate-fade-in-down ${styles[type]}`}>{message}</div>;
-};
-
-// Component hàng thông tin (đã sửa để nhận prop 'name')
+// Component hàng thông tin (giữ nguyên)
 const UserInfoRow = ({ icon, label, value, isEditing, onChange, name, inputType = "text", disabled = false }) => (
-  <div className="flex items-center border-b border-gray-200 py-4">
-    <div className="w-1/3 flex items-center text-gray-500">
-      {icon}
-      <span className="ml-3 font-medium">{label}</span>
+    <div className="flex items-center border-b border-gray-200 py-4">
+        <div className="w-1/3 flex items-center text-gray-500">
+            {icon}
+            <span className="ml-3 font-medium">{label}</span>
+        </div>
+        <div className="w-2/3">
+            {isEditing && !disabled ? (
+                <input
+                    type={inputType}
+                    name={name}
+                    value={value || ''} // Đảm bảo value không bao giờ là null/undefined
+                    onChange={onChange}
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            ) : (
+                <span className={`text-gray-800 ${disabled ? 'text-gray-400' : ''}`}>{value || 'Chưa cập nhật'}</span>
+            )}
+        </div>
     </div>
-    <div className="w-2/3">
-      {isEditing && !disabled ? (
-        <input
-          type={inputType}
-          name={name} // Sửa lỗi: Thêm thuộc tính name để hàm handler chung hoạt động
-          value={value}
-          onChange={onChange}
-          className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      ) : (
-        <span className={`text-gray-800 ${disabled ? 'text-gray-400' : ''}`}>{value || 'Chưa cập nhật'}</span>
-      )}
-    </div>
-  </div>
 );
+
 
 const UserProfilePage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { currentUser, loading } = useSelector((state) => state.user);
 
+  // State cục bộ của component
   const [formData, setFormData] = useState({ userNameUser: '', dobUser: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [notification, setNotification] = useState({ message: '', type: '' });
-
   const fileInputRef = useRef(null);
 
+  // Hàm helper để chuyển đổi ngày tháng từ nhiều định dạng
+  const formatDateForInput = (dob) => {
+    if (!dob) return '';
+    try {
+      let dateObj;
+      if (Array.isArray(dob) && dob.length >= 3) {
+        // API trả về [năm, tháng, ngày]
+        dateObj = new Date(Date.UTC(dob[0], dob[1] - 1, dob[2]));
+      } else {
+        // API trả về chuỗi ISO hoặc timestamp
+        dateObj = new Date(dob);
+      }
+      if (isNaN(dateObj.getTime())) return ''; // Ngày không hợp lệ
+      return dateObj.toISOString().split('T')[0]; // Format thành 'YYYY-MM-DD'
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Đồng bộ state của form với Redux store
   useEffect(() => {
     if (!currentUser) {
-      navigate('/');
+      // Có thể thêm toast ở đây nếu muốn
+      navigate('/login');
     } else {
-      // Đồng bộ state của form với Redux store mỗi khi currentUser thay đổi
       setFormData({
         userNameUser: currentUser.userNameUser || '',
-        dobUser: currentUser.dobUser ? new Date(currentUser.dobUser).toISOString().split('T')[0] : '',
+        dobUser: formatDateForInput(currentUser.dobUser),
       });
     }
   }, [currentUser, navigate]);
 
-  const showNotification = (type, message) => setNotification({ type, message });
-
-  // Sửa lỗi: Hàm xử lý input duy nhất, hoạt động cho tất cả các trường
+  // Hàm xử lý chung cho các input trong form
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleProfileUpdate = async (e) => {
+  // Hàm xử lý khi bấm nút "Lưu thay đổi"
+  const handleProfileUpdate = (e) => {
     e.preventDefault();
-    try {
-      // Logic gửi dispatch đã đúng
-      await dispatch(updateUserProfile(formData)).unwrap();
-      showNotification('success', 'Cập nhật thông tin thành công!');
-      setIsEditing(false);
-    } catch (err) {
-      showNotification('error', err || 'Cập nhật thất bại.');
+    if (!formData.userNameUser) {
+        toast.error("Tên người dùng không được để trống.");
+        return;
     }
+    
+    // Payload chỉ chứa các trường cần cập nhật
+    const payload = {
+        userNameUser: formData.userNameUser,
+        dobUser: formData.dobUser // Gửi đi dưới dạng 'YYYY-MM-DD'
+    };
+
+    dispatch(updateUserProfile(payload))
+      .unwrap()
+      .then(() => {
+        toast.success('Cập nhật thông tin thành công!');
+        setIsEditing(false);
+        // Tùy chọn: dispatch(fetchCurrentUser(currentUser.idUser)); để lấy lại toàn bộ data mới nhất
+      })
+      .catch((err) => {
+        toast.error(`Cập nhật thất bại: ${err.message || err}`);
+      });
   };
 
-  // Hàm Hủy, reset lại formData về giá trị từ currentUser
+  // Hàm xử lý khi bấm "Hủy"
   const handleCancelEdit = () => {
     setIsEditing(false);
+    // Reset form về trạng thái từ Redux store
     setFormData({
       userNameUser: currentUser.userNameUser || '',
-      dobUser: currentUser.dobUser ? new Date(currentUser.dobUser).toISOString().split('T')[0] : '',
+      dobUser: formatDateForInput(currentUser.dobUser),
     });
   };
 
-  const handleAvatarChange = async (e) => {
+  // Hàm xử lý khi chọn file ảnh đại diện mới
+  const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      try {
-        await dispatch(updateUserAvatar(file)).unwrap();
-        showNotification('success', 'Cập nhật ảnh đại diện thành công!');
-      } catch (err) {
-        showNotification('error', err || 'Tải ảnh lên thất bại.');
-      }
+      // Action updateUserAvatar đã được sửa để chỉ cần file
+      dispatch(updateUserAvatar(file))
+        .unwrap()
+        .then(() => {
+          toast.success('Cập nhật ảnh đại diện thành công!');
+        })
+        .catch((err) => {
+          toast.error(`Tải ảnh lên thất bại: ${err.message || err}`);
+        });
     }
   };
 
@@ -119,8 +145,6 @@ const UserProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-      <Notification message={notification.message} type={notification.type} onDismiss={() => setNotification({ message: '', type: '' })} />
-
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="p-6 sm:p-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8">Cài đặt tài khoản</h1>
@@ -130,7 +154,7 @@ const UserProfilePage = () => {
             <div className="md:col-span-1 flex flex-col items-center text-center">
               <div className="relative group">
                 <img
-                  src={currentUser.avatarUser || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.userNameUser) || currentUser.emailUser[0]}&background=random&color=fff`}
+                  src={currentUser.avatarUser || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.userNameUser || currentUser.emailUser[0])}&background=random&color=fff`}
                   alt="Avatar"
                   className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
                 />
@@ -151,10 +175,9 @@ const UserProfilePage = () => {
             <div className="md:col-span-2">
               <form onSubmit={handleProfileUpdate}>
                 <UserInfoRow icon={<User size={20} />} label="Tên người dùng" name="userNameUser" value={formData.userNameUser} isEditing={isEditing} onChange={handleInputChange} />
-                <UserInfoRow icon={<Mail size={20} />} label="Email" value={currentUser.emailUser} isEditing={isEditing} disabled={true} />
+                <UserInfoRow icon={<Mail size={20} />} label="Email" value={currentUser.emailUser} isEditing={false} disabled={true} />
                 <UserInfoRow icon={<Calendar size={20} />} label="Ngày sinh" name="dobUser" value={formData.dobUser} isEditing={isEditing} onChange={handleInputChange} inputType="date" />
                 
-                {/* Nút "Lưu" và "Hủy" chỉ hiển thị ở chế độ chỉnh sửa VÀ nằm BÊN TRONG form */}
                 {isEditing && (
                   <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button type="submit" disabled={loading} className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait">
@@ -166,7 +189,6 @@ const UserProfilePage = () => {
                 )}
               </form>
               
-              {/* Nút "Chỉnh sửa" chỉ hiển thị ở chế độ xem VÀ nằm BÊN NGOÀI form */}
               {!isEditing && (
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                    <button type="button" onClick={() => setIsEditing(true)} className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 border border-gray-300">
@@ -200,8 +222,7 @@ const UserProfilePage = () => {
         </div>
       </div>
 
-      {/* Dialog đổi mật khẩu */}
-      {showPasswordDialog && <ChangePasswordDialog onClose={() => setShowPasswordDialog(false)} onNotification={showNotification} />}
+      {showPasswordDialog && <ChangePasswordDialog onClose={() => setShowPasswordDialog(false)} />}
     </div>
   );
 };

@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import Footer from "../Footer"
 // SỬA: Import actions từ đúng slice
 import { LyberiNovels } from '../../redux/novelSlice';
-// import { unfollowNovel } from '../../redux/userSlice'; // Import unfollow từ userSlice
+import { followNovel } from '../../redux/userSlice'; // Import unfollow từ userSlice
 
 import NovelCard from '../NovelCard'; // Giả sử đường dẫn này đúng
 
@@ -55,7 +55,7 @@ const [currentPage, setCurrentPage] = useState(1); // <<--- THÊM: State cho tra
       if (!currentUser) return; // Kiểm tra lại cho chắc
       
       // SỬA: Dispatch đúng asyncThunk
-      dispatch(unfollowNovel({ idUser: currentUser.idUser, idNovel }))
+      dispatch(followNovel({ idUser: currentUser.idUser, idNovel }))
         .unwrap()
         .then(() => {
           toast.success("Đã bỏ theo dõi thành công.");
@@ -106,45 +106,35 @@ const [currentPage, setCurrentPage] = useState(1); // <<--- THÊM: State cho tra
     );
   }
 
-   return (
-    <div className="min-h-screen bg-gray-900 dark text-white p-4 sm:p-8 flex flex-col">
-      <div className="max-w-7xl mx-auto flex-grow w-full">
-        <h1 className="text-3xl font-bold text-sky-400 mb-2 border-b-2 border-sky-500/30 pb-3">Tủ truyện của tôi</h1>
-        <p className="text-gray-400 mb-8">
-          {followedNovels.length} truyện đang được theo dõi.
-        </p>
+  return (
+   <div className="min-h-screen bg-gray-900 dark text-white p-4 sm:p-8 flex flex-col">
+    <div className="max-w-7xl mx-auto flex-grow w-full">
+      <h1 className="text-3xl font-bold text-sky-400 mb-2 border-b-2 border-sky-500/30 pb-3">Tủ truyện của tôi</h1>
+      <p className="text-gray-400 mb-8">
+       {followedNovels.length} truyện đang được theo dõi.
+      </p>
 
-        {followedNovels.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-              {/* SỬA: Map trên `currentNovels` thay vì `followedNovels` */}
-              {currentNovels.map((novel) => (
-                <LibraryCardWrapper key={novel.idNovel} novel={novel} onUnfollow={handleUnfollow} />
-              ))}
-            </div>
-            
-            {/* THÊM: Tích hợp component Pagination */}
-            <Pagination 
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          </>
-        ) : (
-          !loading && ( // Chỉ hiển thị khi không loading
-            <div className="text-center py-20 bg-gray-800 rounded-lg">
-                <BookX size={64} className="mx-auto text-gray-600" />
-                <h2 className="mt-4 text-xl font-semibold text-gray-300">Tủ truyện trống</h2>
-                <p className="mt-2 text-gray-500">Bạn chưa theo dõi truyện nào cả.</p>
-                <Link to="/" className="mt-6 inline-block bg-sky-600 text-white font-bold py-2 px-5 rounded-md hover:bg-sky-700 transition-colors">
-                  Khám phá truyện mới
-                </Link>
-            </div>
-          )
-        )}
-      </div>
-      <Footer />
+      {followedNovels.length > 0 ? (
+       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+        {followedNovels.map((novel) => (
+          <LibraryCardWrapper key={novel.idNovel} novel={novel} onUnfollow={handleUnfollow} />
+        ))}
+       </div>
+      ) : (
+       !loading && (
+        <div className="text-center py-20 bg-gray-800 rounded-lg">
+           <BookX size={64} className="mx-auto text-gray-600" />
+           <h2 className="mt-4 text-xl font-semibold text-gray-300">Tủ truyện trống</h2>
+           <p className="mt-2 text-gray-500">Bạn chưa theo dõi truyện nào cả.</p>
+           <Link to="/" className="mt-6 inline-block bg-sky-600 text-white font-bold py-2 px-5 rounded-md hover:bg-sky-700 transition-colors">
+            Khám phá truyện mới
+           </Link>
+        </div>
+       )
+      )}
     </div>
+    <Footer />
+   </div>
   );
 };
 export default LibraryPage;
