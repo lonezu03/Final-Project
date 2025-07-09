@@ -5,6 +5,6 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   define: {
-    global: 'window',  // Thêm dòng này để thay thế global bằng window trong môi trường trình duyệt
+    global: 'window',  
   },
 })
