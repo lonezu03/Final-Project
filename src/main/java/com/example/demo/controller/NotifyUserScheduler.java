@@ -22,39 +22,43 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class NotifyUserScheduler {
 
-	SimpMessagingTemplate messagingTemplate;
-//	NovelService novelService;
-	IHistoryNotifyRepository historyNotifyRepository;
-/**
- * Hàm được lên lịch để chạy mỗi 60 giây nhằm gửi thông báo chương mới cho người dùng.
- * 
- * - Tìm tất cả các bản ghi `HistoryNotify` có trường `isNotify = false`
- * - Gửi thông báo qua WebSocket tới từng người dùng (dựa theo email)
- * - Sau khi gửi xong, cập nhật lại bản ghi là đã thông báo và lưu thời gian gửi
- */
-	@Scheduled(fixedRate = 60000) // every 60 seconds
-	public void remindUsersOfTasks() {
-		List<HistoryNotify> historyNotifies = historyNotifyRepository.findByIsNotifyFalse();
-		for (HistoryNotify historyNotify : historyNotifies) {
+    SimpMessagingTemplate messagingTemplate;
+    // NovelService novelService;
+    IHistoryNotifyRepository historyNotifyRepository;
 
-			String email = historyNotify.getUser().getEmailUser();
-			String message = "Truyện: " + historyNotify.getNameNovel() + "/nĐã ra thêm: "
-					+ historyNotify.getTitleChapter();
-			log.info("📤 Sending notify to user {} for new chapter {}", email, message);
-			messagingTemplate.convertAndSendToUser(email, "/queue/notify", message);
+    /**
+     * Hàm được lên lịch để chạy mỗi 60 giây nhằm gửi thông báo chương mới cho
+     * người dùng.
+     *
+     * - Tìm tất cả các bản ghi `HistoryNotify` có trường `isNotify = false`
+     * - Gửi thông báo qua WebSocket tới từng người dùng (dựa theo email)
+     * - Sau khi gửi xong, cập nhật lại bản ghi là đã thông báo và lưu thời gian
+     * gửi
+     */
+    @Scheduled(fixedRate = 60000) // every 60 seconds
+    public void remindUsersOfTasks() {
+        List<HistoryNotify> historyNotifies = historyNotifyRepository.findByIsNotifyFalse();
+        for (HistoryNotify historyNotify : historyNotifies) {
 
-			historyNotify.setIsNotify(true);
-			historyNotify.setDateNotify(new Date());
-			historyNotifyRepository.save(historyNotify);
+            String email = historyNotify.getUser().getEmailUser();
+            String message = "Truyện: " + historyNotify.getNameNovel() + "/nĐã ra thêm: "
+                    + historyNotify.getTitleChapter();
+            log.info("📤 Sending notify to user {} for new chapter {}", email, message);
+            messagingTemplate.convertAndSendToUser(email, "/queue/notify", message);
 
-		}
-	}
+            historyNotify.setIsNotify(true);
+            historyNotify.setDateNotify(new Date());
+            historyNotifyRepository.save(historyNotify);
 
-//	@Scheduled(fixedRate = 1000) // every 60 seconds
-//	public void testWebsocket() {
-//		log.info("thông báo nè");
-////		log.info("📤 Sending notify to user {} for new chapter {}", , );
-//		messagingTemplate.convertAndSendToUser("truongthaiduong0808@gmail.com", "/queue/notify", "ok chưa");
-//
-//	}
+        }
+    }
+
+    // @Scheduled(fixedRate = 1000) // every 60 seconds
+    // public void testWebsocket() {
+    // log.info("thông báo nè");
+    //// log.info("📤 Sending notify to user {} for new chapter {}", , );
+    // messagingTemplate.convertAndSendToUser("truongthaiduong0808@gmail.com",
+    // "/queue/notify", "ok chưa");
+    //
+    // }
 }

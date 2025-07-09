@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * WebSocket configuration using STOMP for the application.
- * 
+ *
  * This class enables WebSocket and configures:
  * - the message broker for sending/receiving messages
  * - the endpoints that clients will connect to
@@ -32,47 +32,49 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-	Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
+    Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
-	private final JwtUtils jwtUtils;
+    private final JwtUtils jwtUtils;
 
-	@Override
-	public void configureMessageBroker(MessageBrokerRegistry config) {
-		config.enableSimpleBroker("/queue", "/topic");
-		config.setApplicationDestinationPrefixes("/app");
-		config.setUserDestinationPrefix("/user");
-	}
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/queue", "/topic");
+        config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
+    }
 
-	@Override
-	public void registerStompEndpoints(StompEndpointRegistry registry) {
-		registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
-	}
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+    }
 
-	@Override
-	public void configureClientInboundChannel(ChannelRegistration registration) {
-		registration.interceptors(new ChannelInterceptor() {
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(new ChannelInterceptor() {
 
-			@Override
-			public Message<?> preSend(Message<?> message, MessageChannel channel) {
-				StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-				if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-					String token = accessor.getFirstNativeHeader("Authorization");
-					// check done
-					if (token != null && token.startsWith("Bearer ")) {
-						token = token.substring(7);
-						if (jwtUtils.validateToken(token)) {
-							String email = jwtUtils.getUsernameFromToken(token);
-							logger.info("🟢 WebSocket user registered: " + email); // ✅ Log here
-							accessor.setUser(new UsernamePasswordAuthenticationToken(email, null, List.of()));
-						} else {
-							logger.error("❌ Invalid token!");
-						}
-					} else {
-						logger.error("⚠️ Authorization header not found.");
-					}
-				}
-				return message;
-			}
-		});
-	}
+            @Override
+            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+                StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message,
+                        StompHeaderAccessor.class);
+                if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+                    String token = accessor.getFirstNativeHeader("Authorization");
+                    // check done
+                    if (token != null && token.startsWith("Bearer ")) {
+                        token = token.substring(7);
+                        if (jwtUtils.validateToken(token)) {
+                            String email = jwtUtils.getUsernameFromToken(token);
+                            logger.info("🟢 WebSocket user registered: " + email); // ✅ Log here
+                            accessor.setUser(new UsernamePasswordAuthenticationToken(email, null,
+                                    List.of()));
+                        } else {
+                            logger.error("❌ Invalid token!");
+                        }
+                    } else {
+                        logger.error("⚠️ Authorization header not found.");
+                    }
+                }
+                return message;
+            }
+        });
+    }
 }
