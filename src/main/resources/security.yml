@@ -31,7 +31,9 @@
       - GET:/send-private/**
       - POST:/api/payment/create
       - POST:/api/payment/call
-      - GET:/api/payment/callback-success
+      - GET:/api/payment/callback-success/**
+      - GET:/api/payment/callback
+      - POST:/api/payment/callbackk
     endpoints:
       "[/project/getAll]": "GET: member, manager, admin"
       "[/project/getByProjectId/**]": "GET: member, manager, admin"

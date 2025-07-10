@@ -6,6 +6,8 @@ import com.example.demo.dto.request.ZaloPayRequest;
 import com.example.demo.dto.request.ZaloPayWrapperRequest;
 import com.example.demo.dto.respone.ZaloPayPaymentResponse;
 import com.example.demo.dto.respone.ZaloPayResponseData;
+import com.example.demo.enums.StatusDeposit;
+import com.example.demo.service.HistoryDepositService;
 import com.example.demo.service.ZaloPayService;
 import com.example.demo.util.ZaloPayUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -18,12 +20,18 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
+
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
+import java.net.URI;
+
+import org.apache.commons.codec.digest.HmacUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +44,7 @@ import org.springframework.web.bind.annotation.*;
 public class ZaloPayController {
 	ZaloPayService zaloPayService;
 	ObjectMapper objectMapper;
-
+	HistoryDepositService historyDepositService;
 //	Shipping shipping;
 	/**
 	 * Tạo đơn hàng thanh toán qua ZaloPay và trả về URL thanh toán.
@@ -56,64 +64,21 @@ public class ZaloPayController {
 		return responseEntity;
 	}
 
-	@PostMapping("/call")
-	public ResponseEntity<String> handleZaloPayCallback(@RequestBody Map<String, Object> payload) {
-//		log.info("✅ Redirect sau thanh toán từ ZaloPay");
-//
-//		return ResponseEntity.ok("Thanh toán ZaloPay thành công! Cảm ơn bạn.");
-		
-		log.info("✅ Nhận callback từ ZaloPay: {}", payload);
-
-	    // (Optional) Xác minh MAC nếu ZaloPay gửi kèm
-	    // String mac = (String) payload.get("mac");
-	    // Verify MAC here if needed
-
-	    // Xử lý logic cập nhật trạng thái đơn hàng tại đây, ví dụ:
-	    String appTransId = (String) payload.get("app_trans_id");
-	    String returnCode = (String) payload.get("return_code");
-
-	    if ("1".equals(returnCode)) {
-	        log.info("✅ Thanh toán thành công cho giao dịch {}", appTransId);
-	        // Update DB, gửi thông báo, v.v.
-	    } else {
-	        log.warn("❌ Thanh toán thất bại, return_code={}", returnCode);
-	    }
-
-	    // ZaloPay yêu cầu trả về JSON có key "return_code"
-	    return ResponseEntity.ok("{\"return_code\": 1}");
-
-	}
-
-	@GetMapping("/callback-success")
-	public ResponseEntity<String> handleRedirectAfterPayment(@RequestParam("idHistoryDeposit") String idHistoryDeposit) {
-	    log.info("✅ Redirect sau thanh toán từ ZaloPay. ID lịch sử: {}", idHistoryDeposit);
-
-	    // Tùy logic của bạn: có thể load thêm thông tin giao dịch từ DB nếu cần
-	    return ResponseEntity.ok("Thanh toán thành công! Mã lịch sử nạp: " + idHistoryDeposit);
-	}
-
-
-	// @RequestParam("embed_data") String embedDataStr
-	// @GetMapping("/callback")
-	// public ResponseEntity<?> handleCallback(@RequestParam("shipping_order")
-	// String shippingOrderStr) {
-	// try {
-	// String decoded = URLDecoder.decode(shippingOrderStr, StandardCharsets.UTF_8);
-	// ShippingOrderRequest request = objectMapper.readValue(decoded,
-	// ShippingOrderRequest.class);
-	// log.info(request.toString());
-	// // Gửi sang GHN
-	// ResponseEntity<?> ghnRes = shipping.createOrder(request);
-	// return ResponseEntity.ok("Tạo đơn GHN thành công: " + ghnRes.getBody());
-	// } catch (Exception e) {
-	// e.printStackTrace();
-	// return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Lỗi: " +
-	// e.getMessage());
-	// }
-	// }
-
-	@GetMapping("/call")
-	public void handleCallback() {
+	@PostMapping("/callbackk")
+	public void callbackZaloPay() {
 		zaloPayService.checkCallback();
 	}
+
+	@GetMapping("/callback")
+	public ResponseEntity<Void> handleRedirectAfterPayment(@RequestParam String idHistoryDeposit) {
+		log.info("✅ Redirect sau thanh toán từ ZaloPay. ID lịch sử: {}", idHistoryDeposit);
+		historyDepositService.updateHistoryDeposit(idHistoryDeposit, StatusDeposit.SUCCESS);
+		// Redirect đến trang thành công của frontend
+		URI redirectUri = URI.create("https://webtruyen-git-fontend-phan-thanh-vus-projects.vercel.app/payment/callback-success");
+		HttpHeaders headers = new HttpHeaders();
+		headers.setLocation(redirectUri);
+
+		return new ResponseEntity<>(headers, HttpStatus.FOUND); // 302 redirect
+	}
+
 }

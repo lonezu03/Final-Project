@@ -75,8 +75,10 @@ public class ZaloPayService {
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-Type", "application/x-www-form-urlencoded");
 
-		String url = "https://webtruyen-git-fontend-phan-thanh-vus-projects.vercel.app";
-
+//		String url = "https://webtruyen-git-fontend-phan-thanh-vus-projects.vercel.app";
+//		String url="https://834d5a68767a.ngrok-free.app";
+//		String url="http://localhost:8080";
+		String url="https://truongthaiduongphanthanhvu.onrender.com";
 		int amount = user.getAmount();
 		double voucherPercent = user.getVoucher() != null ? user.getVoucher() : 0.0;
 
@@ -97,23 +99,30 @@ public class ZaloPayService {
 		HistoryDepositRespone depositRespone = historyDepositService.createHistoryDeposit(request);
 
 		// Tạo embed_data JSON
-		JSONObject embedData = new JSONObject();
-		String redirectUrl = url + "/payment/callback-success?idHistoryDeposit="
-				+ depositRespone.getIdHistoryDeposit();
-		embedData.put("redirecturl", redirectUrl);
+//		JSONObject embedData = new JSONObject();
+//		String redirectUrl = url + "/api/payment/callback-success?idHistoryDeposit="+ depositRespone.getIdHistoryDeposit();
+//		embedData.put("redirecturl", redirectUrl);
+//
+//		embedData.put("callbackurl",
+//				"https://834d5a68767a.ngrok-free.app" + "/api/payment/callback");
+//
+//		String embedDataStr = embedData.toString();
+		
+		 JSONObject embedData = new JSONObject();
+//	        embedData.put("redirecturl", "http://localhost:8080/api/payment/callback?idHistoryDeposit="+ depositRespone.getIdHistoryDeposit());
+	        embedData.put("redirecturl", url+"/api/payment/callback?idHistoryDeposit="+ depositRespone.getIdHistoryDeposit());
 
-		embedData.put("callbackurl",
-				url + "/api/payment/call");
-
-		String embedDataStr = embedData.toString();
-		log.info("📦 embed_data gửi đi: {}", embedDataStr);
+//	        embedData.put("callbackurl", "http://localhost:8080/api/payment/callbackk");
+	        embedData.put("promotioninfo", "");
+	        embedData.put("merchantinfo", "embeddata123");
+//		log.info("📦 embed_data gửi đi: {}", embedDataStr);
 		MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
 		map.add("app_id", "2553");
 		map.add("key1", key1);
 		map.add("key2", key2);
 		map.add("amount", user.getAmount() + "");
 		map.add("app_user", "NovelWebsiteDemo");
-		map.add("embed_data", embedDataStr);
+		map.add("embed_data", embedData.toString());
 		map.add("item",
 				"[{\"itemid\":\"knb\",\"itemname\":\"kim nguyen bao\",\"itemprice\":198400,\"itemquantity\":1}]");
 		map.add("description", user.getOrderInfo());
@@ -124,11 +133,10 @@ public class ZaloPayService {
 		builder.append("250411");
 		builder.append("_");
 		builder.append(randum);
-		String data = "app_id=" + "2553" + "&app_trans_id=" + builder.toString() + "&..."; // Include other parameters
-																							// here
+		String data = "app_id=" + "2553" + "&app_trans_id=" + builder.toString() + "&..."; 
 
 		// Generate MAC
-		String mac = zaloPayUtil.HMacHexStringEncode(zaloPayUtil.HMACSHA256, "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL", data);
+		String mac = zaloPayUtil.HMacHexStringEncode(zaloPayUtil.HMACSHA256, APP_KEY, data);
 		map.add("mac", mac);
 
 		HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(map, headers);
@@ -140,6 +148,7 @@ public class ZaloPayService {
 		// Parse response.getBody() từ String sang JsonNode
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode rootNode = objectMapper.readTree(response.getBody().toString());
+//		log.info("📨 Response từ ZaloPay: {}", rootNode.toPrettyString());
 
 		// Parse tiếp request_data và response_data vì chúng là chuỗi JSON lồng trong
 		JsonNode requestData = objectMapper.readTree(rootNode.get("request_data").asText());
