@@ -4,6 +4,7 @@ import axios from 'axios'; // axios gốc vẫn được dùng cho các API khô
 import apiClient from '../services/api'; // Import apiClient đã cấu hình
 import { rooturl } from './element'; // Import đường dẫn gốc từ file element
 import { LyberiNovels } from './novelSlice'; // <<-- THÊM IMPORT NÀY Ở ĐẦU FILE
+import { confirmTransactions } from './transactionSlice'; 
 
 const userApiBase = `${rooturl}/user`; // Chỉ dùng cho các API không cần auth
 
@@ -242,7 +243,7 @@ export const updateUserProfile = createAsyncThunk(
       }
 
       const payload = {
-        ...currentUser,
+        idUser: currentUser?.idUser, // Giữ nguyên idUser từ currentUser
         userNameUser: userNameUser,
         // Sử dụng ngày tháng đã được định dạng lại
         dobUser: formattedDob,
@@ -669,6 +670,17 @@ const userSlice = createSlice({
     .addCase(LyberiNovels.rejected, (state, action) => {
       state.followedNovels = []; // Reset nếu lỗi
       console.error("Lỗi LyberiNovels:", action.payload);
+    })
+    .addCase(confirmTransactions.fulfilled, (state, action) => {
+        // action.payload từ confirmTransactions là { success: true, confirmedChapters: ["..."] }
+        const newPurchasedChapters = action.payload.confirmedChapters;
+        if (state.currentUser && Array.isArray(newPurchasedChapters)) {
+            // Tạo một Set để tránh trùng lặp và thêm các chương mới vào
+            const updatedSet = new Set([...(state.currentUser.purchasedChapterIds || []), ...newPurchasedChapters]);
+            state.currentUser.purchasedChapterIds = Array.from(updatedSet);
+            // Cập nhật lại localStorage
+            localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+        }
     })
 
       // .addMatcher cho các hành động login vẫn giữ nguyên

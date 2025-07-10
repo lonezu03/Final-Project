@@ -72,7 +72,7 @@ const UserProfilePage = () => {
   useEffect(() => {
     if (!currentUser) {
       // Có thể thêm toast ở đây nếu muốn
-      navigate('/login');
+      navigate('/');
     } else {
       setFormData({
         userNameUser: currentUser.userNameUser || '',

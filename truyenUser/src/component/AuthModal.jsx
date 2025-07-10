@@ -93,22 +93,24 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     if (String(otpInput) !== String(receivedOtpFromServer)) { setLocalError("Mã OTP không chính xác."); return; }
     setLocalError(''); dispatch(clearUserError());
     try {
-      // 1. Tạo user trên Firebase
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // 2. Gọi API backend để đăng ký user (sử dụng /user/create hoặc tên tương tự)
+      // 1. Gọi API backend để đăng ký user trước
       const registrationPayload = {
-        emailUser: userCredential.user.email,
-        passwordUser: password, // Password từ state của form
-        dobUser: new Date().toISOString(), // Giá trị mặc định
-        coin: 0, // Giá trị mặc định
-        // userNameUser: userCredential.user.email.split('@')[0], // Gửi nếu API /create cần
-        // firebaseUid: userCredential.user.uid // Nên gửi
+        emailUser: email,
+        passwordUser: password,
+        // dobUser: new Date().toISOString(),
+        // coin: 0,
+        // userNameUser: email.split('@')[0],
+        // firebaseUid: undefined // Chưa có uid vì chưa tạo Firebase
       };
       await handleBackendOperation(registerUser, registrationPayload, "User Registration");
-    } catch (firebaseError) {
-      if (firebaseError.code === 'auth/email-already-in-use') setLocalError("Email này đã được đăng ký trên Firebase.");
-      else if (firebaseError.code === 'auth/weak-password') setLocalError("Mật khẩu quá yếu.");
-      else setLocalError(`Đăng ký Firebase thất bại: ${firebaseError.message}`);
+
+      // 2. Sau khi backend thành công, tạo user trên Firebase
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      // Ưu tiên lỗi backend, sau đó lỗi Firebase
+      if (err?.code === 'auth/email-already-in-use') setLocalError("Email này đã được đăng ký trên Firebase.");
+      else if (err?.code === 'auth/weak-password') setLocalError("Mật khẩu quá yếu.");
+      else setLocalError(err?.message ? `Đăng ký thất bại: ${err.message}` : "Đăng ký thất bại.");
     }
   };
 

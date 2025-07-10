@@ -1,28 +1,18 @@
 // src/redux/transactionSlice.js
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import apiClient from '../services/api'; // Sử dụng apiClient đã cấu hình, giả sử nó đã có token
+import apiClient from '../services/api';
 
 // --- Async Thunks ---
-
-/**
- * Action để tạo một giao dịch mới (mua/thuê chương).
- * Sẽ gọi API POST /transaction/createTransaction.
- */
 export const createTransaction = createAsyncThunk(
   'transaction/create',
   async (transactionData, { rejectWithValue }) => {
-    // transactionData: { idUser, idChapters, dateEndRent, amountCoin, typeTransaction }
     try {
       const response = await apiClient.post('/transaction/createTransaction', transactionData);
-      
-      // Giả sử response thành công có code là 200 và result là true
-      if (response.data && response.data.code === 200 && response.data.result === true) {
-        // Trả về dữ liệu gốc đã gửi đi để có thể sử dụng nếu cần
-        return { success: true, request: transactionData, message: response.data.message };
+      if (response.data && response.data.code === 1000 && response.data.result === true) {
+        // Trả về dữ liệu gốc để component có thể dùng cho bước confirm
+        return { success: true, request: transactionData };
       }
-      
-      // Nếu không, reject với message từ API
       return rejectWithValue(response.data?.message || 'Không thể tạo giao dịch.');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi tạo giao dịch.');
@@ -30,21 +20,15 @@ export const createTransaction = createAsyncThunk(
   }
 );
 
-/**
- * Action để xác nhận lại các giao dịch.
- * Sẽ gọi API POST /transaction/confirmTransactions.
- */
 export const confirmTransactions = createAsyncThunk(
   'transaction/confirm',
   async (confirmationData, { rejectWithValue }) => {
-    // confirmationData: { idUser, listIdChapter }
     try {
       const response = await apiClient.post('/transaction/confirmTransactions', confirmationData);
-      
-      if (response.data && response.data.code === 200 && response.data.result === true) {
-        return { success: true, message: response.data.message };
+      if (response.data && response.data.code === 1000 && response.data.result === true) {
+        // Trả về danh sách chương đã xác nhận để cập nhật state
+        return { success: true, confirmedChapters: confirmationData.listIdChapter };
       }
-      
       return rejectWithValue(response.data?.message || 'Không thể xác nhận giao dịch.');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi xác nhận giao dịch.');
@@ -52,60 +36,53 @@ export const confirmTransactions = createAsyncThunk(
   }
 );
 
-
 // --- Slice Definition ---
-
 const initialState = {
-  // Trạng thái cho việc tạo giao dịch
-  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
-  error: null,
-  lastTransaction: null, // Lưu thông tin của giao dịch cuối cùng
+  createStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+  createError: null,
+  confirmStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+  confirmError: null,
+  pendingTransaction: null, // Lưu giao dịch đang chờ xác nhận
 };
 
 const transactionSlice = createSlice({
   name: 'transaction',
   initialState,
   reducers: {
-    // Reducer để reset trạng thái
     resetTransactionState: (state) => {
-      state.status = 'idle';
-      state.error = null;
-      state.lastTransaction = null;
+      Object.assign(state, initialState); // Reset tất cả về ban đầu
     }
   },
   extraReducers: (builder) => {
     builder
       // --- Cases for createTransaction ---
       .addCase(createTransaction.pending, (state) => {
-        state.status = 'loading';
-        state.error = null;
+        state.createStatus = 'loading';
+        state.createError = null;
       })
       .addCase(createTransaction.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        // Lưu lại thông tin về giao dịch vừa thành công
-        state.lastTransaction = action.payload; 
+        state.createStatus = 'succeeded';
+        state.pendingTransaction = action.payload.request;
       })
       .addCase(createTransaction.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload; // payload là message lỗi từ rejectWithValue
+        state.createStatus = 'failed';
+        state.createError = action.payload;
       })
-
       // --- Cases for confirmTransactions ---
       .addCase(confirmTransactions.pending, (state) => {
-        state.status = 'loading'; // Có thể dùng chung cờ loading
-        state.error = null;
+        state.confirmStatus = 'loading';
+        state.confirmError = null;
       })
       .addCase(confirmTransactions.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        // Có thể không cần lưu gì đặc biệt sau khi confirm, chỉ cần biết là thành công
+        state.confirmStatus = 'succeeded';
+        state.pendingTransaction = null; // Xóa giao dịch đang chờ
       })
       .addCase(confirmTransactions.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload;
+        state.confirmStatus = 'failed';
+        state.confirmError = action.payload;
       });
   },
 });
 
 export const { resetTransactionState } = transactionSlice.actions;
-
 export default transactionSlice.reducer;

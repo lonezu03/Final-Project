@@ -8,6 +8,8 @@ import { getAllNovels, searchNovels } from './redux/novelSlice';
 import { getAllCategories } from './redux/categorySlice';
 import { loadUserFromStorage } from './redux/userSlice';
 import NotificationWebSocket from './redux/NotificationWebSocket'; // Import NotificationWebSocket
+import 'react-toastify/dist/ReactToastify.css'; // Đảm bảo bạn import CSS của react-toastify
+import { ToastContainer } from 'react-toastify';
 
 // Import các component trang
 import ReadingPage from './component/page/readingPage';
@@ -61,6 +63,7 @@ const AppContent = () => {
               <div key={index} className="notification-item">
                 {notification}
               </div>
+              
             ))}
           </div>
         )}
@@ -94,6 +97,14 @@ function App() {
   return (
     <Provider store={store}>
       <AppContent />
+       <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick={true}
+        rtl={false}
+      />
     </Provider>
   );
 }

@@ -3,13 +3,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  getCommentsByChapter,
   createComment,
   deleteComment,
   likeComment,
   dislikeComment,
+  searchComments,
   clearComments,
-  clearCommentError,
   updateCommentContent
 } from '../redux/commentSlice';
 import {
@@ -75,7 +74,7 @@ const CommentItem = ({
   // Fallback nếu API comment chỉ trả về userName trực tiếp và không có object user
   const isOwnerFallback = !comment.user && currentUser && currentUser.userNameUser === comment.userName;
   const canModify = isOwner || isOwnerFallback;
-
+  
   // Xác định xem comment hiện tại có phải là comment đang được sửa không
   const isCurrentlyEditingThisItem = globalEditingComment?.idComment === comment.idComment;
   // Xác định xem có đang mở form reply cho comment này không
@@ -220,8 +219,10 @@ const CommentItem = ({
 
 const ChapterComments = ({ chapterId, novelId }) => {
   const dispatch = useDispatch();
-  const { commentsByChapter, loading, error, actionLoading = {} } = useSelector((state) => state.comments); // Thêm default cho actionLoading
+  
+  const { comments, pagination, loading, error, actionStatus } = useSelector((state) => state.comments);
   const currentUser = useSelector((state) => state.user.currentUser);
+  const [currentPage, setCurrentPage] = useState(0); // API phân trang từ 0
 
   const [newComment, setNewComment] = useState('');
   const [isSubmittingNewComment, setIsSubmittingNewComment] = useState(false);
@@ -236,20 +237,91 @@ const ChapterComments = ({ chapterId, novelId }) => {
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);    // Trạng thái loading khi GỬI reply
 
   const dropdownRefs = useRef({});
+   const handleAction = async (actionToDispatch, successMessage, errorMessage) => {
+      try {
+          await dispatch(actionToDispatch).unwrap();
+          if (successMessage) toast.success(successMessage);
+          // Reset action status sau khi thành công
+          dispatch(resetActionStatus());
+          return true; // Báo hiệu thành công
+      } catch(err) {
+          toast.error(`${errorMessage}: ${err}`);
+          dispatch(resetActionStatus());
+          return false; // Báo hiệu thất bại
+      }
+  };
 
-  useEffect(() => {
-    if (chapterId) {
-      dispatch(getCommentsByChapter(chapterId));
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !currentUser?.idUser) return;
+    
+    const success = await handleAction(
+        createComment({
+            contentComment: newComment,
+            idUser: currentUser.idUser,
+            idChapter: chapterId,
+        }),
+        null, // không cần toast success, vì sẽ tải lại
+        "Lỗi khi gửi bình luận"
+    );
+    
+    if (success) {
+        setNewComment('');
+        // Tải lại trang đầu tiên để xem comment mới nhất
+        if (currentPage !== 0) {
+            setCurrentPage(0);
+        } else {
+            // Nếu đang ở trang 1, dispatch lại để refresh
+            const searchCriteria = { idChapter, parentOnly: true };
+            const pageable = { page: 0, size: 10, sort: ['timeComment,desc'] };
+            dispatch(searchComments({ searchCriteria, pageable }));
+        }
     }
-    return () => { dispatch(clearComments()); };
-  }, [dispatch, chapterId]);
+  };
 
-  useEffect(() => {
-    // Đồng bộ state loading cục bộ với actionLoading từ Redux
-    setIsSubmittingNewComment(actionLoading?.create || false);
-    setIsUpdatingComment(actionLoading?.update || false);
-    // isSubmittingReply được quản lý riêng khi nhấn nút gửi reply
-  }, [actionLoading]);
+   const handleUpdateComment = async (e) => {
+    e.preventDefault();
+    if (!editedContent.trim() || !editingComment) return;
+
+    const success = await handleAction(
+        updateCommentContent({
+            existingComment: editingComment,
+            newContent: editedContent,
+            idUserPerformingUpdate: currentUser.idUser,
+            idChapterOfComment: chapterId
+        }),
+        "Sửa bình luận thành công!",
+        "Lỗi khi cập nhật bình luận"
+    );
+    if (success) handleCancelEdit();
+  };
+   useEffect(() => {
+    if (chapterId) {
+      const searchCriteria = {
+        idChapter: chapterId,
+        parentOnly: true, // Chỉ lấy comment gốc
+      };
+      const pageable = {
+        page: currentPage,
+        size: 10, // Ví dụ: 10 comment mỗi trang
+        // sort: ['timeComment,desc'] // Sắp xếp theo thời gian mới nhất
+      };
+      dispatch(searchComments({ searchCriteria, pageable }));
+    }
+    
+    return () => { dispatch(clearComments()); };
+  }, [dispatch, chapterId, currentPage]); // Chạy lại khi chuyển trang (currentPage thay đổi)
+
+  // Hàm chuyển trang
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+  // useEffect(() => {
+  //   // Đồng bộ state loading cục bộ với actionLoading từ Redux
+  //   setIsSubmittingNewComment(actionLoading?.create || false);
+  //   setIsUpdatingComment(actionLoading?.update || false);
+  //   // isSubmittingReply được quản lý riêng khi nhấn nút gửi reply
+  // }, [actionLoading]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -264,21 +336,29 @@ const ChapterComments = ({ chapterId, novelId }) => {
     return () => { document.removeEventListener("mousedown", handleClickOutside); };
   }, [openDropdownId]);
 
-  const handleSubmitComment = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim() || !currentUser?.idUser || !chapterId) return;
-    setIsSubmittingNewComment(true); // Set loading cục bộ
-    dispatch(clearCommentError());
-    try {
-      await dispatch(createComment({
-        contentComment: newComment,
-        idUser: currentUser.idUser,
-        idChapter: chapterId,
-      })).unwrap();
-      setNewComment('');
-    } catch (err) { console.error("Lỗi khi gửi bình luận:", err); }
-    finally { setIsSubmittingNewComment(false); } // Reset loading cục bộ
-  };
+  // const handleSubmitComment = async (e) => {
+  //   e.preventDefault();
+  //   if (!newComment.trim() || !currentUser?.idUser || !chapterId) return;
+  //   setIsSubmittingNewComment(true); // Set loading cục bộ
+  //   dispatch(clearCommentError());
+  //   try {
+  //     await dispatch(createComment({
+  //       contentComment: newComment,
+  //       idUser: currentUser.idUser,
+  //       idChapter: chapterId,
+  //     })).unwrap();
+  //     setNewComment('');
+  //      if (currentPage !== 0) {
+  //           setCurrentPage(0); // Quay về trang đầu
+  //       } else {
+  //           // Nếu đang ở trang 1, thì dispatch lại để refresh
+  //            const searchCriteria = { idChapter, parentOnly: true };
+  //            const pageable = { page: 0, size: 10, sort: ['timeComment,desc'] };
+  //            dispatch(searchComments({ searchCriteria, pageable }));
+  //       }
+  //   } catch (err) { console.error("Lỗi khi gửi bình luận:", err); }
+  //   finally { setIsSubmittingNewComment(false); } // Reset loading cục bộ
+  // };
 
   const handleDeleteComment = async (commentId) => {
     const findCommentRecursive = (comments, id) => {
@@ -291,7 +371,7 @@ const ChapterComments = ({ chapterId, novelId }) => {
       }
       return null;
     };
-    const commentToDelete = findCommentRecursive(commentsByChapter || [], commentId);
+    const commentToDelete = findCommentRecursive(comments || [], commentId);
 
     if (!commentToDelete) return;
 
@@ -309,7 +389,7 @@ const ChapterComments = ({ chapterId, novelId }) => {
       } catch (err) { console.error("Lỗi khi xóa bình luận:", err); }
     }
   };
-
+  
    const handleLike = async (comment) => {
     if (!currentUser) {
       alert("Vui lòng đăng nhập để thích bình luận.");
@@ -367,21 +447,21 @@ const ChapterComments = ({ chapterId, novelId }) => {
     setEditedContent('');
   };
 
-  const handleUpdateComment = async (e) => {
-    e.preventDefault();
-    if (!editedContent.trim() || !editingComment || !currentUser?.idUser) return;
-    setIsUpdatingComment(true);
-    try {
-      await dispatch(updateCommentContent({
-        existingComment: editingComment,
-        newContent: editedContent,
-        idUserPerformingUpdate: currentUser.idUser,
-        idChapterOfComment: chapterId
-      })).unwrap();
-      handleCancelEdit();
-    } catch (err) { console.error("Lỗi khi cập nhật bình luận:", err); }
-    finally { setIsUpdatingComment(false); }
-  };
+  // const handleUpdateComment = async (e) => {
+  //   e.preventDefault();
+  //   if (!editedContent.trim() || !editingComment || !currentUser?.idUser) return;
+  //   setIsUpdatingComment(true);
+  //   try {
+  //     await dispatch(updateCommentContent({
+  //       existingComment: editingComment,
+  //       newContent: editedContent,
+  //       idUserPerformingUpdate: currentUser.idUser,
+  //       idChapterOfComment: chapterId
+  //     })).unwrap();
+  //     handleCancelEdit();
+  //   } catch (err) { console.error("Lỗi khi cập nhật bình luận:", err); }
+  //   finally { setIsUpdatingComment(false); }
+  // };
 
   const assignDropdownRef = (el, commentId) => { if (el) dropdownRefs.current[commentId] = el; };
 
@@ -403,7 +483,7 @@ const ChapterComments = ({ chapterId, novelId }) => {
 
     if (!replyContent.trim() || !currentUser?.idUser || !chapterId || !parentIdComment) return;
     setIsSubmittingReply(true);
-    dispatch(clearCommentError());
+    // dispatch(clearCommentError());
     try {
       await dispatch(createComment({
         contentComment: replyContent,
@@ -420,11 +500,38 @@ const ChapterComments = ({ chapterId, novelId }) => {
   const toggleDropdown = (commentId) => {
     setOpenDropdownId(openDropdownId === commentId ? null : commentId);
   };
+const CommentPagination = ({ currentPage, totalPages, onPageChange }) => {
+    if (totalPages <= 1) return null;
+    
+    const handlePageClick = (page) => {
+        if (page >= 0 && page < totalPages) { // Trang bắt đầu từ 0
+            onPageChange(page);
+        }
+    };
+    
+    // Tạo một mảng các số trang để render
+    const pages = Array.from({ length: totalPages }, (_, i) => i);
 
+    return (
+        <div className="flex justify-center items-center space-x-2 mt-6">
+            <button disabled={currentPage === 0} onClick={() => handlePageClick(currentPage - 1)} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Trước</button>
+            {pages.map(pageNumber => (
+                <button 
+                    key={pageNumber} 
+                    onClick={() => handlePageClick(pageNumber)}
+                    className={`px-3 py-1 rounded ${currentPage === pageNumber ? 'bg-sky-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                >
+                    {pageNumber + 1}
+                </button>
+            ))}
+            <button disabled={currentPage >= totalPages - 1} onClick={() => handlePageClick(currentPage + 1)} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Sau</button>
+        </div>
+    );
+};
   return (
     <div className="mt-8 bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
       <h3 className="text-xl font-semibold text-sky-400 mb-4 border-b border-gray-700 pb-2">
-        Bình luận ({commentsByChapter?.reduce((acc, comment) => acc + 1 + (comment.replyComments?.length || 0), 0) || 0})
+        Bình luận ({comments?.reduce((acc, comment) => acc + 1 + (comment.replyComments?.length || 0), 0) || 0})
       </h3>
 
       {currentUser ? (
@@ -439,34 +546,34 @@ const ChapterComments = ({ chapterId, novelId }) => {
             disabled={isSubmittingNewComment}
           />
           {error && typeof error === 'string' && <p className="text-red-500 text-xs mt-1">{error}</p>}
-          <button
+           <button
             type="submit"
             disabled={isSubmittingNewComment || !newComment.trim()}
             className="mt-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center"
           >
-            {isSubmittingNewComment ? <LucideSpinner size={18} className="animate-spin mr-2" /> : <LucideSend size={16} className="mr-2" />}
-            Gửi bình luận
+            {isSubmittingNewComment ? <LucideSpinner className="animate-spin mr-2" /> : <LucideSend className="mr-2" />}
+        Gửi bình luận
           </button>
         </form>
       ) : (
          <p className="mb-6 text-gray-400 text-sm">Vui lòng <Link to="/login" className="text-sky-400 hover:underline">đăng nhập</Link> để bình luận.</p>
       )}
 
-      {loading && (!commentsByChapter || commentsByChapter.length === 0) && (
+      {loading && (!comments || comments.length === 0) && (
          <div className="text-center text-gray-400 py-4">
           <LucideSpinner size={24} className="animate-spin inline mr-2" /> Đang tải bình luận...
         </div>
       )}
-      {!loading && commentsByChapter && commentsByChapter.length === 0 && !error && (
+      {!loading && comments && comments.length === 0 && !error && (
          <p className="text-gray-500 text-center py-4">Chưa có bình luận nào cho chương này.</p>
       )}
-      {error && typeof error === 'string' && (!commentsByChapter || commentsByChapter.length === 0) && (
+      {error && typeof error === 'string' && (!comments || comments.length === 0) && (
           <p className="text-red-500 text-center py-4">{error}</p>
       )}
 
 
       <div className="space-y-4">
-        {commentsByChapter && commentsByChapter.map((comment) => (
+        {comments && comments.map((comment) => (
           <CommentItem
             key={comment.idComment}
             comment={comment}
@@ -500,6 +607,11 @@ const ChapterComments = ({ chapterId, novelId }) => {
           />
         ))}
       </div>
+         <CommentPagination 
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 };

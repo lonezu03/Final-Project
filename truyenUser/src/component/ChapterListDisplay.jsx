@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -38,31 +38,40 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
         </div>
     );
 };
-
-
-const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPage = 50 }) => {
+ const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPage = 50 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Lấy state cần thiết từ Redux
+  // Lấy state mới từ Redux
   const { currentUser } = useSelector((state) => state.user);
-  const { status, error, lastTransaction } = useSelector((state) => state.transaction);
+  const { createStatus, confirmStatus, pendingTransaction, createError } = useSelector((state) => state.transaction);
   
-  // State cục bộ để quản lý dialog xác nhận
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [transactionDetails, setTransactionDetails] = useState(null);
+  const CHAPTER_PRICE = 3;
 
-  const CHAPTER_PRICE = 3; // Giá mỗi chương
+  // Effect để xử lý kết quả từ `createTransaction`
+  useEffect(() => {
+    if (createStatus === 'succeeded' && pendingTransaction) {
+      setShowConfirmDialog(true);
+    }
+    if (createStatus === 'failed' && createError) {
+      toast.error(`Lỗi: ${createError}`);
+      dispatch(resetTransactionState());
+    }
+  }, [createStatus, pendingTransaction, createError, dispatch]);
 
-  // Hàm xử lý khi người dùng click nút mua
   const handlePurchaseClick = (chapterToBuy) => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để mua chương.");
       navigate('/login');
       return;
     }
+     if ((currentUser.coin || 0) < CHAPTER_PRICE) {
+      toast.error("Số xu không đủ. Vui lòng nạp thêm!");
+      navigate('/deposit');
+      return;
+    }
     
-    // Dispatch action createTransaction
     const transactionData = {
       idUser: currentUser.idUser,
       idChapters: [chapterToBuy.idChapter],
@@ -71,54 +80,31 @@ const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPag
       dateEndRent: null,
     };
     
-    dispatch(createTransaction(transactionData))
-      .unwrap()
-      .then((result) => {
-        // Khi createTransaction thành công (pending trên server)
-        // Lưu thông tin để hiển thị trên dialog xác nhận
-        setTransactionDetails({
-            chapters: [{ id: chapterToBuy.idChapter, title: chapterToBuy.titleChapter }],
-            totalCost: CHAPTER_PRICE,
-        });
-        setShowConfirmDialog(true);
-      })
-      .catch((err) => {
-        toast.error(`Lỗi tạo giao dịch: ${err}`);
-      });
+    dispatch(createTransaction(transactionData));
   };
 
-  // Hàm xử lý khi người dùng xác nhận mua trên dialog
   const handleConfirmPurchase = () => {
-    if (!currentUser || !transactionDetails) return;
+    if (!currentUser || !pendingTransaction) return;
     
     const confirmationData = {
       idUser: currentUser.idUser,
-      listIdChapter: transactionDetails.chapters.map(ch => ch.id),
+      listIdChapter: pendingTransaction.idChapters,
     };
     
     dispatch(confirmTransactions(confirmationData))
       .unwrap()
-      .then(async () => {
-        toast.success("Mua chương thành công! Đang làm mới phiên đăng nhập...");
-        setShowConfirmDialog(false);
-        setTransactionDetails(null);
+      .then((result) => {
+        toast.success(result.message || "Mua chương thành công!");
         
-        // YÊU CẦU: Đăng xuất và đăng nhập lại
-        const userCredentials = {
-            emailUser: localStorage.getItem('userEmail'), // Cần lưu email/pass an toàn hơn
-            passwordUser: localStorage.getItem('userPassword'), 
-        };
+        // Lấy ra chapterId vừa mua
+        const purchasedChapterId = pendingTransaction.idChapters[0];
+        
+        // Đóng dialog và reset state
+        setShowConfirmDialog(false);
+        dispatch(resetTransactionState());
 
-        if(userCredentials.emailUser && userCredentials.passwordUser) {
-            dispatch(logoutUser());
-            // Đợi một chút để đảm bảo state đã được xóa
-            await new Promise(resolve => setTimeout(resolve, 50)); 
-            dispatch(loginUserWithPassword(userCredentials));
-        } else {
-            // Nếu không có thông tin đăng nhập, chỉ đăng xuất và yêu cầu đăng nhập lại
-            dispatch(logoutUser());
-            navigate('/login');
-        }
+        // Điều hướng thẳng vào chương vừa mua
+        navigate(`/novel/${novelId}/chapter/${purchasedChapterId}`);
       })
       .catch((err) => {
         toast.error(`Xác nhận thất bại: ${err}`);
@@ -127,16 +113,13 @@ const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPag
   
   const handleCancelConfirm = () => {
     setShowConfirmDialog(false);
-    setTransactionDetails(null);
-    dispatch(resetTransactionState()); // Reset trạng thái transaction
+    dispatch(resetTransactionState());
   };
-
-  // ... (Phần render JSX bên dưới không thay đổi nhiều)
 
   return (
     <>
-      {/* Màn hình loading che phủ khi đang tạo giao dịch */}
-      {status === 'loading' && (
+      {/* Màn hình loading che phủ khi đang TẠO giao dịch */}
+      {(createStatus === 'loading') && (
         <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-[9998]">
             <Loader2 className="animate-spin text-white" size={48} />
             <p className="text-white mt-4">Đang tạo giao dịch...</p>
@@ -148,7 +131,6 @@ const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPag
           const chapterNumberDisplay = `Chương ${chapter.chapterNumber || (currentPage - 1) * chaptersPerPage + index + 1}`;
           const chapterTitle = chapter.titleChapter || "Chưa có tiêu đề";
           
-          // Logic kiểm tra đã mua hay chưa bây giờ phải dựa vào currentUser.purchasedChapterIds (từ API login)
           const isPurchased = currentUser?.purchasedChapterIds?.includes(chapter.idChapter);
 
           return (
@@ -167,7 +149,7 @@ const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPag
               {!isPurchased && (
                 <button
                   onClick={() => handlePurchaseClick(chapter)}
-                  disabled={status === 'loading'}
+                  disabled={createStatus === 'loading' || confirmStatus === 'loading'}
                   className="ml-3 px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex-shrink-0 my-1 disabled:opacity-50"
                   title={`Mua chương ${chapterTitle}`}
                 >
@@ -179,13 +161,15 @@ const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPag
         })}
       </ul>
 
-      {/* Dialog xác nhận cuối cùng */}
-      {showConfirmDialog && (
+      {showConfirmDialog && pendingTransaction && (
         <FinalConfirmDialog
-          transactionDetails={transactionDetails}
+          transactionDetails={{
+              chapters: pendingTransaction.idChapters.map(id => ({ id, title: chapters.find(c => c.idChapter === id)?.titleChapter || `Chương ID: ${id}` })),
+              totalCost: pendingTransaction.amountCoin,
+          }}
           onConfirm={handleConfirmPurchase}
           onCancel={handleCancelConfirm}
-          loading={status === 'loading'}
+          loading={confirmStatus === 'loading'}
         />
       )}
     </>

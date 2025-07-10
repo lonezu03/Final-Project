@@ -74,7 +74,47 @@ export const createComment = createAsyncThunk(
     }
   }
 );
+const findAndUpdateComment = (comments, updatedComment) => {
+  return comments.map(comment => {
+    if (comment.idComment === updatedComment.idComment) {
+      return { ...comment, ...updatedComment }; // Ghi đè comment cũ bằng comment mới từ API
+    }
+    if (comment.replyComments && comment.replyComments.length > 0) {
+      return {
+        ...comment,
+        replyComments: findAndUpdateComment(comment.replyComments, updatedComment),
+      };
+    }
+    return comment;
+  });
+};
 
+// Hàm đệ quy để tìm và xóa một comment
+const findAndDeleteComment = (comments, commentIdToDelete) => {
+  return comments.filter(comment => {
+    if (comment.idComment === commentIdToDelete) {
+      return false; // Loại bỏ comment này
+    }
+    if (comment.replyComments && comment.replyComments.length > 0) {
+      comment.replyComments = findAndDeleteComment(comment.replyComments, commentIdToDelete);
+    }
+    return true;
+  });
+};
+
+// Hàm đệ quy để thêm một reply vào đúng comment cha
+const findAndAddReply = (comments, parentId, newReply) => {
+    return comments.map(comment => {
+        if (comment.idComment === parentId) {
+            const newReplyComments = [newReply, ...(comment.replyComments || [])];
+            return { ...comment, replyComments: newReplyComments };
+        }
+        if (comment.replyComments && comment.replyComments.length > 0) {
+            return { ...comment, replyComments: findAndAddReply(comment.replyComments, parentId, newReply) };
+        }
+        return comment;
+    });
+};
 // PUT /comment/update
 export const updateCommentContent = createAsyncThunk(
   'comments/updateContent',
@@ -101,8 +141,8 @@ export const updateCommentContent = createAsyncThunk(
         idComment: existingComment.idComment,
         contentComment: newContent,
         // Lấy giá trị like/dislike hiện tại từ existingComment, nếu không có thì mặc định là 0
-        likeComment: existingComment.likeComment || 0,
-        dislikeComment: existingComment.dislikeComment || 0,
+        // likeComment: existingComment.likeComment || 0,
+        // dislikeComment: existingComment.dislikeComment || 0,
         chapter: existingComment.chapter?.idChapter || idChapterOfComment, // API yêu cầu 'chapter' là idChapter (kiểu số)
         user: idUserPerformingUpdate // API yêu cầu 'user' là idUser (kiểu string) của người thực hiện
       };
@@ -178,28 +218,41 @@ export const deleteComment = createAsyncThunk(
   }
 );
 
-// GET /comment/getAllByUser/{idUser}
-export const getCommentsByUser = createAsyncThunk( /* ... giữ nguyên ... */ );
 // POST /comment/search
-export const searchComments = createAsyncThunk('comments/search', async (searchCriteria, { rejectWithValue }) => {
-  try {
-    const response = await axios.post(`${API_BASE_URL_COMMENT_PUBLIC}/search`, searchCriteria, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
-      return response.data; // Trả về toàn bộ dữ liệu tìm kiếm bao gồm kết quả và phân trang
+export const searchComments = createAsyncThunk(
+  'comments/search',
+  async ({ searchCriteria, pageable }, { rejectWithValue }) => {
+    // searchCriteria: { idChapter, parentOnly, ... }
+    // pageable: { page, size, sort: ['...'] }
+    try {
+      // Xây dựng query string từ object pageable
+      const params = new URLSearchParams();
+      if (pageable) {
+        params.append('page', pageable.page || 0);
+        params.append('size', pageable.size || 10);
+        if (pageable.sort && Array.isArray(pageable.sort)) {
+            pageable.sort.forEach(sortRule => params.append('sort', sortRule));
+        }
+      }
+
+      const queryString = `?${params.toString()}`;
+      
+      // apiClient sẽ tự động thêm baseURL
+      const response = await apiClient.post(`/comment/search${queryString}`, searchCriteria);
+
+      if (response.data) { // API search của bạn không có cấu trúc {code, message, result}
+        return response.data; // Trả về toàn bộ object phân trang
+      }
+      return rejectWithValue('Dữ liệu tìm kiếm bình luận không hợp lệ.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi tìm kiếm bình luận.');
     }
-    return rejectWithValue(response.data.message || 'Failed to fetch comments');
-  } catch (error) {
-    return rejectWithValue(error.response?.data?.message || error.message || 'Error fetching comments');
   }
-});
+);
 
 const initialState = {
   commentsByChapter: [],
-  loading: false, // Loading chung cho getByChapter, getByNovel, getByUser
+  loading: false,
   actionLoading: { // Loading riêng cho các action CUD và like/dislike
     create: false,
     update: false,
@@ -208,8 +261,14 @@ const initialState = {
     dislike: {}, // { [commentId]: boolean }
   },
   error: null,
-  pagination: {}, // Dữ liệu phân trang từ tìm kiếm bình luận
+  comments: [], // Danh sách comment của trang hiện tại
 
+ pagination: {
+    totalPages: 0,
+    totalElements: 0,
+    currentPage: 0,
+    size: 10,
+  },
 };
 
 const commentSlice = createSlice({
@@ -217,7 +276,8 @@ const commentSlice = createSlice({
   initialState,
   reducers: {
     clearComments: (state) => {
-      state.commentsByChapter = [];
+      state.comments = [];
+      state.pagination = initialState.pagination;
       state.error = null;
     },
     clearCommentError: (state) => {
@@ -258,44 +318,16 @@ const commentSlice = createSlice({
         state.actionLoading.create = true;
         state.error = null;
       })
-      .addCase(createComment.fulfilled, (state, action) => {
-        state.actionLoading.create = false;
-        state.error = null; // Xóa lỗi cũ khi thành công
+       .addCase(createComment.fulfilled, (state, action) => {
         const newComment = action.payload;
-
-        if (newComment && newComment.idComment) {
-          // Nếu backend trả về idParent trong newComment, chúng ta có thể xử lý lồng reply ở đây
-          if (newComment.idParent) {
-            const findAndAddReplyRecursive = (comments, parentId, replyToAdd) => {
-              for (let i = 0; i < comments.length; i++) {
-                if (String(comments[i].idComment) === String(parentId)) { // So sánh string để chắc chắn
-                  if (!comments[i].replyComments) {
-                    comments[i].replyComments = [];
-                  }
-                  // Thêm vào đầu để reply mới nhất lên trên (hoặc push() để xuống dưới)
-                  comments[i].replyComments.unshift(replyToAdd);
-                  return true;
-                }
-                if (comments[i].replyComments && comments[i].replyComments.length > 0) {
-                  if (findAndAddReplyRecursive(comments[i].replyComments, parentId, replyToAdd)) {
-                    return true;
-                  }
-                }
-              }
-              return false;
-            };
-
-            if (!findAndAddReplyRecursive(state.commentsByChapter, newComment.idParent, newComment)) {
-              // Nếu không tìm thấy comment cha (hiếm khi xảy ra nếu logic đúng),
-              // hoặc để đơn giản, tạm thời thêm vào cấp gốc và chờ fetch lại
-              console.warn(`Không tìm thấy comment cha với idParent: ${newComment.idParent} để thêm reply. Thêm reply vào cấp gốc.`);
-              state.commentsByChapter.unshift(newComment);
-              // Tốt hơn là nên fetch lại getCommentsByChapter(chapterId) để đảm bảo dữ liệu đồng bộ hoàn toàn
-            }
-          } else {
-            // Đây là comment gốc
-            state.commentsByChapter.unshift(newComment);
-          }
+        if (newComment.idParent) {
+          // Nếu là reply, thêm nó vào comment cha
+          state.comments = findAndAddReply(state.comments, newComment.idParent, newComment);
+        } else {
+          // Nếu là comment gốc, thêm vào đầu danh sách
+          state.comments.unshift(newComment);
+          // Tăng tổng số lượng element để pagination hiển thị đúng
+          state.pagination.totalElements += 1; 
         }
       })
       .addCase(createComment.rejected, (state, action) => {
@@ -304,14 +336,11 @@ const commentSlice = createSlice({
       })
 
       // Update Comment Content
-      .addCase(updateCommentContent.pending, (state, action) => {
-        state.actionLoading.update = true;
-        state.error = null;
-      })
       .addCase(updateCommentContent.fulfilled, (state, action) => {
-        state.actionLoading.update = false;
-        updateCommentInList(state, action.payload);
+        const updatedComment = action.payload;
+        state.comments = findAndUpdateComment(state.comments, updatedComment);
       })
+      
       .addCase(updateCommentContent.rejected, (state, action) => {
         state.actionLoading.update = false;
         state.error = action.payload || 'Failed to update comment';
@@ -323,8 +352,8 @@ const commentSlice = createSlice({
         state.error = null;
       })
       .addCase(likeComment.fulfilled, (state, action) => {
-        state.actionLoading.like[action.meta.arg.idComment] = false;
-        updateCommentInList(state, action.payload);
+        const updatedComment = action.payload;
+        state.comments = findAndUpdateComment(state.comments, updatedComment);
       })
       .addCase(likeComment.rejected, (state, action) => {
         state.actionLoading.like[action.meta.arg.idComment] = false;
@@ -337,8 +366,8 @@ const commentSlice = createSlice({
         state.error = null;
       })
       .addCase(dislikeComment.fulfilled, (state, action) => {
-        state.actionLoading.dislike[action.meta.arg.idComment] = false;
-        updateCommentInList(state, action.payload);
+        const updatedComment = action.payload;
+        state.comments = findAndUpdateComment(state.comments, updatedComment);
       })
       .addCase(dislikeComment.rejected, (state, action) => {
         state.actionLoading.dislike[action.meta.arg.idComment] = false;
@@ -351,24 +380,32 @@ const commentSlice = createSlice({
         state.error = null;
       })
       .addCase(deleteComment.fulfilled, (state, action) => {
-        state.actionLoading.delete = false;
-        state.commentsByChapter = state.commentsByChapter.filter(comment => comment.idComment !== action.payload);
+        const deletedCommentId = action.payload;
+        state.comments = findAndDeleteComment(state.comments, deletedCommentId);
+        state.pagination.totalElements -= 1; // Giảm tổng số lượng
       })
       .addCase(deleteComment.rejected, (state, action) => {
         state.actionLoading.delete = false;
         state.error = action.payload || 'Failed to delete comment';
       })
-       .addCase(searchComments.pending, (state) => {
-        state.loading = true; // Đang chờ yêu cầu
+        .addCase(searchComments.pending, (state) => {
+        state.loading = true;
       })
       .addCase(searchComments.fulfilled, (state, action) => {
         state.loading = false;
-        state.comments = action.payload.content; // Lưu kết quả tìm kiếm
-        state.pagination = action.payload.pageable; // Lưu thông tin phân trang
+        state.comments = action.payload.content; // Lưu danh sách comment
+        // Lưu thông tin phân trang
+        state.pagination = {
+            totalPages: action.payload.totalPages,
+            totalElements: action.payload.totalElements,
+            currentPage: action.payload.number, // API trả về 'number' cho trang hiện tại
+            size: action.payload.size,
+        };
       })
       .addCase(searchComments.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message; // Xử lý lỗi khi có vấn đề
+        state.error = action.payload;
+        state.comments = [];
       });
 
       // Loại bỏ các addMatcher nếu đã xử lý riêng lẻ từng action
