@@ -75,7 +75,7 @@ public class ZaloPayService {
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-Type", "application/x-www-form-urlencoded");
 
-		String url = "https://webtruyen-e79mt48so-phan-thanh-vus-projects.vercel.app";
+		String url = "https://webtruyen-ln0hqc4vc-phan-thanh-vus-projects.vercel.app";
 
 		int amount = user.getAmount();
 		double voucherPercent = user.getVoucher() != null ? user.getVoucher() : 0.0;
