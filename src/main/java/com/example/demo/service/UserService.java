@@ -7,11 +7,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.config.SecurityConfig;
 import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.TokenRefreshRequest;
 import com.example.demo.dto.request.UserUpdateCoinRequest;
@@ -49,9 +55,11 @@ import com.example.demo.repository.ITransactionRepository;
 import com.example.demo.repository.IUserRepository;
 import com.example.demo.repository.RefreshTokenRepository;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service xử lý các nghiệp vụ liên quan đến người dùng.
@@ -60,6 +68,7 @@ import lombok.experimental.FieldDefaults;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserService {
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 	IUserRepository userRepository;
 	IUserMapper userMapper;
@@ -75,6 +84,8 @@ public class UserService {
 	IHistoryDepositRepository historyDepositRepository;
 	IHistoryDepositMapper historyDepositMapper;
 	ITransactionRepository transactionRepository;
+	RefreshTokenService refreshTokenService;
+	JwtDecoder jwtDecoder;
 	/**
 	 * Lấy danh sách tất cả người dùng từ database và map sang DTO UserRespone.
 	 *
@@ -133,6 +144,78 @@ public class UserService {
 		return userMapper.toUserRespone(userRepository.save(user));
 	}
 
+	
+	/**
+	 * Generate a new accessToken from a valid refreshToken.
+	 *
+	 * @param refreshRequest Object containing refreshToken.
+	 * @return A LoginResponse containing the new accessToken and existing refreshToken.
+	 * @throws AppException if the token is not found or expired.
+	 */
+//	public UserLoginRespone refreshToken(String token) {
+//		try {
+//			RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshRequest.getRefreshToken())
+//					.orElseThrow(() -> new AppException(ErrorCode.REFRESH_TOKEN_NOT_EXISTS));
+//
+//			if (refreshTokenService.verifiedRefreshToken(refreshToken) != null) {
+//				String accessToken = authenticationService.generateToken(refreshToken.getUser(),
+//						refreshToken.getToken());
+//
+//				return UserLoginRespone.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
+//			}
+//
+//			throw new AppException(ErrorCode.REFRESH_TOKEN_EXPIRY);
+//
+//		} catch (AppException ex) {
+//			logger.warn("Business logic error when refreshing token: {}", ex.getMessage());
+//			throw ex;
+//		} catch (Exception ex) {
+//			logger.error("System error when refreshing token", ex);
+//			throw new AppException(ErrorCode.UNKNOW_ERROR);
+//		}
+//	}
+	
+	public UserRespone refreshUser(String token) {
+		try {
+			
+			if (!authenticationService.introspect(token).isValid()) {
+				throw new AppException(ErrorCode.TOKEN_NOT_VALID);
+			} 			
+			Jwt jwt = jwtDecoder.decode(token);
+			String userId = jwt.getClaimAsString("user");
+
+
+			User user=userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+			
+			UserRespone userRespone = userMapper.toUserRespone(user);
+			List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
+			userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
+			
+			List<String> chapterBought = transactionRepository
+				    .findByUser_IdUserAndStatusDeposit(user.getIdUser(),StatusDeposit.SUCCESS).stream()
+				    .map(tr -> tr.getChapter().getIdChapter())
+				    .toList();
+			userRespone.setChapterBought(chapterBought);
+			
+			List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
+			userRespone.setHistoryDeposit(historyDepositRespones);
+
+			
+			userRespone.setHistoryDeposit(historyDepositRespones);
+			String refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+			String accessToken = authenticationService.generateToken(user, refreshToken);
+			userRespone.setToken(accessToken);
+		
+		
+			return userRespone;
+		} catch (AppException ex) {
+			logger.warn("Business logic error when refreshing token: {}", ex.getMessage());
+			throw ex;
+		} catch (Exception ex) {
+			logger.error("System error when refreshing token", ex);
+			throw new AppException(ErrorCode.UNKNOW_ERROR);
+		}
+	}
 	/**
 	 * Đăng nhập người dùng bằng email và mật khẩu.
 	 *
@@ -165,8 +248,13 @@ public class UserService {
 		
 		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
 		userRespone.setHistoryDeposit(historyDepositRespones);
-		userRespone.setToken(authenticationService.generateToken(user));
+
+		
 		userRespone.setHistoryDeposit(historyDepositRespones);
+		String refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+		String accessToken = authenticationService.generateToken(user, refreshToken);
+		userRespone.setToken(accessToken);
+	
 	
 		return userRespone;
 	}
@@ -188,7 +276,10 @@ public class UserService {
 		List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
 		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
 
-		userRespone.setToken(authenticationService.generateToken(user));
+		
+		String refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+		String accessToken = authenticationService.generateToken(user, refreshToken);
+		userRespone.setToken(accessToken);
 		List<String> chapterBought = transactionRepository
 			    .findByUser_IdUser(user.getIdUser()).stream()
 			    .map(tr -> tr.getChapter().getIdChapter())
@@ -214,7 +305,9 @@ public class UserService {
 		user = userRepository.save(user);
 
 		UserRespone userRespone = userMapper.toUserRespone(user);
-		userRespone.setToken(authenticationService.generateToken(user));
+		String refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+		String accessToken = authenticationService.generateToken(user, refreshToken);
+		userRespone.setToken(accessToken);
 		return userRespone;
 	}
 

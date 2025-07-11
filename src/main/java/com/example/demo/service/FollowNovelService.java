@@ -45,7 +45,7 @@ public class FollowNovelService {
 	 * @throws AppException nếu người dùng hoặc truyện không tồn tại, hoặc nếu đã
 	 *                      theo dõi rồi
 	 */
-	public void followNovel(FollowNovelRequest request) {
+	public boolean followNovel(FollowNovelRequest request) {
 		User user = userRepository.findById(request.getIdUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 		Novel novel = novelRepository.findById(request.getIdNovel())
@@ -60,10 +60,12 @@ public class FollowNovelService {
 		if (followExist) {
 
 			followNovelRepository.deleteById(followNovelId);
+			return false;
 		} else {
 			FollowNovel followNovel = FollowNovel.builder().id(followNovelId).user(user).novel(novel).build();
 
 			followNovelRepository.save(followNovel);
+			return true;
 		}
 
 	}

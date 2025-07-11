@@ -4,9 +4,13 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
+import javax.crypto.spec.SecretKeySpec;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,13 +19,22 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.example.demo.entity.User;
+import com.example.demo.repository.IUserRepository;
+import com.example.demo.repository.RefreshTokenRepository;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Central configuration class for Spring Security.
@@ -39,9 +52,22 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-//    @Autowired
-//    private TokenValidationFilter tokenValidationFilter;
+    @Autowired
+    private TokenValidationFilter tokenValidationFilter;
 
+	@Autowired
+	private RefreshTokenRepository refreshTokenRepository;
+    
+	@Autowired
+	private IUserRepository userRepository;
+	
+    @Autowired
+    private JwtDecoder jwtDecoder;
+    
+    @Autowired
+    private JwtUtils jwtUtils;
+    @Value("${app.security.singer-key}")
+    private String jwtSecret;
     /**
      * Defines the {@link SecurityFilterChain} bean, the core of security configuration.
      * This method sets up the entire request processing logic, including CORS, JWT authentication,
@@ -64,9 +90,7 @@ public class SecurityConfig {
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.decoder(decoder)
                 .jwtAuthenticationConverter(jwtAuthenticationConverter())));
-
-        // Insert custom TokenValidationFilter after Spring’s default Bearer token filter
-//        httpSecurity.addFilterAfter(tokenValidationFilter, BearerTokenAuthenticationFilter.class);
+       
 
         // Configure authorization rules
         httpSecurity.authorizeHttpRequests(auth -> {
@@ -90,7 +114,8 @@ public class SecurityConfig {
                 auth.requestMatchers(method, path).hasAnyAuthority(roles);
             }
             logger.info("--- FINISHED CONFIGURING ENDPOINT PERMISSIONS ---");
-
+            // Insert custom TokenValidationFilter after Spring’s default Bearer token filter
+            httpSecurity.addFilterAfter(tokenValidationFilter, BearerTokenAuthenticationFilter.class);
             // 3. Catch-all rule: Any other request requires authentication
             auth.anyRequest().authenticated();
         });
@@ -140,4 +165,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+    
+
 }

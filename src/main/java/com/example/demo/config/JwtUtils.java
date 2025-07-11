@@ -1,12 +1,26 @@
 package com.example.demo.config;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.StringJoiner;
+
 import javax.crypto.SecretKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.example.demo.entity.User;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSObject;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
@@ -49,5 +63,36 @@ public class JwtUtils {
 			logger.error("❌ Error parsing token: {}", e.getMessage(), e);
 			return null;
 		}
+	}
+	
+	public String generateToken(User user,String refreshToken) {
+
+		JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+
+		JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+				.subject(user.getEmailUser())
+				.issuer(user.getUserNameUser())
+				.issueTime(new Date())
+//				.expirationTime(new Date(Instant.now().plus(5, ChronoUnit.HOURS).toEpochMilli()))
+				.expirationTime(new Date(Instant.now().plus(5, ChronoUnit.MILLIS).toEpochMilli()))
+
+				.claim("scope", buildScope(user))
+				.claim("refreshToken", refreshToken)
+				.build();
+		Payload payload = new Payload(jwtClaimsSet.toJSONObject());
+		JWSObject jwsObject = new JWSObject(header, payload);
+
+		try {
+			jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
+			return jwsObject.serialize();
+		} catch (JOSEException e) {
+			logger.error("Cannot create token", e);
+			throw new RuntimeException(e);
+		}
+	}
+	private String buildScope(User user) {
+		StringJoiner stringJoiner = new StringJoiner(" ");
+		stringJoiner.add(user.getRole() + "");
+		return stringJoiner.toString();
 	}
 }

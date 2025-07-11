@@ -71,6 +71,22 @@ public class AuthenticationService {
 							.Valid(verified && expiryTime.after(new Date()))
 							.build();
 	}
+	
+	public IntrospectRespone introspect(String token) throws JOSEException, ParseException {
+		
+
+		JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
+
+		SignedJWT signedJWT = SignedJWT.parse(token);
+
+		Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+		var verified = signedJWT.verify(verifier);
+
+		return IntrospectRespone.builder()
+							.Valid(verified && expiryTime.after(new Date()))
+							.build();
+	}
 	/**
  * Sinh JWT token mới cho người dùng với thông tin gồm: email, username, vai trò, thời gian phát hành, thời gian hết hạn.
  *
@@ -78,7 +94,7 @@ public class AuthenticationService {
  * @return chuỗi token đã ký hợp lệ
  * @throws RuntimeException nếu có lỗi khi ký token
  */
-	public String generateToken(User user) {
+	public String generateToken(User user,String refreshToken) {
 
 		JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
@@ -87,7 +103,12 @@ public class AuthenticationService {
 				.issuer(user.getUserNameUser())
 				.issueTime(new Date())
 				.expirationTime(new Date(Instant.now().plus(5, ChronoUnit.HOURS).toEpochMilli()))
-				.claim("scope", buildScope(user)).build();
+//				.expirationTime(new Date(Instant.now().plus(5, ChronoUnit.MILLIS).toEpochMilli()))
+
+				.claim("scope", buildScope(user))
+				.claim("refreshToken", refreshToken)
+				.claim("user", user.getIdUser())
+				.build();
 		Payload payload = new Payload(jwtClaimsSet.toJSONObject());
 		JWSObject jwsObject = new JWSObject(header, payload);
 
@@ -98,7 +119,6 @@ public class AuthenticationService {
 			log.error("Cannot create token", e);
 			throw new RuntimeException(e);
 		}
-
 	}
 /**
  * Tạo chuỗi scope (phạm vi quyền hạn) từ vai trò của người dùng.

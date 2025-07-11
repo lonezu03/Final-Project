@@ -179,8 +179,8 @@ public class NovelController {
 	@Operation(summary = "Follow truyện", description = "User bấm theo dõi 1 truyện.")
 	public ApiRespone<Boolean> followNovel(@RequestBody FollowNovelRequest request){
 		try {
-			followNovelService.followNovel(request);
-			return ApiRespone.<Boolean>builder().result(true).build();
+			Boolean isfollow= followNovelService.followNovel(request);
+			return ApiRespone.<Boolean>builder().result(isfollow).build();
 
 		} catch (Exception e) {
 			e.printStackTrace();

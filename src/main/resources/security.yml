@@ -36,19 +36,4 @@
       - POST:/api/payment/callbackk
     endpoints:
       "[/project/getAll]": "GET: member, manager, admin"
-      "[/project/getByProjectId/**]": "GET: member, manager, admin"
-      "[/project/createProject]": "POST: manager, admin"
-      "[/project/addUser]": "POST: manager, admin"
-      "[/project/addTask]": "POST: manager, admin"
-      "[/project/removeUser]": "POST: manager, admin"
-      "[/project/removeTask]": "POST: manager, admin"
-      "[/project/updateProject]": "PUT: manager, admin"
-      "[/project/deleteProject/**]": "DELETE: manager, admin"
 
-      "[/task/getAll]": "GET: member, manager, admin"
-      "[/task/getByTaskId/**]": "GET: member, manager, admin"
-      "[/task/createTask]": "POST: member, manager, admin"
-      "[/task/addUser]": "POST: member, manager, admin"
-      "[/task/removeTask]": "POST: member, manager, admin"
-      "[/task/updateTask]": "PUT: member, manager, admin"
-      "[/task/deleteTask/**]": "DELETE: member, manager, admin"

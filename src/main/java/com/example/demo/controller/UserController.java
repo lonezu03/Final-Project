@@ -31,9 +31,11 @@ import com.example.demo.dto.respone.ReviewNovelRespone;
 import com.example.demo.dto.respone.UserRespone;
 import com.example.demo.entity.HistoryId;
 import com.example.demo.entity.ReviewNovelId;
+import com.example.demo.exception.AppException;
 import com.example.demo.service.HistoryDepositService;
 import com.example.demo.service.HistoryReadService;
 import com.example.demo.service.MailService;
+import com.example.demo.service.RefreshTokenService;
 import com.example.demo.service.ReviewNovelService;
 import com.example.demo.service.UserService;
 
@@ -57,6 +59,7 @@ public class UserController {
 	HistoryReadService historyReadService;
 	ReviewNovelService reviewNovelService;
 	HistoryDepositService historyDepositService;
+	RefreshTokenService refreshTokenService;
 	private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	/**
@@ -108,6 +111,21 @@ public class UserController {
 		return ApiRespone.<String>builder().result(otp).build();
 	}
 
+	@PostMapping(value = "/logout/{idUser}")
+	@Operation(summary = "User Logout", description = "Logs out the user by deleting their refresh token.")
+	public String logout(@PathVariable String idUser) {
+		try {
+			refreshTokenService.deleteRefreshTokenByIdUser(idUser);
+			return "Log out successful!";
+		} catch (AppException e) {
+			logger.warn("Business error during user logout: {}", e.getMessage(), e);
+			throw e;
+		} catch (Exception e) {
+			logger.error("System error during user logout: {}", e.getMessage(), e);
+			throw e;
+		}
+	}
+
 	/**
 	 * Đăng nhập bằng email và mật khẩu.
 	 *
@@ -132,29 +150,25 @@ public class UserController {
 		return ApiRespone.<UserRespone>builder().result(userService.loginByEmail(request)).build();
 	}
 
-//    /**
-//     * Endpoint to issue a new access token using a valid refresh token.
-//     *
-//     * @param refreshRequest Object containing the refresh token.
-//     * @return An object containing a new access token and the old refresh token.
-//     */
-//    @PostMapping("/refreshToken")
-//    @Operation(summary = "Refresh Access Token", description = "Issues a new access token using a valid refresh token.")
-//    public ApiRespone<UserRespone> refreshToken(@RequestBody TokenRefreshRequest refreshRequest) {
-//        try {
-////            JsonSchemaValidator.validate(refreshRequest, "userRefreshTokenSchema.json");
-//            return userService.refreshToken(refreshRequest);
-//        } catch (ValidationException e) {
-//            logger.warn("Validation error during token refresh: {}", e.getMessage(), e);
-//            throw e;
-//        } catch (AppException e) {
-//            logger.warn("Business error during token refresh: {}", e.getMessage(), e);
-//            throw e;
-//        } catch (Exception e) {
-//            logger.error("System error during token refresh: {}", e.getMessage(), e);
-//            throw e;
-//        }
-//    }
+    /**
+     * Endpoint to issue a new access token using a valid refresh token.
+     *
+     * @param refreshRequest Object containing the refresh token.
+     * @return An object containing a new access token and the old refresh token.
+     */
+    @PostMapping("/refreshUser")
+    @Operation(summary = "Refresh User", description = "Refresh user")
+    public ApiRespone<UserRespone> refreshUser(@RequestBody String token) {
+        try {
+            return ApiRespone.<UserRespone>builder().result(userService.refreshUser(token)).build();
+        }  catch (AppException e) {
+            logger.warn("Business error during refresh User: {}", e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("System error during refresh User: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
 	/**
 	 * Cập nhật avatar cho người dùng.
 	 *
@@ -192,11 +206,14 @@ public class UserController {
 	public ApiRespone<String> deleteUser(@RequestParam String idUser) {
 		return ApiRespone.<String>builder().result(userService.deleteUser(idUser)).build();
 	}
-	
+
 	@PutMapping("/updateHistoryDeposit")
-	public ApiRespone<HistoryDepositRespone> updateHistoryDeposit(@RequestBody HistoryDepositUpdateRequest request ) {
-		return ApiRespone.<HistoryDepositRespone>builder().result(historyDepositService.updateHistoryDeposit(request.getIdHistoryDeposit(),request.getStatusDeposit())).build();
+	public ApiRespone<HistoryDepositRespone> updateHistoryDeposit(@RequestBody HistoryDepositUpdateRequest request) {
+		return ApiRespone.<HistoryDepositRespone>builder().result(
+				historyDepositService.updateHistoryDeposit(request.getIdHistoryDeposit(), request.getStatusDeposit()))
+				.build();
 	}
+
 	/**
 	 * Tạo mới lịch sử đọc truyện của người dùng.
 	 *
@@ -246,8 +263,6 @@ public class UserController {
 	ApiRespone<UserRespone> grantRole(@PathVariable String idUser) {
 		return ApiRespone.<UserRespone>builder().result(userService.grantRole(idUser)).build();
 	}
-
-
 
 	/**
 	 * Tạo mới một đánh giá cho tiểu thuyết.
