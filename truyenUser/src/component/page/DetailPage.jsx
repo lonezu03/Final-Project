@@ -26,18 +26,17 @@ const DetailPage = () => {
   const chaptersPerPageInList = 50;
   const { currentUser, followedNovels } = useSelector((state) => state.user);
 
-  useEffect(() => {
+   useEffect(() => {
     if (novelId) {
+        // Reset lại các state khi chuyển qua truyện mới
         setActiveTab('summary');
         setCurrentChapterListPage(1);
-        if (!novelDetailData || novelDetailData.idNovel !== novelId) { // Kiểm tra xem dữ liệu đã có chưa
-            dispatch(getNovelById(novelId));
-        }
-        if (!chaptersFromApiForDetailPage || chaptersFromApiForDetailPage.length === 0) { // Kiểm tra xem đã có chapters chưa
-            dispatch(getAllChapters(novelId));
-        }
+        
+        // Gọi API để lấy thông tin truyện và danh sách chương
+        dispatch(getNovelById(novelId));
+        dispatch(getAllChapters(novelId));
     }
-}, [dispatch, novelId, novelDetailData, chaptersFromApiForDetailPage]);
+  }, [dispatch, novelId]); 
  useEffect(() => {
     // Khi component mount và có người dùng, tải danh sách truyện họ đã theo dõi
     if (currentUser?.idUser&&followedNovels) {
