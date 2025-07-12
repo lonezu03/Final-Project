@@ -46,7 +46,6 @@ const [currentPage, setCurrentPage] = useState(1); // <<--- THÊM: State cho tra
     }
 
     // Luôn tải lại danh sách khi vào trang để đảm bảo dữ liệu mới nhất
-    dispatch(LyberiNovels({ idUser: currentUser.idUser }));
     
   }, [dispatch, currentUser, navigate]);
 

@@ -105,11 +105,11 @@ const findAndDeleteComment = (comments, commentIdToDelete) => {
 // Hàm đệ quy để thêm một reply vào đúng comment cha
 const findAndAddReply = (comments, parentId, newReply) => {
     return comments.map(comment => {
-        if (comment.idComment === parentId) {
+        if (String(comment.idComment) === String(parentId)) {
             const newReplyComments = [newReply, ...(comment.replyComments || [])];
             return { ...comment, replyComments: newReplyComments };
         }
-        if (comment.replyComments && comment.replyComments.length > 0) {
+        if (comment.replyComments) {
             return { ...comment, replyComments: findAndAddReply(comment.replyComments, parentId, newReply) };
         }
         return comment;
@@ -318,16 +318,27 @@ const commentSlice = createSlice({
         state.actionLoading.create = true;
         state.error = null;
       })
-       .addCase(createComment.fulfilled, (state, action) => {
-        const newComment = action.payload;
-        if (newComment.idParent) {
-          // Nếu là reply, thêm nó vào comment cha
-          state.comments = findAndAddReply(state.comments, newComment.idParent, newComment);
+      .addCase(createComment.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        const newComment = action.payload; // Dữ liệu comment mới từ API
+        const originalPayload = action.meta.arg; // Payload gốc đã gửi đi
+
+        if (originalPayload.idParent) {
+          // Đây là một REPLY.
+          // Dùng hàm helper để tìm comment cha và chèn reply mới vào.
+          state.comments = findAndAddReply(state.comments, originalPayload.idParent, newComment);
         } else {
-          // Nếu là comment gốc, thêm vào đầu danh sách
-          state.comments.unshift(newComment);
-          // Tăng tổng số lượng element để pagination hiển thị đúng
-          state.pagination.totalElements += 1; 
+          // Đây là một COMMENT GỐC.
+          // Chỉ thêm vào đầu nếu đang ở trang 1.
+          if (state.pagination.currentPage === 0) {
+            state.comments.unshift(newComment);
+            // Giữ số lượng comment trên trang không vượt quá page size
+            if (state.comments.length > state.pagination.size) {
+              state.comments.pop();
+            }
+          }
+          // Luôn tăng tổng số lượng để pagination tính toán lại.
+          state.pagination.totalElements += 1;
         }
       })
       .addCase(createComment.rejected, (state, action) => {

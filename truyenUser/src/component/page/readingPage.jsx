@@ -136,35 +136,34 @@ useEffect(() => {
 
 // Effect #4: Hiển thị dialog "ĐỌC TIẾP?" (chạy khi có lịch sử hoặc nội dung chương)
 
-
 useEffect(() => {
-  // 1. Điều kiện tiên quyết: chỉ chạy khi có đủ dữ liệu
+  // Điều kiện tiên quyết: chỉ chạy khi có đủ dữ liệu
   if (loadingContent || !currentChapterContent || !Array.isArray(userHistory) || userHistory.length === 0) {
     return;
   }
 
   console.log("[Effect #4] Bắt đầu kiểm tra dialog (chỉ tìm theo chapterId)...");
-  
+
   let chapterHistoryFound = null;
 
-  // 2. Duyệt qua từng nhóm truyện trong lịch sử
+  // Duyệt qua từng nhóm truyện trong lịch sử
   for (const novelGroup of userHistory) {
     // Nếu nhóm truyện có mảng các chương đã đọc
     if (novelGroup && Array.isArray(novelGroup.historyReadRespones)) {
-      // 3. Tìm chương có id khớp trong mảng này
+      // Tìm chương có id khớp trong mảng này
       const found = novelGroup.historyReadRespones.find(
         (chap) => String(chap.id?.idChapter) === String(chapterId)
       );
-      
-      // 4. Nếu tìm thấy, gán kết quả và thoát khỏi vòng lặp ngay lập tức
+
+      // Nếu tìm thấy, gán kết quả và thoát khỏi vòng lặp ngay lập tức
       if (found) {
         chapterHistoryFound = found;
-        break; 
+        break;
       }
     }
   }
 
-  // 5. Nếu đã tìm thấy lịch sử của chương này và có vị trí đọc hợp lệ -> hiển thị dialog
+  // Nếu đã tìm thấy lịch sử của chương này và có vị trí đọc hợp lệ -> hiển thị dialog
   if (chapterHistoryFound && chapterHistoryFound.readPlace > 50) {
     console.log(`[Effect #4] TÌM THẤY! Vị trí đọc là ${chapterHistoryFound.readPlace}. Hiển thị dialog.`);
     setSavedScrollPosition(chapterHistoryFound.readPlace);
@@ -174,6 +173,15 @@ useEffect(() => {
   }
 
 }, [userHistory, loadingContent, currentChapterContent, chapterId]);
+
+// Effect set lại scroll position khi dialog được xác nhận
+useEffect(() => {
+  if (showContinueDialog && savedScrollPosition !== null) {
+    // Đảm bảo vị trí đã lưu hợp lệ và dialog đã được hiển thị
+    window.scrollTo(0, savedScrollPosition); // Cuộn trang đến vị trí đã lưu
+    console.log(`[Effect] Đang cuộn đến vị trí: ${savedScrollPosition}`);
+  }
+}, [showContinueDialog, savedScrollPosition]);
 // Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC (trước đây là Effect #4)
 let vitrilandau=100
 
@@ -360,11 +368,23 @@ useEffect(() => {
 
 
   const handleConfirmContinue = () => {
-    if (contentRef.current && savedScrollPosition) {
-      setTimeout(() => { if (contentRef.current) contentRef.current.scrollTop = savedScrollPosition; }, 100);
+    // Chỉ cần kiểm tra có vị trí đã lưu không
+    if (savedScrollPosition !== null) {
+      console.log(`[Confirm Continue] Yêu cầu cuộn window đến vị trí: ${savedScrollPosition}`);
+      
+      // Dùng setTimeout để đảm bảo việc cuộn xảy ra sau khi dialog đã đóng
+      // và trình duyệt có thời gian để tính toán lại layout.
+      setTimeout(() => {
+        // Dùng window.scrollTo() để cuộn toàn bộ trang
+        window.scrollTo({
+          top: savedScrollPosition,
+          behavior: 'smooth' // Hiệu ứng cuộn mượt mà
+        });
+      }, 100); 
     }
+    // Ẩn dialog sau khi đã xử lý
     setShowContinueDialog(false);
-  };
+};
   const handleCancelContinue = () => {
     setShowContinueDialog(false);
     localStorage.removeItem(getPositionKey());

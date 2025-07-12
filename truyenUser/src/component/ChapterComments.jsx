@@ -478,24 +478,39 @@ const ChapterComments = ({ chapterId, novelId }) => {
   };
 
   const handleSubmitReply = async (e, parentIdComment) => {
-    e.preventDefault();
-      console.log("Submitting reply:", { replyContent, currentUser, chapterId, parentIdComment });
+  e.preventDefault();
 
-    if (!replyContent.trim() || !currentUser?.idUser || !chapterId || !parentIdComment) return;
-    setIsSubmittingReply(true);
-    // dispatch(clearCommentError());
-    try {
-      await dispatch(createComment({
-        contentComment: replyContent,
-        idUser: currentUser.idUser,
-        idChapter: chapterId,
-        idParent: parentIdComment // <<<< TRUYỀN ĐÚNG TÊN TRƯỜNG MÀ THUNK MONG ĐỢI
-      })).unwrap();
-      setReplyContent('');
-      setReplyingToCommentId(null);
-    } catch (err) { console.error("Lỗi khi gửi trả lời:", err); }
-    finally { setIsSubmittingReply(false); }
-  };
+  if (!replyContent.trim() || !currentUser?.idUser || !chapterId || !parentIdComment) return;
+
+  setIsSubmittingReply(true);
+  
+  try {
+    // Dispatch action để tạo reply
+    const response = await dispatch(createComment({
+      contentComment: replyContent,
+      idUser: currentUser.idUser,
+      idChapter: chapterId,
+      idParent: parentIdComment, // Truyền idParent vào payload
+    })).unwrap();
+
+    // Cập nhật state comments ngay lập tức
+    const newReply = response; // Giả sử response trả về comment reply mới
+    setReplyContent(''); // Clear input
+    setReplyingToCommentId(null); // Clear reply form
+
+    // Cập nhật trực tiếp state comments
+    dispatch({
+      type: 'comments/createReply', // Tạo action tuỳ chỉnh để cập nhật reply vào comment cha
+      payload: { parentId: parentIdComment, newReply }
+    });
+  } catch (err) {
+    console.error("Lỗi khi gửi trả lời:", err);
+  } finally {
+    setIsSubmittingReply(false);
+  }
+};
+
+
 
   const toggleDropdown = (commentId) => {
     setOpenDropdownId(openDropdownId === commentId ? null : commentId);

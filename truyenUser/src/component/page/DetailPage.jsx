@@ -44,38 +44,43 @@ const DetailPage = () => {
     }
   }, [currentUser, dispatch]); // Chạy khi currentUser thay đổi
 
-  const isFollowing = useMemo(() => {
-    // Logic này giờ sẽ hoạt động đúng
-    return Array.isArray(followedNovels) && followedNovels.includes(novelId);
-  }, [followedNovels, novelId]);
-
+ const isFollowing = useMemo(() => {
+  return Array.isArray(followedNovels) && followedNovels.includes(novelId);
+}, [followedNovels, novelId]);
   const handleFollowToggle = () => {
-    if (!currentUser) {
-      toast.info("Vui lòng đăng nhập để theo dõi truyện!");
-      navigate('/');
-      return;
-    }
-    const actionPayload = { idUser: currentUser.idUser, idNovel: novelId };
-    
-    if (isFollowing) {
-      // TẠM THỜI VÔ HIỆU HÓA
-      // Khi có API, bạn sẽ bỏ comment đoạn code này
-      // dispatch(unfollowNovel(actionPayload))
-      //   .unwrap()
-      //   .then(() => toast.success("Đã bỏ theo dõi truyện."))
-      //   .catch(err => toast.error(`Lỗi: ${err.message || err}`));
-      toast.warn("Chức năng Bỏ theo dõi đang được phát triển.");
-    } else {
-      dispatch(followNovel(actionPayload))
-        .unwrap()
-        .then(() => {
-            toast.success("Đã theo dõi truyện thành công!");
-            // Cập nhật lại số lượng follow trên UI mà không cần tải lại trang
-            dispatch(getNovelById(novelId));
-        })
-        .catch(err => toast.error(`Lỗi: ${err.message || err}`));
-    }
-  };
+  if (!currentUser) {
+    toast.info("Vui lòng đăng nhập để theo dõi truyện!");
+    navigate('/');
+    return;
+  }
+
+  const actionPayload = { idUser: currentUser.idUser, idNovel: novelId };
+
+  // Kiểm tra nếu người dùng đã theo dõi truyện
+  if (isFollowing) {
+    // Gọi action để bỏ theo dõi truyện
+    dispatch(followNovel(actionPayload))
+      .unwrap()
+      .then(() => {
+        toast.success("Đã bỏ theo dõi truyện.");
+        // Cập nhật ngay lập tức danh sách truyện theo dõi trong Redux store
+        dispatch(LyberiNovels({ idUser: currentUser.idUser })); // Tải lại danh sách truyện theo dõi
+      })
+      .catch((err) => toast.error(`Lỗi: ${err.message || err}`));
+  } else {
+    // Gọi action để theo dõi truyện
+    dispatch(followNovel(actionPayload))
+      .unwrap()
+      .then(() => {
+        toast.success("Đã theo dõi truyện thành công!");
+        // Cập nhật ngay lập tức danh sách truyện theo dõi trong Redux store
+        dispatch(LyberiNovels({ idUser: currentUser.idUser })); // Tải lại danh sách truyện theo dõi
+      })
+      .catch((err) => toast.error(`Lỗi: ${err.message || err}`));
+  }
+};
+
+
   const handleOpenReviewDialog = () => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để đánh giá!");

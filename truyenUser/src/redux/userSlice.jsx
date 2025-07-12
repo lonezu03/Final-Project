@@ -365,8 +365,16 @@ export const followNovel = createAsyncThunk(
   async ({ idUser, idNovel }, { rejectWithValue }) => {
     try {
       const response = await apiClient.post('/novel/followNovel', { idUser, idNovel });
-      if (response.data?.code === 1073741824 && response.data.result === true) {
-        return { idNovel };
+
+      // Kiểm tra nếu kết quả trả về hợp lệ
+      if (response.data?.code === 1000) {
+        if (response.data.result === true) {
+          // Theo dõi thành công
+          return { idNovel, result: true };
+        } else if (response.data.result === false) {
+          // Bỏ theo dõi thành công
+          return { idNovel, result: false };
+        }
       }
       return rejectWithValue(response.data?.message || 'Theo dõi thất bại');
     } catch (error) {
@@ -374,7 +382,64 @@ export const followNovel = createAsyncThunk(
     }
   }
 );
+export const refreshUser = createAsyncThunk(
+  'user/refresh',
+  async (_, { getState, rejectWithValue }) => {
+    const { currentUser } = getState().user;
+    if (!currentUser?.idUser) {
+      return rejectWithValue('Không có người dùng để làm mới.');
+    }
+    try {
+      // API yêu cầu gửi idUser trong body dưới dạng chuỗi
+      const response = await apiClient.post('/user/refreshUser', currentUser.idUser, {
+          headers: {
+              // Quan trọng: Báo cho server biết bạn đang gửi một chuỗi text
+              'Content-Type': 'application/json' 
+          }
+      });
 
+      if (response.data && response.data.code === 1073741824 && response.data.result) {
+        return response.data.result; // Trả về object user mới và đầy đủ
+      }
+      return rejectWithValue(response.data?.message || 'Không thể làm mới thông tin người dùng.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi làm mới thông tin người dùng.');
+    }
+  }
+);
+export const loadAndRefreshUser = createAsyncThunk(
+  'user/loadAndRefresh',
+  async (_, { dispatch, getState, rejectWithValue }) => {
+    try {
+      // BƯỚC 1: Tải dữ liệu từ localStorage để UI hiển thị ngay lập tức
+      const savedUserString = localStorage.getItem('currentUser');
+      const savedToken = localStorage.getItem('authToken');
+      
+      if (savedUserString && savedToken) {
+        const user = JSON.parse(savedUserString);
+        // Dispatch một action đồng bộ để cập nhật state ngay lập tức
+        dispatch(setUserFromStorage({ user, token: savedToken }));
+
+        // BƯỚC 2: Gọi refreshUser để lấy dữ liệu và token mới nhất từ server
+        // Dùng unwrap() sẽ ném lỗi nếu refreshUser bị rejected, và khối catch sẽ bắt được
+        const refreshedUser = await dispatch(refreshUser()).unwrap();
+        
+        // Nếu refresh thành công, trả về dữ liệu mới nhất để cập nhật lần cuối
+        return refreshedUser;
+      }
+
+      // Nếu không có dữ liệu trong storage, không làm gì cả
+      return rejectWithValue('No user data in storage.');
+
+    } catch (error) {
+      // Lỗi này xảy ra khi dispatch(refreshUser()).unwrap() thất bại (ví dụ: token hết hạn)
+      console.log('Refresh token failed, logging out.', error);
+      // Tự động đăng xuất người dùng một cách "thầm lặng"
+      dispatch(logoutUser()); 
+      return rejectWithValue(error);
+    }
+  }
+);
  const handlePending = (state) => {
       state.loading = true;
       state.error = null;
@@ -448,20 +513,9 @@ const userSlice = createSlice({
     clearUserError: (state) => { state.error = null; },
     clearOtpMessage: (state) => { state.otpMessage = null; },
     clearHistoryActionStatus: (state) => { state.historyActionStatus = null; },
-    loadUserFromStorage: (state) => {
-      const savedUserString = localStorage.getItem('currentUser');
-      const savedToken = localStorage.getItem('authToken');
-      if (savedUserString) {
-        try {
-          state.currentUser = JSON.parse(savedUserString);
-        } catch (e) {
-          console.error("Error parsing currentUser from localStorage", e);
-          localStorage.removeItem('currentUser');
-        }
-      }
-      if (savedToken) {
-        state.token = savedToken;
-      }
+    setUserFromStorage: (state, action) => {
+        state.currentUser = action.payload.user;
+        state.token = action.payload.token;
     },
     clearUserHistory: (state) => {
       state.userHistory = [];
@@ -655,11 +709,20 @@ const userSlice = createSlice({
         state.error = action.payload; // Lưu lỗi nếu có
       })
       .addCase(followNovel.fulfilled, (state, action) => {
-    state.loading = false;
-    if (!state.followedNovels.includes(action.payload.idNovel)) {
-      state.followedNovels.push(action.payload.idNovel);
+  state.loading = false;
+  const { idNovel, result } = action.payload;
+
+  if (result === true) {
+    // Nếu kết quả là true, thêm vào danh sách theo dõi
+    if (!state.followedNovels.includes(idNovel)) {
+      state.followedNovels.push(idNovel);
     }
-  })
+  } else if (result === false) {
+    // Nếu kết quả là false, xóa khỏi danh sách theo dõi
+    state.followedNovels = state.followedNovels.filter(novelId => novelId !== idNovel);
+  }
+})
+
    .addCase(LyberiNovels.fulfilled, (state, action) => {
       // action.payload là mảng các object truyện [{idNovel: "..."}, ...]
       // Chúng ta chỉ cần lấy ra mảng các ID
@@ -681,7 +744,48 @@ const userSlice = createSlice({
             // Cập nhật lại localStorage
             localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
         }
+    }) .addCase(refreshUser.fulfilled, (state, action) => {
+        // Đây là reducer quan trọng nhất
+        // Nó sẽ ghi đè toàn bộ thông tin user cũ bằng dữ liệu mới nhất từ server
+        state.currentUser = action.payload;
+        
+        // Cập nhật lại token nếu có token mới được trả về
+        if(action.payload.token) {
+            state.token = action.payload.token;
+            localStorage.setItem('authToken', action.payload.token);
+        }
+        
+        // Cập nhật lại localStorage
+        localStorage.setItem('currentUser', JSON.stringify(action.payload));
+        
+        state.loading = false;
+        state.error = null;
     })
+    .addCase(refreshUser.pending, (state) => {
+        state.loading = true;
+    })
+    .addCase(refreshUser.rejected, (state, action) => {
+        state.loading = false;
+        // Có thể không cần báo lỗi ra UI, chỉ log ra console
+        console.error('Refresh user failed:', action.payload);
+    })
+     .addCase(loadAndRefreshUser.pending, (state) => {
+            // Có thể không cần làm gì ở đây, vì UI đã hiển thị dữ liệu cũ
+        })
+        .addCase(loadAndRefreshUser.fulfilled, (state, action) => {
+            // Reducer này sẽ ghi đè dữ liệu từ storage bằng dữ liệu mới nhất từ server
+            state.currentUser = action.payload;
+            if(action.payload.token) {
+                state.token = action.payload.token;
+                localStorage.setItem('authToken', action.payload.token);
+            }
+            localStorage.setItem('currentUser', JSON.stringify(action.payload));
+        })
+        .addCase(loadAndRefreshUser.rejected, (state, action) => {
+            // Không cần làm gì ở đây vì logic logout đã được xử lý bên trong thunk
+            // Chỉ đảm bảo state không bị treo ở trạng thái loading
+            state.loading = false;
+        })
 
       // .addMatcher cho các hành động login vẫn giữ nguyên
       .addMatcher(
@@ -724,7 +828,7 @@ export const {
   logoutUser,
   clearUserError,
   clearOtpMessage,
-  loadUserFromStorage,
+  setUserFromStorage, 
   clearHistoryActionStatus,
   clearUserHistory
 } = userSlice.actions;

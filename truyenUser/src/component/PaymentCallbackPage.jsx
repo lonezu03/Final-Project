@@ -3,6 +3,9 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CircleCheck, Home } from 'lucide-react';
+import { refreshUser } from '../redux/userSlice'; // Sửa import
+import { useDispatch } from 'react-redux';
+import { useEffect } from 'react';
 
 const PaymentCallbackPage = () => {
   const location = useLocation();
@@ -12,6 +15,11 @@ const PaymentCallbackPage = () => {
   const amount = queryParams.get('amount') || '0'; // Lấy số tiền
   const transactionId = queryParams.get('vnp_TxnRef') || queryParams.get('apptransid') || 'Không có'; // Lấy mã giao dịch
 
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(refreshUser());
+  }, [dispatch]);
   return (
     // --- Giao diện nền sáng ---
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
