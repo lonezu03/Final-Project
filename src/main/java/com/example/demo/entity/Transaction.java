@@ -7,8 +7,11 @@ import com.example.demo.enums.StatusDeposit;
 import com.example.demo.enums.TypeDeposit;
 import com.example.demo.enums.TypeTransaction;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -45,8 +48,10 @@ public class Transaction {
 	private LocalDateTime dateEndRent;
 	
 	private Integer amountCoin;
-	
+	  @Column(name = "statusDeposit",nullable = false)
+	    @Enumerated(EnumType.STRING)
 	private StatusDeposit statusDeposit;
-	
+	  @Column(name = "typeTransaction",nullable = false)
+	    @Enumerated(EnumType.STRING)
 	private TypeTransaction typeTransaction;
 }

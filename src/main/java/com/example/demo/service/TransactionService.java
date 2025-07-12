@@ -75,7 +75,7 @@ public class TransactionService {
 	            }
 
 	            HistoryDepositCreationRequest historyRequest = HistoryDepositCreationRequest.builder()
-	                    .amountDeposit(request.getAmountCoin())
+	                    .amountDeposit(null)
 	                    .coinDeposit(request.getAmountCoin())
 	                    .voucher(0.0)
 	                    .statusDeposit(StatusDeposit.PENDING)
@@ -86,7 +86,7 @@ public class TransactionService {
 
 	            HistoryDeposit historyDeposit = historyDepositMapper.toHistoryDeposit(historyRequest);
 	            historyDeposit.setUser(user);
-
+	            historyDeposit.setDateCreate(LocalDateTime.now());
 	            historyDeposits.add(historyDeposit);
 	        }
 

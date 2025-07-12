@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -71,4 +72,7 @@ public class Novel {
 	@OneToMany(mappedBy = "novel",cascade = CascadeType.ALL,orphanRemoval = true)
 	@OrderBy("indexChapter ASC") // <-- THÊM DÒNG NÀY
 	Set<Chapter> chapters=new HashSet<>();
+	
+	@OneToMany(mappedBy = "novel", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<ReviewNovel> reviewNovels = new ArrayList<>();
 }
