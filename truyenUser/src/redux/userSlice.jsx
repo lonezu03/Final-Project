@@ -517,6 +517,21 @@ const userSlice = createSlice({
         state.currentUser = action.payload.user;
         state.token = action.payload.token;
     },
+      loadUserFromStorage: (state) => {
+      const savedUserString = localStorage.getItem('currentUser');
+      const savedToken = localStorage.getItem('authToken');
+      if (savedUserString) {
+        try {
+          state.currentUser = JSON.parse(savedUserString);
+        } catch (e) {
+          console.error("Error parsing currentUser from localStorage", e);
+          localStorage.removeItem('currentUser');
+        }
+      }
+      if (savedToken) {
+        state.token = savedToken;
+      }
+    },
     clearUserHistory: (state) => {
       state.userHistory = [];
       state.isHistoryLoading = false;
@@ -829,6 +844,8 @@ export const {
   clearUserError,
   clearOtpMessage,
   setUserFromStorage, 
+    loadUserFromStorage,
+
   clearHistoryActionStatus,
   clearUserHistory
 } = userSlice.actions;
