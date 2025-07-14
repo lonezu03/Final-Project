@@ -34,24 +34,24 @@ public class Transaction {
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private String idTransaction;
-	
+
 	@ManyToOne
 	@JoinColumn(name = "id_User", nullable = false)
-	private User user; 
+	private User user;
 
 	@ManyToOne
 	@JoinColumn(name = "id_Chapter", nullable = false)
 	private Chapter chapter;
-	
+
 	private LocalDateTime dateBuy;
-	
+
 	private LocalDateTime dateEndRent;
-	
+
 	private Integer amountCoin;
-	  @Column(name = "statusDeposit",nullable = false)
-	    @Enumerated(EnumType.STRING)
+	@Column(name = "statusDeposit", nullable = false)
+	@Enumerated(EnumType.STRING)
 	private StatusDeposit statusDeposit;
-	  @Column(name = "typeTransaction",nullable = false)
-	    @Enumerated(EnumType.STRING)
+	@Column(name = "typeTransaction", nullable = false)
+	@Enumerated(EnumType.STRING)
 	private TypeTransaction typeTransaction;
 }

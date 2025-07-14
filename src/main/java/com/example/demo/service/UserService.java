@@ -241,9 +241,14 @@ public class UserService {
 		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
 		
 		List<String> chapterBought = transactionRepository
-			    .findByUser_IdUserAndStatusDeposit(user.getIdUser(),StatusDeposit.SUCCESS).stream()
-			    .map(tr -> tr.getChapter().getIdChapter())
+			    .findByUser_IdUser(user.getIdUser()).stream()
+			    .filter(t -> t.getStatusDeposit() == StatusDeposit.SUCCESS)
+			    .map(t -> t.getChapter().getIdChapter()) // giả sử bạn muốn lấy idChapter
 			    .toList();
+		
+	
+		
+		
 		userRespone.setChapterBought(chapterBought);
 		
 		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
