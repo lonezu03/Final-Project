@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.LocaleResolver;
 
 
@@ -137,6 +139,22 @@ public class Config {
     }
 
 
+
+    @Bean
+    public WebClient webClient() {
+        // Kích thước buffer mới, ví dụ 16MB.
+        final int size = 16 * 1024 * 1024; 
+        
+        final ExchangeStrategies strategies = ExchangeStrategies.builder()
+                .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(size))
+                .build();
+
+        // Chỉ xây dựng và trả về WebClient đã được cấu hình bộ đệm
+        return WebClient.builder()
+                .exchangeStrategies(strategies)
+                .build();
+    }
+    
     /**
      * Defines the {@link MessageSource} bean to handle i18n messages (e.g., validation errors).
      * Automatically detects files like errorMessages_vi.properties, errorMessages_en.properties, etc.

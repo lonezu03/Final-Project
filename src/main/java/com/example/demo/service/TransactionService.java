@@ -28,10 +28,12 @@ import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class TransactionService {
 
 	ITransactionMapper transactionMapper;
@@ -119,7 +121,7 @@ public class TransactionService {
 
 	        user.setCoin(user.getCoin() - totalCoinRequired);
 	        pendingTransactions.forEach(tr -> tr.setStatusDeposit(StatusDeposit.SUCCESS));
-
+	        log.info("Coin"+user.getCoin());
 	        List<HistoryDeposit> historyDeposits = historyDepositRepository
 	                .findByUser_IdUserAndDetailInAndStatusDeposit(
 	                        userId,
@@ -138,7 +140,9 @@ public class TransactionService {
 	        	hd.setDateUpdate(LocalDateTime.now());
 	        });
 
-	        userRepository.save(user);
+	       user=  userRepository.save(user);
+	        log.info("Coin2"+user.getCoin());
+
 	        transactionRepository.saveAll(pendingTransactions);
 	        historyDepositRepository.saveAll(historyDeposits);
 	        return true;

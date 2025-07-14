@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
@@ -87,6 +88,53 @@ public class UploadFileService {
         return (String) uploadResult.get("secure_url");
     }
 
+    /**
+     * Upload một hình ảnh từ chuỗi Base64 (đã có tiền tố "data:image/png;base64,") lên Cloudinary.
+     *
+     * @param base64String Chuỗi base64 đầy đủ của hình ảnh.
+     * @return UploadFileRespone chứa public_id và URL của ảnh.
+     * @throws IOException nếu có lỗi trong quá trình giải mã hoặc upload.
+     */
+    public UploadFileRespone uploadBase64Image(String base64String) throws IOException {
+        log.info("Bắt đầu quá trình upload ảnh từ chuỗi Base64.");
+
+        // 1. Kiểm tra và tách chuỗi Base64 thô
+        if (base64String == null || !base64String.startsWith("data:image/")) {
+            throw new IllegalArgumentException("Chuỗi Base64 không hợp lệ hoặc không phải là định dạng ảnh.");
+        }
+        // Tách phần tiền tố (ví dụ: "data:image/png;base64,") để lấy dữ liệu thô
+        String[] parts = base64String.split(",");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Định dạng chuỗi Base64 không đúng.");
+        }
+        String rawBase64 = parts[1];
+
+        // 2. Giải mã Base64 thành byte array
+        byte[] imageBytes = Base64.getDecoder().decode(rawBase64);
+        log.debug("Giải mã thành công Base64 thành byte array, kích thước: {} bytes.", imageBytes.length);
+
+        // 3. Tạo một public_id duy nhất
+        // Chúng ta không có tên file gốc, nên tạo một tên chung chung
+        String publicValue = generatePublicValue("gemini-generated-image.png");
+
+        // 4. Upload byte array lên Cloudinary
+        // Đối với ảnh, resource_type mặc định là "image", nên không cần chỉ định rõ
+        Map<String, Object> uploadResult = cloudinary.uploader().upload(
+                imageBytes,
+                ObjectUtils.asMap("public_id", publicValue)
+        );
+
+        String public_ID = (String) uploadResult.get("public_id");
+        String url = (String) uploadResult.get("secure_url"); // Lấy secure_url để luôn là https
+
+        log.info("Upload ảnh lên Cloudinary thành công. Public ID: '{}', URL: '{}'", public_ID, url);
+
+        return UploadFileRespone.builder()
+                .public_id(public_ID)
+                .url(url)
+                .build();
+    }
+    
     /**
      * Xóa ảnh đã upload theo public_id.
      *

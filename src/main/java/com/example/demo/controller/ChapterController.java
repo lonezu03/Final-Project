@@ -40,7 +40,7 @@ public class ChapterController {
 
 	ChapterService chapterService;
 
-/**
+/** 
  * API lấy danh sách tất cả chương của một truyện cụ thể theo ID truyện.
  *
  * @param request thông tin truyện cần lấy chương (bao gồm ID và token nếu có)
