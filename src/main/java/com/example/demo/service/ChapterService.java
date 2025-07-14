@@ -186,18 +186,20 @@ public class ChapterService {
 			String originalFilename = textFile.getOriginalFilename();
 			if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
 				String cotent = new String(textFile.getBytes(), StandardCharsets.UTF_8);
-//				logger.info(cotent);
-
 				isHaveFile = true;
-//				String parentJobId = map.get("parentJobId");
-//			    ttsSubJobRepository.existsByParentJobIdAndStatus( parentJobId, status);
 				chapter.setContentChapter(cotent);
-//				chapter.setAudioFile(parentJobId);
 			} else {
 				throw new AppException(ErrorCode.FILE_MUST_TXT);
 			}
 		}
-		novel.setTotalChapter(novel.getTotalChapter() + 1);
+		
+		if (novel.getTotalChapter()!=null) {
+			novel.setTotalChapter(novel.getTotalChapter() + 1);
+
+		}else {
+			novel.setTotalChapter(0);
+
+		}
 		novelRepository.save(novel);
 
 		chapter = chapterRepository.save(chapter);
