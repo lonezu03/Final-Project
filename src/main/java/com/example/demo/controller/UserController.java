@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,6 +110,8 @@ public class UserController {
 	@PostMapping("/sendOTP")
 	@Operation(summary = "Gửi OTP qua email", description = "Gửi mã OTP (6 chữ số) tới địa chỉ email để xác thực.")
 	public ApiRespone<String> sendOTP(@RequestParam String email) {
+		Map<String, String> emailWrapper = Map.of("email", email);
+		JsonSchemaValidator.validate(emailWrapper, "SendOTPSchema.json");
 		String otp = mailService.generateOTP(6);
 		mailService.sendOTPEmail(email, "Xác nhận OTP", otp);
 		return ApiRespone.<String>builder().result(otp).build();
