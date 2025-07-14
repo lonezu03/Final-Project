@@ -6,7 +6,7 @@ import store from "./redux/store";
 
 import { getAllNovels, searchNovels, LyberiNovels } from './redux/novelSlice';
 import { getAllCategories } from './redux/categorySlice';
-import { setUserFromStorage,loadUserFromStorage } from './redux/userSlice';
+import { setUserFromStorage,loadUserFromStorage,loadAndRefreshUser } from './redux/userSlice';
 import NotificationWebSocket from './redux/NotificationWebSocket'; // Import NotificationWebSocket
 import 'react-toastify/dist/ReactToastify.css'; // Đảm bảo bạn import CSS của react-toastify
 import { ToastContainer } from 'react-toastify';
@@ -45,7 +45,7 @@ const AppContent = () => {
 
  useEffect(() => {
   // Chỉ fetch nếu dữ liệu chưa tồn tại
-  if (!novels || novels.length === 0) {
+  if (!novels || novels.length == 0) {
     dispatch(getAllNovels());
   }
 
@@ -99,7 +99,9 @@ const AppContent = () => {
 function App() {
   // useEffect để dispatch loadUserFromStorage một lần duy nhất khi app khởi động
   useEffect(() => {
-    store.dispatch(loadUserFromStorage());
+        store.dispatch(loadAndRefreshUser());
+
+    // store.dispatch(loadUserFromStorage());
   }, []);
 
   return (

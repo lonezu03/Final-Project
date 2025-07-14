@@ -13,7 +13,8 @@ import {
 import { createHistory, getAllHistoryByUser  } from '../../redux/userSlice';
 import apiClient from '../../services/api'; // Đảm bảo đường dẫn này đúng
 
-
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { FaCog, FaListUl, FaAngleLeft, FaAngleRight } from 'react-icons/fa';
 import AudioPlayer from '../AudioPlayer'; // Đảm bảo đường dẫn này đúng
 import ChapterComments from '../ChapterComments'; // Đảm bảo đường dẫn này đúng
@@ -90,6 +91,22 @@ const debounceTimerRef = useRef(null);
 //       chapterId,
 //     };
 //   }, [currentUser, currentChapterContent, novelId, chapterId]);
+ useEffect(() => {
+    // Chỉ kiểm tra khi có đầy đủ thông tin cần thiết
+    if (currentUser && chapterId && novelId) {
+      // Giả sử có truyện miễn phí hoặc chương đầu miễn phí (thêm logic nếu cần)
+      // Ví dụ: if (currentNovel.isPaid) { ... }
+      
+      const isPurchased = currentUser.chapterBought?.includes(chapterId);
+
+      if (!isPurchased) {
+        // Nếu chưa mua, không cho phép truy cập
+        toast.error("Bạn chưa mua chương này. Vui lòng quay lại để thực hiện thanh toán.");
+        // Điều hướng người dùng về trang chi tiết của truyện
+        navigate(`/novel/${novelId}`, { replace: true });
+      }
+    }
+  }, [currentUser, chapterId, novelId, navigate, currentNovel]);
   useEffect(() => {
     localStorage.setItem('readingFontSize', fontSize.toString());
     localStorage.setItem('readingLineHeight', lineHeight.toString());
@@ -280,7 +297,30 @@ useEffect(() => {
 //     window.removeEventListener('beforeunload', handleBeforeUnload);
 //   };
 // }, [currentUser, novelId, chapterId, currentChapterContent]);
+  const handleNavigateWithPurchaseCheck = (targetChapterId) => {
+    if (!targetChapterId) {
+      console.error("ID chương mục tiêu không hợp lệ.");
+      return; 
+    }
 
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để chuyển chương.");
+      navigate('/login');
+      return;
+    }
+
+    const isPurchased = currentUser.chapterBought?.includes(targetChapterId);
+
+    if (isPurchased) {
+      // ĐÃ MUA: Cho phép điều hướng
+      setProcessedChapterContent(null); // Xóa nội dung cũ để hiển thị loading
+      navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
+    } else {
+      // CHƯA MUA: Báo lỗi và quay về trang chi tiết
+      toast.error("Bạn cần mua chương này để đọc. Vui lòng mua trong danh sách chương.");
+      navigate(`/novel/${novelId}`); 
+    }
+  };
   useEffect(() => {
     if (currentChapterContent?.contentChapter && mainContentAreaRef.current && canvasContainerWidth > 0) {
       const originalText = currentChapterContent.contentChapter;
@@ -402,7 +442,6 @@ useEffect(() => {
     }
     const prev = currentIndex > 0 ? chaptersForReadingPageDropdown[currentIndex - 1] : null;
     const next = currentIndex < chaptersForReadingPageDropdown.length - 1 ? chaptersForReadingPageDropdown[currentIndex + 1] : null;
-    // Đổi tên để tránh xung đột với biến bên ngoài scope
     return { currentChapterIndex: currentIndex, prevChapterDetails: prev, nextChapterDetails: next };
   }, [chapterId, chaptersForReadingPageDropdown]);
 
@@ -425,32 +464,59 @@ useEffect(() => {
   const isLastChapter = !!(chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length > 0 && currentChapterIndex === chaptersForReadingPageDropdown.length - 1);
 
   // BƯỚC 3: Khai báo các hàm xử lý phụ thuộc vào các biến ở trên.
-  const handlePrevChapter = () => {
+  // const handlePrevChapter = () => {
+  //   if (prevChapterDetails?.idChapter) {
+  //     setProcessedChapterContent(null);
+  //     navigate(`/novel/${novelId}/chapter/${prevChapterDetails.idChapter}`);
+  //   }
+  // };
+
+  // const handleNextChapter = () => {
+  //   if (nextChapterDetails?.idChapter) {
+  //     setProcessedChapterContent(null);
+  //     navigate(`/novel/${novelId}/chapter/${nextChapterDetails.idChapter}`);
+  //   }
+  // };
+
+  // const handleChapterSelect = (selectedChapterId) => {
+  //   if (selectedChapterId && String(selectedChapterId) !== String(chapterId)) {
+  //     setProcessedChapterContent(null);
+  //     navigate(`/novel/${novelId}/chapter/${selectedChapterId}`);
+  //   }
+  //   setShowChapterListDropdown(false);
+  // };
+   const handlePrevChapter = () => {
     if (prevChapterDetails?.idChapter) {
-      setProcessedChapterContent(null);
-      navigate(`/novel/${novelId}/chapter/${prevChapterDetails.idChapter}`);
+      handleNavigateWithPurchaseCheck(prevChapterDetails.idChapter);
     }
   };
 
   const handleNextChapter = () => {
     if (nextChapterDetails?.idChapter) {
-      setProcessedChapterContent(null);
-      navigate(`/novel/${novelId}/chapter/${nextChapterDetails.idChapter}`);
+      handleNavigateWithPurchaseCheck(nextChapterDetails.idChapter);
     }
   };
 
   const handleChapterSelect = (selectedChapterId) => {
     if (selectedChapterId && String(selectedChapterId) !== String(chapterId)) {
-      setProcessedChapterContent(null);
-      navigate(`/novel/${novelId}/chapter/${selectedChapterId}`);
+      handleNavigateWithPurchaseCheck(selectedChapterId);
     }
     setShowChapterListDropdown(false);
   };
+  
   // ======================= KẾT THÚC FIX 2 =======================
 
   const renderErrorText = (err, type = "Nội dung") => (
     <div className="text-center py-10 text-red-500">Lỗi tải {type}: {typeof err === 'string' ? err : (err?.message || 'Đã có lỗi không xác định.')}</div>
   );
+ // nhưng để tránh render một frame nội dung sai, có thể thêm kiểm tra ở đây.
+  if (currentUser && !currentUser.chapterBought?.includes(chapterId)) {
+    // Mặc dù đã có useEffect điều hướng, điều này ngăn chặn việc render nội dung trong một khoảnh khắc
+    return <div className="flex justify-center items-center min-h-screen text-xl">Đang kiểm tra quyền truy cập...</div>;
+  }
+  if (loadingContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải nội dung chương...</div>;
+  if (errorContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return renderErrorText(errorContent, "nội dung chương");
+  if (!currentChapterContent) return <div className="flex justify-center items-center min-h-screen text-xl">Không tìm thấy nội dung chương này.</div>;
 
 
   if (novelLoading && !currentNovel) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải thông tin truyện...</div>;

@@ -749,17 +749,18 @@ const userSlice = createSlice({
       state.followedNovels = []; // Reset nếu lỗi
       console.error("Lỗi LyberiNovels:", action.payload);
     })
-    .addCase(confirmTransactions.fulfilled, (state, action) => {
-        // action.payload từ confirmTransactions là { success: true, confirmedChapters: ["..."] }
-        const newPurchasedChapters = action.payload.confirmedChapters;
-        if (state.currentUser && Array.isArray(newPurchasedChapters)) {
-            // Tạo một Set để tránh trùng lặp và thêm các chương mới vào
-            const updatedSet = new Set([...(state.currentUser.purchasedChapterIds || []), ...newPurchasedChapters]);
-            state.currentUser.purchasedChapterIds = Array.from(updatedSet);
-            // Cập nhật lại localStorage
-            localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
-        }
-    }) .addCase(refreshUser.fulfilled, (state, action) => {
+    // .addCase(confirmTransactions.fulfilled, (state, action) => {
+    //     // action.payload từ confirmTransactions là { success: true, confirmedChapters: ["..."] }
+    //     const newPurchasedChapters = action.payload.confirmedChapters;
+    //     if (state.currentUser && Array.isArray(newPurchasedChapters)) {
+    //         // Tạo một Set để tránh trùng lặp và thêm các chương mới vào
+    //         const updatedSet = new Set([...(state.currentUser.purchasedChapterIds || []), ...newPurchasedChapters]);
+    //         state.currentUser.purchasedChapterIds = Array.from(updatedSet);
+    //         // Cập nhật lại localStorage
+    //         localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+    //     }
+    // }) 
+    .addCase(refreshUser.fulfilled, (state, action) => {
         // Đây là reducer quan trọng nhất
         // Nó sẽ ghi đè toàn bộ thông tin user cũ bằng dữ liệu mới nhất từ server
         state.currentUser = action.payload;

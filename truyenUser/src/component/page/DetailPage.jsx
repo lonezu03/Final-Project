@@ -80,21 +80,46 @@ const DetailPage = () => {
   }
 };
 
+ const handleNavigateToChapter = (targetChapterId) => {
+    if (!targetChapterId) {
+      toast.warn("Không thể xác định chương cần đọc.");
+      return;
+    }
+
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để đọc chương này.");
+      navigate('/login');
+      return;
+    }
+    
+    // Logic kiểm tra chương đã mua
+    const isPurchased = currentUser.chapterBought?.includes(targetChapterId);
+
+    if (isPurchased) {
+      // Nếu đã mua, cho phép điều hướng
+      navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
+    } else {
+      // Nếu chưa mua, thông báo lỗi và chuyển tab
+      toast.error("Bạn cần mua chương này để có thể đọc. Vui lòng tìm chương trong danh sách bên dưới.");
+      setActiveTab('chapters');
+    }
+  };
+
 
   const handleOpenReviewDialog = () => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để đánh giá!");
-      navigate('/');
+      navigate('/login');
       return;
     }
     setShowReviewDialog(true);
   };
+
   const renderErrorText = (err) => (typeof err === 'string' ? err : err?.message || 'Đã có lỗi xảy ra.');
 
-  // Sắp xếp và ghi nhớ danh sách chương cho DetailPage
   const sortedChaptersForDetailPage = useMemo(() => {
     if (chaptersFromApiForDetailPage && Array.isArray(chaptersFromApiForDetailPage)) {
-      return [...chaptersFromApiForDetailPage].sort((a, b) => (a.chapterNumber || a.idChapter) - (b.chapterNumber || b.idChapter));
+      return [...chaptersFromApiForDetailPage].sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
     }
     return [];
   }, [chaptersFromApiForDetailPage]);
@@ -102,29 +127,29 @@ const DetailPage = () => {
   const handleReadFirstChapter = () => {
     if (sortedChaptersForDetailPage.length > 0) {
       const firstChapter = sortedChaptersForDetailPage[0];
-      if (firstChapter?.idChapter) navigate(`/novel/${novelId}/chapter/${firstChapter.idChapter}`);
-      else console.error("Không tìm thấy ID chương đầu tiên.");
-    } else if (!chaptersLoading) alert("Truyện này chưa có chương nào hoặc đang tải.");
+      handleNavigateToChapter(firstChapter?.idChapter);
+    } else if (!chaptersLoading) {
+      toast.info("Truyện này chưa có chương nào.");
+    }
   };
 
   const handleReadLatestChapter = () => {
     if (sortedChaptersForDetailPage.length > 0) {
       const latestChapter = sortedChaptersForDetailPage[sortedChaptersForDetailPage.length - 1];
-      if (latestChapter?.idChapter) navigate(`/novel/${novelId}/chapter/${latestChapter.idChapter}`);
-      else console.error("Không tìm thấy ID chương mới nhất.");
-    } else if (!chaptersLoading) alert("Truyện này chưa có chương nào hoặc đang tải.");
+      handleNavigateToChapter(latestChapter?.idChapter);
+    } else if (!chaptersLoading) {
+      toast.info("Truyện này chưa có chương nào.");
+    }
   };
 
   const handleReadContinue = () => {
     const lastReadChapterId = localStorage.getItem(`lastRead_${novelId}`);
     if (lastReadChapterId) {
-      // Kiểm tra xem chapterId đó có thực sự thuộc truyện này không (tùy chọn)
-      const chapterExists = sortedChaptersForDetailPage.some(ch => ch.idChapter === lastReadChapterId);
-      if(chapterExists) {
-        navigate(`/novel/${novelId}/chapter/${lastReadChapterId}`);
+      const chapterExists = sortedChaptersForDetailPage.some(ch => ch.idChapter.toString() === lastReadChapterId.toString());
+      if (chapterExists) {
+        handleNavigateToChapter(lastReadChapterId);
       } else {
-        // Nếu chapterId đã lưu không còn hợp lệ (ví dụ bị xóa), đọc từ đầu
-        console.warn(`Chapter ID ${lastReadChapterId} đã lưu không tìm thấy trong danh sách chương hiện tại. Đọc từ đầu.`);
+        console.warn(`Chapter ID ${lastReadChapterId} đã lưu không hợp lệ. Đọc từ đầu.`);
         handleReadFirstChapter();
       }
     } else {
@@ -136,7 +161,6 @@ const DetailPage = () => {
   if (novelError && !novelDetailData) return <div className="flex justify-center items-center min-h-screen text-red-500 text-xl p-10">Lỗi tải thông tin truyện: {renderErrorText(novelError)}</div>;
   if (!novelDetailData && !novelLoading) return <div className="flex justify-center items-center min-h-screen text-white text-xl p-10">Không tìm thấy truyện.</div>;
   if (!novelDetailData) return null;
-
   let authorDisplay = novelDetailData.authors?.map(auth => auth.nameAuthor || "N/A").join(', ') || "Chưa rõ tác giả";
   let categoriesDisplay = novelDetailData.categories?.map(cat => cat.nameCategory || "N/A") || ["Chưa phân loại"];
   if (categoriesDisplay.length === 0) categoriesDisplay = ["Chưa phân loại"];

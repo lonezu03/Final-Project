@@ -131,9 +131,9 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
           const chapterNumberDisplay = `Chương ${chapter.chapterNumber || (currentPage - 1) * chaptersPerPage + index + 1}`;
           const chapterTitle = chapter.titleChapter || "Chưa có tiêu đề";
           
-          const isPurchased = currentUser?.purchasedChapterIds?.includes(chapter.idChapter);
+          const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
 
-          return (
+            return (
             <li key={chapter.idChapter} className="flex items-center justify-between border-b border-gray-700">
               <div className="flex items-center flex-grow min-w-0">
                 <span className="w-20 md:w-24 flex-shrink-0 text-left py-2.5 border-r border-gray-700 mr-3 pl-2 text-gray-400">{chapterNumberDisplay}</span>
