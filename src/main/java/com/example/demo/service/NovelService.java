@@ -30,6 +30,7 @@ import com.example.demo.dto.respone.NovelRespone;
 import com.example.demo.dto.respone.UploadFileRespone;
 import com.example.demo.entity.Author;
 import com.example.demo.entity.Category;
+import com.example.demo.entity.Chapter;
 import com.example.demo.entity.FollowNovel;
 import com.example.demo.entity.FollowNovelId;
 import com.example.demo.entity.HistoryNotify;
@@ -83,7 +84,14 @@ public class NovelService {
 			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
 			  Double avg = ratingMap.get(novel.getIdNovel());
 			  novelRespone.setRating(avg != null ? String.format("%.1f", avg) : "0");
-			
+				Integer totalFollow= followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
+				novelRespone.setTotalFollower(totalFollow);
+			    
+			    int totalView = novel.getChapters()
+			    	    .stream()
+			    	    .mapToInt(Chapter::getViewChapter)
+			    	    .sum();		    
+			    novelRespone.setTotalView(totalView);
 			
 			return novelRespone;
 		}).toList();
@@ -99,9 +107,17 @@ public class NovelService {
 	public NovelRespone getNovel(String idNovel) {
 		 Novel novel = novelRepository.findById(idNovel)
 		            .orElseThrow(() -> new RuntimeException("Novel not found"));
-
+		 
+		 	Integer totalFollow= followNovelRepository.findByNovel_IdNovel(idNovel).size();
 		    NovelRespone respone = novelMapper.toNovelRespone(novel);
-
+		    respone.setTotalFollower(totalFollow);
+		    
+		    int totalView = novel.getChapters()
+		    	    .stream()
+		    	    .mapToInt(Chapter::getViewChapter)
+		    	    .sum();		    
+		    respone.setTotalView(totalView);
+		    
 		    // Gọi query lấy rating trung bình
 		    Double avg = reviewNovelRepository.findAverageRatingByNovelId(idNovel);
 		    respone.setRating(avg != null ? String.format("%.1f", avg) : "0");

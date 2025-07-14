@@ -24,6 +24,7 @@ public class NovelRespone {
 	String statusNovel;
 	String imageNovel;
 	Integer totalFollower;
+	Integer totalView;
 	Boolean isFollow;
 	
 	

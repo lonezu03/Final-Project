@@ -33,7 +33,7 @@ public class TextService {
     private static final Logger logger = LoggerFactory.getLogger(TextService.class);
     private final ITtsSubJobRepository ttsSubJobRepository;
 
-    private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj"; // Nên đưa vào application.properties
+    private static final String API_KEY = "Ox5oXSQpCVEATs6QYrTnLzrbodnM9qGN"; // Nên đưa vào application.properties
     private static final String API_URL = "https://api.fpt.ai/hmi/tts/v5";
 
     /**

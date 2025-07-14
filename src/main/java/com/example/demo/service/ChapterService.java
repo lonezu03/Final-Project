@@ -137,7 +137,10 @@ public class ChapterService {
 		
 		ChapterRespone chapterRespone=chapterMapper.toChapterRespone(chapters);
 		
-		if (ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter()).isPresent()) {
+		Optional<TtsJob> ttsJob=ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter());
+		
+		if (ttsJob.isPresent() &&ttsJob.get().getStatus().equals("COMPLETED")) {
+			
 			TtsJob ttsJobOpt = ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter())
 					.get();
 			logger.info(ttsJobOpt.getFinalAudioUrl());
