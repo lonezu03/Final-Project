@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useRef  } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Provider, useDispatch, useSelector } from "react-redux";
 
@@ -97,11 +97,19 @@ const AppContent = () => {
 
 // Component App gốc chịu trách nhiệm cung cấp store và tải phiên đăng nhập
 function App() {
-  // useEffect để dispatch loadUserFromStorage một lần duy nhất khi app khởi động
-  useEffect(() => {
-        store.dispatch(loadAndRefreshUser());
+  // SỬ DỤNG useRef ĐỂ TẠO CỜ (FLAG)
+  // useRef sẽ giữ nguyên giá trị của nó qua các lần re-render
+  const hasFetched = useRef(false);
 
-    // store.dispatch(loadUserFromStorage());
+  useEffect(() => {
+    // Chỉ dispatch action nếu cờ là false
+    if (!hasFetched.current) {
+      console.log("Dispatching loadAndRefreshUser for the first time.");
+      store.dispatch(loadAndRefreshUser());
+      
+      // Sau khi dispatch, đặt cờ thành true để không bao giờ chạy lại nữa
+      hasFetched.current = true;
+    }
   }, []);
 
   return (
@@ -109,7 +117,7 @@ function App() {
       <AppContent />
       <ToastContainer
         position="top-right"
-        autoClose={5000}
+        autoClose={3000} // Giảm thời gian toast
         hideProgressBar={false}
         newestOnTop={true}
         closeOnClick={true}

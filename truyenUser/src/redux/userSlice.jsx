@@ -385,56 +385,65 @@ export const followNovel = createAsyncThunk(
 export const refreshUser = createAsyncThunk(
   'user/refresh',
   async (_, { getState, rejectWithValue }) => {
-    const { currentUser } = getState().user;
-    if (!currentUser?.idUser) {
-      return rejectWithValue('Không có người dùng để làm mới.');
+    // Lấy token từ Redux state
+    const { token } = getState().user; 
+
+    if (!token) {
+      return rejectWithValue('Không có token để làm mới phiên đăng nhập.');
     }
+
     try {
-      // API yêu cầu gửi idUser trong body dưới dạng chuỗi
-      const response = await apiClient.post('/user/refreshUser', currentUser.idUser, {
-          headers: {
-              // Quan trọng: Báo cho server biết bạn đang gửi một chuỗi text
-              'Content-Type': 'application/json' 
-          }
+      // Gửi token trong body với Content-Type là text/plain
+      const response = await apiClient.post('/user/refreshUser', token, {
+        headers: {
+          // ==========================================================
+          // ĐÂY LÀ THAY ĐỔI DUY NHẤT VÀ QUAN TRỌNG NHẤT
+          'Content-Type': 'text/plain', 
+          // ==========================================================
+        },
       });
 
-      if (response.data && response.data.code === 1073741824 && response.data.result) {
-        return response.data.result; // Trả về object user mới và đầy đủ
+      // Logic xử lý response đã đúng
+      if (response.data && response.data.code === 1000 && response.data.result) {
+        return response.data.result; // Trả về object user mới
       }
+
       return rejectWithValue(response.data?.message || 'Không thể làm mới thông tin người dùng.');
+
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Lỗi khi làm mới thông tin người dùng.');
+      const errorMessage = error.response?.data?.message || 'Lỗi khi làm mới thông tin người dùng.';
+      console.error("Refresh User API Error:", errorMessage, error.response);
+      return rejectWithValue(errorMessage);
     }
   }
-);
+);  
+
+
+// Thunk loadAndRefreshUser không cần thay đổi. Nó đã được thiết kế để hoạt động tốt với refreshUser.
 export const loadAndRefreshUser = createAsyncThunk(
   'user/loadAndRefresh',
   async (_, { dispatch, getState, rejectWithValue }) => {
     try {
-      // BƯỚC 1: Tải dữ liệu từ localStorage để UI hiển thị ngay lập tức
       const savedUserString = localStorage.getItem('currentUser');
       const savedToken = localStorage.getItem('authToken');
       
       if (savedUserString && savedToken) {
         const user = JSON.parse(savedUserString);
-        // Dispatch một action đồng bộ để cập nhật state ngay lập tức
+        
+        // Cập nhật state trước để `refreshUser` có thể `getState().user.token`
         dispatch(setUserFromStorage({ user, token: savedToken }));
 
-        // BƯỚC 2: Gọi refreshUser để lấy dữ liệu và token mới nhất từ server
-        // Dùng unwrap() sẽ ném lỗi nếu refreshUser bị rejected, và khối catch sẽ bắt được
+        // Gọi `refreshUser`. Nó sẽ tự lấy token từ state và thực hiện logic mới ở trên.
         const refreshedUser = await dispatch(refreshUser()).unwrap();
         
-        // Nếu refresh thành công, trả về dữ liệu mới nhất để cập nhật lần cuối
         return refreshedUser;
       }
 
-      // Nếu không có dữ liệu trong storage, không làm gì cả
       return rejectWithValue('No user data in storage.');
 
     } catch (error) {
-      // Lỗi này xảy ra khi dispatch(refreshUser()).unwrap() thất bại (ví dụ: token hết hạn)
-      console.log('Refresh token failed, logging out.', error);
-      // Tự động đăng xuất người dùng một cách "thầm lặng"
+      // Bắt lỗi từ refreshUser().unwrap()
+      console.error('Không thể làm mới phiên đăng nhập, đang đăng xuất.', error);
       dispatch(logoutUser()); 
       return rejectWithValue(error);
     }

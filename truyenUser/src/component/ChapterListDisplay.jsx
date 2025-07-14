@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react'; // Icon loading
+import { refreshUser } from '../redux/userSlice';
 
 // Import các action từ transactionSlice và userSlice
 import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
@@ -83,7 +84,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
     dispatch(createTransaction(transactionData));
   };
 
-  const handleConfirmPurchase = () => {
+   const handleConfirmPurchase = async () => {
     if (!currentUser || !pendingTransaction) return;
     
     const confirmationData = {
@@ -91,24 +92,26 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
       listIdChapter: pendingTransaction.idChapters,
     };
     
-    dispatch(confirmTransactions(confirmationData))
-      .unwrap()
-      .then((result) => {
-        toast.success(result.message || "Mua chương thành công!");
-        
-        // Lấy ra chapterId vừa mua
-        const purchasedChapterId = pendingTransaction.idChapters[0];
-        
-        // Đóng dialog và reset state
-        setShowConfirmDialog(false);
-        dispatch(resetTransactionState());
+    try {
+      // BƯỚC 1: Chờ xác nhận giao dịch thành công
+      const result = await dispatch(confirmTransactions(confirmationData)).unwrap();
+      toast.success(result.message || "Mua chương thành công! Đang cập nhật dữ liệu...");
 
-        // Điều hướng thẳng vào chương vừa mua
-        navigate(`/novel/${novelId}/chapter/${purchasedChapterId}`);
-      })
-      .catch((err) => {
-        toast.error(`Xác nhận thất bại: ${err}`);
-      });
+      // BƯỚC 2: Chờ refresh dữ liệu người dùng thành công
+      await dispatch(refreshUser()).unwrap();
+      toast.success("Đã lưu chương!");
+
+      // BƯỚC 3: Sau khi mọi thứ đã xong, mới điều hướng
+      const purchasedChapterId = pendingTransaction.idChapters[0];
+      navigate(`/novel/${novelId}/chapter/${purchasedChapterId}`);
+
+    } catch (error) {
+      toast.error(`Giao dịch thất bại: ${error.message || error}`);
+    } finally {
+      // Luôn đóng dialog và reset state dù thành công hay thất bại
+      setShowConfirmDialog(false);
+      dispatch(resetTransactionState());
+    }
   };
   
   const handleCancelConfirm = () => {
