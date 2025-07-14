@@ -281,8 +281,9 @@ public class CommentService {
 
 		return commentPage.map(comment -> {
 
+			User user=userRepository.findByIdUser(request.getIdUser()).get();
 			CommentRespone commentRespone = commentMapper.toCommentRespone(comment);
-
+			commentRespone.setUrlImage(user.getAvatarUser());
 			boolean isLikedByRequestUser = false;
 			boolean isDislikeByRequestUser = false;
 

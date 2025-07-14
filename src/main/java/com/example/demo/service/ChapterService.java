@@ -270,7 +270,7 @@ public class ChapterService {
 		chapterOgirin = chapterMapper.toChapterbyChapter(chapter);
 		if (!chapterRepository.existsById(request.getIdChapter())) {
 			throw new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
-		}
+		} 
 
 		Novel novel = novelRepository.findById(request.getNovel()).get();
 

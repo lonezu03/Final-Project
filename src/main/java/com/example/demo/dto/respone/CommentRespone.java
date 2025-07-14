@@ -31,6 +31,8 @@ public class CommentRespone {
 	
 	String idUser;
 	
+	String urlImage;
+	
 	List<CommentRespone> replyComments;
 	
 	List<CommetLikeRespone> likes;
