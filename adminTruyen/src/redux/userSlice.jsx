@@ -1,74 +1,72 @@
-// src/redux/userSlice.js
-
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import apiClient from '../services/api';
 
 const userApiBase = "https://truongthaiduongphanthanhvu.onrender.com/user";
 
-// --- THUNK MỚI: XÁC THỰC PHIÊN ĐĂNG NHẬP KHI TẢI LẠI TRANG ---
-// Action này sẽ được gọi khi ứng dụng khởi động để kiểm tra token cũ.
-export const verifyUserSession = createAsyncThunk(
-  'user/verifySession',
-  async (_, { rejectWithValue, getState }) => {
-    const { token } = getState().user;
-    if (!token) {
-      // Nếu không có token, không cần gọi API, chỉ cần kết thúc.
-      return rejectWithValue('No token found');
-    }
-    
-    try {
-      // Giả sử bạn có endpoint /user/me để lấy thông tin user dựa trên token
-      // apiClient sẽ tự động đính kèm token vào header
-      const response = await apiClient.get('/user/me'); 
-      if (response.data && response.data.code === 1000 && response.data.result) {
-        // Thành công: trả về thông tin user mới nhất
-        return response.data.result;
-      }
-      return rejectWithValue('Invalid session data from server.');
-    } catch (error) {
-      // Thất bại (token hết hạn/không hợp lệ), server trả về lỗi 401/403
-      console.error("Session verification failed:", error.response?.data);
-      return rejectWithValue('Session expired or invalid.');
-    }
-  }
-);
+// ====================================================================
+// ASYNC THUNKS (Hành động gọi API)
+// ====================================================================
 
-
-// --- CÁC THUNK KHÁC (GIỮ NGUYÊN) ---
-export const registerUser = createAsyncThunk(/* ...code của bạn... */);
+/**
+ * Đăng nhập bằng Email và Mật khẩu.
+ */
 export const loginUserWithPassword = createAsyncThunk(
   'user/loginUserWithPassword',
   async (loginCredentials, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${userApiBase}/login`, loginCredentials);
-      if (response.data && response.data.code === 1000 && response.data.result && response.data.result.token) {
-        // Lưu token vào localStorage NGAY LẬP TỨC sau khi đăng nhập thành công
-        localStorage.setItem('authToken', response.data.result.token);
-        return response.data.result;
-      } else {
-        return rejectWithValue(response.data?.message || 'Login failed');
+      if (response.data && response.data.code === 1000 && response.data.result?.token) {
+        return response.data.result; // Trả về { user: {...}, token: "..." }
       }
+      return rejectWithValue(response.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng.');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Login API error.');
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
     }
   }
 );
-// ... các thunk khác của bạn ...
+
+/**
+ * Làm mới phiên đăng nhập khi tải lại trang.
+ * Sẽ được gọi khi ứng dụng khởi động nếu có token trong localStorage.
+ */
+export const refreshUserSession = createAsyncThunk(
+  'user/refreshSession',
+  async (_, { getState, rejectWithValue }) => {
+    const { token } = getState().user; // Lấy token từ Redux state
+    if (!token) {
+      return rejectWithValue('Không có token để làm mới phiên.');
+    }
+
+    try {
+      // Giả sử API của bạn là POST /user/refreshUser và nhận token dạng text
+      const response = await apiClient.post('/user/refreshUser', token, {
+        headers: { 'Content-Type': 'text/plain' },
+      });
+
+      if (response.data && response.data.code === 1000 && response.data.result) {
+        // Backend trả về object user mới và có thể là cả token mới
+        return response.data.result;
+      }
+      return rejectWithValue(response.data?.message || 'Không thể làm mới phiên.');
+    } catch (error) {
+      console.error("Lỗi làm mới phiên:", error.response?.data || error.message);
+      return rejectWithValue('Phiên đăng nhập đã hết hạn hoặc không hợp lệ.');
+    }
+  }
+);
 
 
-// --- SLICE DEFINITION (CẬP NHẬT) ---
+// ====================================================================
+// SLICE DEFINITION (Định nghĩa Slice)
+// ====================================================================
 
 const initialState = {
   currentUser: null,
   token: localStorage.getItem('authToken') || null,
-  usersList: [],
-  userHistory: [],
-  loading: false, // Loading cho các action thông thường (login, create,...)
-  // Thêm trạng thái loading RIÊNG cho việc xác thực phiên khi tải lại trang
-  isVerifyingSession: true, // Bắt đầu là `true` để hiển thị màn hình chờ
+  loading: false, // Loading chung cho login, register,...
+  isRefreshing: !!localStorage.getItem('authToken'), // Loading riêng cho việc refresh phiên
   error: null,
-  // ... các state khác
 };
 
 const userSlice = createSlice({
@@ -79,77 +77,76 @@ const userSlice = createSlice({
       state.currentUser = null;
       state.token = null;
       state.error = null;
-      state.isVerifyingSession = false; // Khi logout, không cần xác thực nữa
+      state.loading = false;
+      state.isRefreshing = false;
       localStorage.removeItem('currentUser');
       localStorage.removeItem('authToken');
-      // ... reset các state khác
     },
-    // Action này giờ chỉ mang tính tham khảo, logic chính nằm ở verifyUserSession
-    loadUserFromStorage: (state) => {
-      const savedUserString = localStorage.getItem('currentUser');
-      if (savedUserString) {
-        try {
-          state.currentUser = JSON.parse(savedUserString);
-        } catch (e) { console.error(e); }
-      }
+     setUserFromStorage: (state, action) => {
+      state.currentUser = action.payload.user;
+      state.token = action.payload.token;
+    
+  },
+    clearUserError: (state) => {
+      state.error = null;
     },
-    // ... các reducer khác
   },
   extraReducers: (builder) => {
-    const handleAuthSuccess = (state, action) => {
-      state.loading = false;
-      state.isVerifyingSession = false; // Đăng nhập xong, phiên đã hợp lệ
-      const userData = action.payload.user || action.payload;
-      const token = action.payload.token;
-
-      state.currentUser = userData;
-      if (token) {
-        state.token = token;
-        // localStorage đã được set trong thunk, nhưng set lại ở đây để chắc chắn
-        localStorage.setItem('authToken', token);
-      }
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      state.error = null;
-    };
-    
-    // ... (builder cho register, các action khác giữ nguyên)
-
-    // Xử lý cho matcher (đã bao gồm loginUserWithPassword)
-   
-      // ... các matcher khác
-
-    // --- XỬ LÝ CHO THUNK MỚI `verifyUserSession` ---
+    // ---- Xử lý cho ĐĂNG NHẬP ----
     builder
-      .addCase(verifyUserSession.pending, (state) => {
-        state.isVerifyingSession = true;
-      })
-      .addCase(verifyUserSession.fulfilled, (state, action) => {
-        state.isVerifyingSession = false;
-        state.currentUser = action.payload; // Cập nhật user với data mới nhất
-        localStorage.setItem('currentUser', JSON.stringify(action.payload));
+      .addCase(loginUserWithPassword.pending, (state) => {
+        state.loading = true;
         state.error = null;
       })
-      .addCase(verifyUserSession.rejected, (state, action) => {
-        state.isVerifyingSession = false; // Đã xác thực xong (dù thất bại)
-        state.currentUser = null;
-        state.token = null;
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('authToken');
-        console.log('Session rejected:', action.payload);
+      .addCase(loginUserWithPassword.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isRefreshing = false; // Đăng nhập thành công, phiên đã hợp lệ
+        
+        // Payload là { user: {...}, token: "..." }
+        state.currentUser = action.payload.user;
+        state.token = action.payload.token;
+        
+        // Lưu vào localStorage
+        localStorage.setItem('currentUser', JSON.stringify(action.payload.user));
+        localStorage.setItem('authToken', action.payload.token);
+      })
+      .addCase(loginUserWithPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload; // Gán lỗi để hiển thị trên UI
       });
-       builder
-      .addMatcher(
-        (action) => [
-          loginUserWithPassword.fulfilled.type,
-          // ... các action login khác
-        ].includes(action.type),
-        handleAuthSuccess
-      )
+
+    // ---- Xử lý cho LÀM MỚI PHIÊN ----
+    builder
+      .addCase(refreshUserSession.pending, (state) => {
+        state.isRefreshing = true;
+        state.error = null;
+      })
+      .addCase(refreshUserSession.fulfilled, (state, action) => {
+        state.isRefreshing = false;
+        
+        const userData = action.payload.user || action.payload;
+        const newToken = action.payload.token;
+
+        state.currentUser = userData;
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+
+        if (newToken) {
+            state.token = newToken;
+            localStorage.setItem('authToken', newToken);
+        }
+      })
+      // .addCase(refreshUserSession.rejected, (state, action) => {
+      //   state.isRefreshing = false;
+      //   // Khi refresh thất bại, xóa thông tin đăng nhập cũ
+      //   state.currentUser = null;
+      //   state.token = null;
+      //   localStorage.removeItem('currentUser');
+      //   localStorage.removeItem('authToken');
+      //   console.error('Refresh session rejected:', action.payload);
+      // });
   }
 });
 
-export const { logoutUser, loadUserFromStorage,clearUserError, // THÊM LẠI clearUserError VÀO ĐÂY
-  clearOtpMessage,
-  clearHistoryActionStatus,
-  clearUserHistory } = userSlice.actions;
+// Export các actions và reducer
+export const { logoutUser, clearUserError,setUserFromStorage } = userSlice.actions;
 export default userSlice.reducer;

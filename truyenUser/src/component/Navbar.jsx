@@ -30,26 +30,26 @@ const createSlug = (text) => {
 };
 
 const menuItems = [
-  {
-    label: "Thể loại",
-    basePath: "/category",
-    subItems: ["Tiên Hiệp", "Huyền Huyễn", "Khoa Huyễn", "Đô Thị", "Đồng Nhân", "Dã Sử", "Kỳ Ảo", "Truyện Teen"]
-  },
-  {
-    label: "Bối cảnh thế giới",
-    basePath: "/world",
-    subItems: ["Chư Thiên Vạn Giới", "Dị Tộc Luyện Tinh", "Tiên Lữ Kỳ Duyên", "Mạt Thế Nguy Cơ", "Hậu Môn Thế Gia"]
-  },
-  {
-    label: "Lưu phái",
-    basePath: "/style",
-    subItems: ["Sau Màn", "Mỹ Thực", "Ngọt Sủng", "Xuyên Không", "Tùy Thân", "Bàn Thờ", "Hệ Thống"]
-  },
-  {
-    label: "Danh sách",
-    basePath: "/list",
-    subItems: ["Truyện Dịch", "Truyện Convert", "Truyện Full", "Truyện Hot"]
-  },
+  // {
+  //   label: "Thể loại",
+  //   basePath: "/category",
+  //   subItems: ["Tiên Hiệp", "Huyền Huyễn", "Khoa Huyễn", "Đô Thị", "Đồng Nhân", "Dã Sử", "Kỳ Ảo", "Truyện Teen"]
+  // },
+  // {
+  //   label: "Bối cảnh thế giới",
+  //   basePath: "/world",
+  //   subItems: ["Chư Thiên Vạn Giới", "Dị Tộc Luyện Tinh", "Tiên Lữ Kỳ Duyên", "Mạt Thế Nguy Cơ", "Hậu Môn Thế Gia"]
+  // },
+  // {
+  //   label: "Lưu phái",
+  //   basePath: "/style",
+  //   subItems: ["Sau Màn", "Mỹ Thực", "Ngọt Sủng", "Xuyên Không", "Tùy Thân", "Bàn Thờ", "Hệ Thống"]
+  // },
+  // {
+  //   label: "Danh sách",
+  //   basePath: "/list",
+  //   subItems: ["Truyện Dịch", "Truyện Convert", "Truyện Full", "Truyện Hot"]
+  // },
 ];
 
 const Navbar = () => {

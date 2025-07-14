@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { loginUserWithPassword, clearUserError, loadUserFromStorage } from '../../redux/userSlice'; 
+import { loginUserWithPassword, clearUserError ,refreshUserSession} from '../../redux/userSlice'; 
 
 const LoginAdmin = () => {
   const [email, setEmail] = useState('');
@@ -11,13 +11,12 @@ const LoginAdmin = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { loading, error: reduxError, currentUser } = useSelector((state) => state.users) || {};
-
+const { loading, error: reduxError, currentUser } = useSelector((state) => state.user) || {};
   // SCENARIO 1: Xử lý khi người dùng đã đăng nhập từ trước và vào lại trang login
   useEffect(() => {
     // Tải thông tin người dùng từ localStorage ngay khi component được tải
     // để đảm bảo currentUser được cập nhật nếu F5 trang
-    dispatch(loadUserFromStorage());
+    dispatch(refreshUserSession());
   }, [dispatch]);
 
   useEffect(() => {

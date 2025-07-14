@@ -19,11 +19,11 @@ const TopStories = () => {
 
   // Fetch categories nếu chưa có (giả sử categories vẫn được quản lý riêng)
   // Nên thực hiện việc fetch này ở component cha (ví dụ: HomePage)
-  useEffect(() => {
-    if (!categories || categories.length === 0 && !categoriesLoading) {
-      dispatch(getAllCategories());
-    }
-  }, [dispatch, categories, categoriesLoading]);
+  // useEffect(() => {
+  //   if (!categories || categories.length === 0 && !categoriesLoading) {
+  //     dispatch(getAllCategories());
+  //   }
+  // }, [dispatch, categories, categoriesLoading]);
 
 
   const renderError = (err, type) => (typeof err === 'string' ? err : err?.message || `Đã có lỗi xảy ra khi tải ${type}.`);

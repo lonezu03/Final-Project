@@ -30,7 +30,8 @@ const AppContent = () => {
   const dispatch = useDispatch();
   const novels = useSelector((state) => state.novels.novels);
   const categories = useSelector((state) => state.categories.categories);
-  
+    const initialFetchDone = useRef(false);
+
   // State để lưu thông báo nhận được từ WebSocket
   const [notifications, setNotifications] = useState([]);
   
@@ -53,10 +54,9 @@ const AppContent = () => {
     // dispatch(getAllCategories());
   }
 
-  // Kiểm tra người dùng và chỉ load khi chưa có thông tin người dùng
-  if (currentUser && currentUser.idUser && !localStorage.getItem('authToken')) {
-    dispatch(LyberiNovels({ idUser: currentUser.idUser }));
-  }
+ if (currentUser?.idUser) {
+         dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+     }
 
 }, [dispatch, novels, categories, currentUser]); 
 

@@ -16,7 +16,7 @@ const Dashboard = () => {
             <h1 className="title">Dashboard</h1>
 
             {/* Khu vực hiển thị grid */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            {/* <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 <div className="card">
                     <div className="card-header">
                         <div className="w-fit rounded-lg bg-blue-500/20 p-2 text-blue-500 transition-colors dark:bg-blue-600/20 dark:text-blue-600">
@@ -77,12 +77,10 @@ const Dashboard = () => {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <div className="card col-span-1 md:col-span-2 lg:col-span-4">
-                    {/* Thẻ thống kê */}
                     <div className="card-header">
                         <p className="card-title">Overview</p>
                     </div>
 
-                    {/* Biểu đồ */}
                     <div className="card-body p-0">
                         <ResponsiveContainer
                             width={"100%"}
@@ -113,7 +111,6 @@ const Dashboard = () => {
                                     </linearGradient>
                                 </defs>
 
-                                {/* Tooltip hiển thị trong biểu đồ */}
                                 <Tooltip
                                     cursor={false}
                                     formatter={(value) => `$${value}`}
@@ -144,12 +141,10 @@ const Dashboard = () => {
                 </div>
 
                 <div className="card col-span-1 md:col-span-2 lg:col-span-3">
-                    {/* Tiêu đề Card */}
                     <div className="card-header">
                         <p className="card-title">Recent Sales</p>
                     </div>
 
-                    {/* Card Body*/}
                     <div className="card-body h-[300px] overflow-auto p-0">
                         {recentSalesData.map((sale, index) => (
                             <div
@@ -174,7 +169,7 @@ const Dashboard = () => {
                         ))}
                     </div>
                 </div>
-            </div>
+            </div> */}
 
             {/* <div className="card">
                 <div className="card-header">

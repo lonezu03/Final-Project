@@ -66,10 +66,10 @@ const NovelManager = () => {
     const payload = {
       nameNovel: e.target.nameNovel.value,
       descriptionNovel: e.target.descriptionNovel.value,
-      totalChapter: parseInt(e.target.totalChapter.value, 10) || 0,
-      rating: parseFloat(e.target.rating.value) || 0,
+      //totalChapter: parseInt(e.target.totalChapter.value, 10) || 0,
+      //rating: parseFloat(e.target.rating.value) || 0,
       statusNovel: e.target.statusNovel.value,
-      authors: selectedAuthorIds.map(id => ({ idAuthor: id })), // Gửi dưới dạng list object
+     // authors: selectedAuthorIds.map(id => ({ idAuthor: id })), // Gửi dưới dạng list object
     };
     
     // Tạo FormData để có thể gửi cả file và dữ liệu JSON
@@ -139,14 +139,14 @@ const NovelManager = () => {
                   <textarea id="descriptionNovel" name="descriptionNovel" rows="4" defaultValue={isEditing ? currentNovel?.descriptionNovel : ''} className="border border-gray-300 p-2 w-full rounded-md" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                  {/* <div>
                     <label htmlFor="totalChapter" className="block text-sm font-medium text-gray-700 mb-1">Tổng số chương</label>
                     <input id="totalChapter" name="totalChapter" type="number" defaultValue={isEditing ? currentNovel?.totalChapter : 0} className="border border-gray-300 p-2 w-full rounded-md" />
                   </div>
                   <div>
                     <label htmlFor="rating" className="block text-sm font-medium text-gray-700 mb-1">Đánh giá</label>
                     <input id="rating" name="rating" type="number" step="0.1" max="5" min="0" defaultValue={isEditing ? currentNovel?.rating : 0} className="border border-gray-300 p-2 w-full rounded-md" />
-                  </div>
+                  </div> */}
                 </div>
                 <div>
                   <label htmlFor="statusNovel" className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
@@ -156,7 +156,7 @@ const NovelManager = () => {
                     <option value="DROP">Tạm ngưng</option>
                   </select>
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tác giả</label>
                   <Select
                     isMulti
@@ -167,7 +167,7 @@ const NovelManager = () => {
                     onChange={(selected) => setSelectedAuthorIds(selected.map(opt => opt.value))}
                     placeholder="Chọn tác giả..."
                   />
-                </div>
+                </div> */}
                 <div>
                   <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">Ảnh bìa</label>
                   <input id="image" type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} className="border border-gray-300 p-2 w-full rounded-md" />

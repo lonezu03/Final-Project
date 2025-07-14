@@ -81,16 +81,17 @@ const DetailPage = () => {
 };
 
  const handleNavigateToChapter = (targetChapterId) => {
-    if (!targetChapterId) {
+  if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để đọc chương này.");
+      navigate('/login');
+      return;
+    } 
+  if (!targetChapterId) {
       toast.warn("Không thể xác định chương cần đọc.");
       return;
     }
 
-    if (!currentUser) {
-      toast.info("Vui lòng đăng nhập để đọc chương này.");
-      navigate('/login');
-      return;
-    }
+    
     
     // Logic kiểm tra chương đã mua
     const isPurchased = currentUser.chapterBought?.includes(targetChapterId);

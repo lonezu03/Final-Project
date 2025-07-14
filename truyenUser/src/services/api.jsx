@@ -9,8 +9,9 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken'); 
+    const currentUser = JSON.parse(localStorage.getItem('currentUser')); // Lấy thông tin người dùng từ localStorage
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${currentUser ? currentUser.token : token}`; // Thêm token vào header
     }
     return config;
   },

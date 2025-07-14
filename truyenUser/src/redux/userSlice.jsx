@@ -123,24 +123,24 @@ export const sendOTP = createAsyncThunk(
 );
 
 // 6. API Upload Avatar - Sử dụng apiClient
-export const uploadAvatar = createAsyncThunk(
-  'user/uploadAvatar',
-  async ({ email, imageFile }, { rejectWithValue }) => {
-    try {
-      const formData = new FormData();
-      formData.append('image', imageFile);
-      const response = await apiClient.post(`/user/uploadAvatar?email=${encodeURIComponent(email)}`, formData);
-      if (response.data && response.data.code === 1000 && response.data.result) {
-        return response.data.result; // Backend nên trả về object user đã cập nhật
-      } else {
-        return rejectWithValue(response.data?.message || 'Upload avatar failed: Invalid response.');
-      }
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Upload avatar API error.';
-      return rejectWithValue(errorMsg);
-    }
-  }
-);
+// export const uploadAvatar = createAsyncThunk(
+//   'user/uploadAvatar',
+//   async ({ email, imageFile }, { rejectWithValue }) => {
+//     try {
+//       const formData = new FormData();
+//       formData.append('image', imageFile);
+//       const response = await apiClient.post(`/user/uploadAvatar?email=${encodeURIComponent(email)}`, formData);
+//       if (response.data && response.data.code === 1000 && response.data.result) {
+//         return response.data.result; // Backend nên trả về object user đã cập nhật
+//       } else {
+//         return rejectWithValue(response.data?.message || 'Upload avatar failed: Invalid response.');
+//       }
+//     } catch (error) {
+//       const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Upload avatar API error.';
+//       return rejectWithValue(errorMsg);
+//     }
+//   }
+// );
 
 // 7. API CREATE HISTORY - Sử dụng apiClient
 export const createHistory = createAsyncThunk(
@@ -306,29 +306,7 @@ export const changeUserPassword = createAsyncThunk(
 );
 
 
-export const updateUserAvatar = createAsyncThunk(
-  'user/updateAvatar',
-  async (avatarFile, { rejectWithValue }) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', avatarFile);
 
-      // Endpoint có thể là /user/update-avatar hoặc tương tự
-      const response = await apiClient.post('/user/update-avatar', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data && response.data.code === 1000) {
-        return response.data.result; // API trả về user object đã cập nhật
-      }
-      return rejectWithValue(response.data.message || 'Cập nhật avatar thất bại.');
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Lỗi khi cập nhật avatar.');
-    }
-  }
-);
 //api createReviewNovel
 // API tạo đánh giá tiểu thuyết
 export const createReviewNovel = createAsyncThunk(
@@ -446,6 +424,47 @@ export const loadAndRefreshUser = createAsyncThunk(
       console.error('Không thể làm mới phiên đăng nhập, đang đăng xuất.', error);
       dispatch(logoutUser()); 
       return rejectWithValue(error);
+    }
+  }
+);
+
+// api upload avatar
+export const uploadAvatar = createAsyncThunk(
+  'user/uploadAvatar',
+  // Payload đầu vào là một object chứa file ảnh
+  async (imageFile, { getState, rejectWithValue }) => {
+    // Lấy email từ currentUser trong state để không cần truyền vào từ component
+    const { currentUser } = getState().user;
+    if (!currentUser?.emailUser) {
+      return rejectWithValue('Không tìm thấy email người dùng để tải lên avatar.');
+    }
+
+    try {
+      // Tạo đối tượng FormData để gửi file
+      const formData = new FormData();
+      // Đặt tên trường là "image" để khớp với API
+      formData.append('image', imageFile);
+
+      // Xây dựng URL với query parameter là email đã được mã hóa
+      const url = `/user/uploadAvatar?email=${encodeURIComponent(currentUser.emailUser)}`;
+
+      // Gọi API bằng apiClient. apiClient sẽ tự động thêm header Authorization.
+      // Axios sẽ tự động đặt 'Content-Type': 'multipart/form-data' khi body là một FormData.
+      const response = await apiClient.post(url, formData);
+
+      // Kiểm tra response từ server
+      if (response.data && (response.data.code === 1000 || response.data.code === 1073741824) && response.data.result) {
+        // Trả về object user đã được cập nhật hoàn chỉnh
+        return response.data.result;
+      }
+      
+      // Nếu code không đúng, reject với message từ server
+      return rejectWithValue(response.data?.message || 'Tải lên avatar thất bại.');
+
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Lỗi khi tải lên avatar.';
+      console.error("Upload Avatar API Error:", errorMessage, error.response);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -604,13 +623,14 @@ const userSlice = createSlice({
       // Upload Avatar
       .addCase(uploadAvatar.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(uploadAvatar.fulfilled, (state, action) => {
-        state.loading = false;
-        if (state.currentUser && state.currentUser.emailUser === action.payload.emailUser) {
-          // Giả sử action.payload là object user đã được cập nhật từ backend
-          state.currentUser = { ...state.currentUser, ...action.payload };
-          localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
-        }
-      })
+  state.loading = false;
+  if (state.currentUser && state.currentUser.emailUser === action.payload.emailUser) {
+    // Cập nhật chỉ trường avatarUser
+    state.currentUser = { ...state.currentUser, avatarUser: action.payload.avatarUser };
+    // Lưu lại chỉ thông tin mới vào localStorage
+    localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+  }
+})
       .addCase(uploadAvatar.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
 
       // Create History

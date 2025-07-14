@@ -84,8 +84,8 @@ const CommentItem = ({
     <div className={` ${level > 0 ? `ml-${level === 1 ? 4 : 8} sm:ml-${level === 1 ? 6 : 10} mt-3 pt-3 border-t border-gray-700/50` : ''}`}>
       <div className="flex items-start space-x-2 sm:space-x-3">
         <div className={`flex-shrink-0 rounded-full bg-gray-600 flex items-center justify-center text-gray-400 font-semibold ${level > 0 ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm'}`}>
-          {comment.user?.avatarUser ? (
-            <img src={comment.user.avatarUser} alt={comment.user.userNameUser || 'Avatar'} className="w-full h-full rounded-full object-cover" />
+          {comment.urlImage ? (
+            <img src={comment.urlImage} alt={comment.userName || 'Avatar'} className="w-full h-full rounded-full object-cover" />
           ) : (
             comment.userName ? comment.userName.charAt(0).toUpperCase() : '?'
           )}
@@ -272,7 +272,7 @@ const ChapterComments = ({ chapterId, novelId }) => {
             setCurrentPage(0);
         } else {
             // Nếu đang ở trang 1, dispatch lại để refresh
-            const searchCriteria = { idChapter, parentOnly: true };
+            const searchCriteria = { idChapter, parentOnly: true, idUser: currentUser?.idUser };
             const pageable = { page: 0, size: 10, sort: ['timeComment,desc'] };
             dispatch(searchComments({ searchCriteria, pageable }));
         }
@@ -300,6 +300,7 @@ const ChapterComments = ({ chapterId, novelId }) => {
       const searchCriteria = {
         idChapter: chapterId,
         parentOnly: true, // Chỉ lấy comment gốc
+        idUser: currentUser?.idUser, // Thêm idUser để lấy thông tin người dùng nếu cần
       };
       const pageable = {
         page: currentPage,

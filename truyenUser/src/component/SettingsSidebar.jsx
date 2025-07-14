@@ -20,28 +20,28 @@ import {
 
 // Dữ liệu cho các mục điều hướng trong sidebar
 const sidebarNavItems = [
-  {
-    label: "Kho truyện",
-    icon: Archive,
-    href: "#",
-    subItems: [
-      { label: "Truyện mới", href: "#" },
-      { label: "Truyện full", href: "#" },
-    ],
-  },
-  {
-    label: "Xếp hạng",
-    icon: ListOrdered,
-    href: "#",
-    subItems: [
-      { label: "Xếp hạng lượt đọc", href: "#" },
-      { label: "Xếp hạng đề cử", href: "#" },
-      { label: "Xếp hạng tặng thưởng", href: "#" },
-      { label: "Xếp hạng bình luận", href: "#" },
-    ],
-  },
-  { label: "Thời gian thực", icon: LineChart, href: "#" },
-  { label: "Đánh giá mới", icon: Star, href: "#" },
+  // {
+  //   label: "Kho truyện",
+  //   icon: Archive,
+  //   href: "#",
+  //   subItems: [
+  //     { label: "Truyện mới", href: "#" },
+  //     { label: "Truyện full", href: "#" },
+  //   ],
+  // },
+  // {
+  //   label: "Xếp hạng",
+  //   icon: ListOrdered,
+  //   href: "#",
+  //   subItems: [
+  //     { label: "Xếp hạng lượt đọc", href: "#" },
+  //     { label: "Xếp hạng đề cử", href: "#" },
+  //     { label: "Xếp hạng tặng thưởng", href: "#" },
+  //     { label: "Xếp hạng bình luận", href: "#" },
+  //   ],
+  // },
+  // { label: "Thời gian thực", icon: LineChart, href: "#" },
+  // { label: "Đánh giá mới", icon: Star, href: "#" },
 ];
 
 const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) => {
@@ -136,14 +136,14 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                 </li>
               </ul>
               <div className="mt-3 pt-3 border-t border-stone-200 grid grid-cols-2 gap-x-2 text-xs text-gray-600">
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <Gift size={16} className="mr-1 text-orange-500" /> 0
                   <span className="ml-auto flex items-center"><KeyRound size={14} className="mr-1 text-gray-400" /> 0</span>
                 </div>
                 <div className="flex items-center">
                   <Coins size={16} className="mr-1 text-yellow-600" /> 0
                   <span className="ml-auto flex items-center"><Wallet size={14} className="mr-1 text-gray-400" /> 0</span>
-                </div>
+                </div> */}
               </div>
             </div>
           )}
