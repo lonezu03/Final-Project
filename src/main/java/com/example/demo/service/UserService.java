@@ -212,6 +212,7 @@ public class UserService {
 			logger.warn("Business logic error when refreshing token: {}", ex.getMessage());
 			throw ex;
 		} catch (Exception ex) {
+			ex.printStackTrace();
 			logger.error("System error when refreshing token", ex);
 			throw new AppException(ErrorCode.UNKNOW_ERROR);
 		}

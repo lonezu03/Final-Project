@@ -80,9 +80,9 @@ public class AuthenticationService {
 		SignedJWT signedJWT = SignedJWT.parse(token);
 
 		Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-
+ 
 		var verified = signedJWT.verify(verifier);
-
+		log.info("Current time: {}", new Date());
 		return IntrospectRespone.builder()
 							.Valid(verified && expiryTime.after(new Date()))
 							.build();

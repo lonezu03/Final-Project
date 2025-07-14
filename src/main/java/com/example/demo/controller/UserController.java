@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.JsonSchemaValidator;
 import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.HistoryDepositUpdateRequest;
+import com.example.demo.dto.request.RefreshUserRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
@@ -111,7 +112,7 @@ public class UserController {
 	@Operation(summary = "Gửi OTP qua email", description = "Gửi mã OTP (6 chữ số) tới địa chỉ email để xác thực.")
 	public ApiRespone<String> sendOTP(@RequestParam String email) {
 		Map<String, String> emailWrapper = Map.of("email", email);
-		JsonSchemaValidator.validate(emailWrapper, "SendOTPSchema.json");
+		JsonSchemaValidator.validate(emailWrapper, "UserSendOTPSchema.json");
 		String otp = mailService.generateOTP(6);
 		mailService.sendOTPEmail(email, "Xác nhận OTP", otp);
 		return ApiRespone.<String>builder().result(otp).build();
