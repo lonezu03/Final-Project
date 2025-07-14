@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.JsonSchemaValidator;
 import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.HistoryDepositUpdateRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
@@ -82,6 +83,7 @@ public class UserController {
 	@PostMapping("/createUser")
 	@Operation(summary = "Tạo người dùng mới", description = "Đăng ký người dùng thông thường bằng thông tin tài khoản.")
 	public ApiRespone<UserRespone> createUser(@RequestBody UserCreationRequest request) {
+		JsonSchemaValidator.validate(request, "UserCreationSchema.json");
 		return ApiRespone.<UserRespone>builder().result(userService.createUser(request)).build();
 	}
 
@@ -94,6 +96,7 @@ public class UserController {
 	@PostMapping("/createUserByEmail")
 	@Operation(summary = "Tạo người dùng bằng email", description = "Đăng ký người dùng chỉ bằng email (dùng cho xác thực OTP).")
 	public ApiRespone<UserRespone> createUserByEmail(@RequestBody UserCreationByEmailRequest request) {
+		JsonSchemaValidator.validate(request, "UserCreationByEmailSchema.json");
 		return ApiRespone.<UserRespone>builder().result(userService.createUserByEmail(request)).build();
 	}
 

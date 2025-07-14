@@ -1,5 +1,11 @@
 package com.example.demo.exception;
 
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.everit.json.schema.ValidationException;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.ResponseEntity;
@@ -109,4 +115,74 @@ public class GlobalExceptionHandler {
 	       return ResponseEntity.badRequest().body(apiRespone);
 	   }
 	   
+	   @ExceptionHandler(UncheckedIOException.class)
+	   public ResponseEntity<ApiRespone> handleUncheckedIOException(UncheckedIOException ex, HttpServletRequest request) {
+	       String endpoint = request.getRequestURI();
+	       String message = "Failed to read schema or JSON data at endpoint: " + endpoint;
+
+	       if (ex.getCause() != null) {
+	           message += ". Details: " + ex.getCause().getMessage();
+	       }
+
+	       ApiRespone apiRespone = ApiRespone.builder()
+	               .code(ErrorCode.INVALID_JSON_SCHEMA.getCode()) // có thể tạo mã lỗi riêng nếu muốn
+	               .message(message)
+	               .build();
+
+	       log.error("UncheckedIOException at [{}]: {}", endpoint, ex.getMessage(), ex);
+	       return ResponseEntity.badRequest().body(apiRespone);
+	   }
+
+	   
+//		/**
+//		 * Handles JSON Schema validation exceptions. This method is triggered when a
+//		 * {@link ValidationException} is thrown.
+//		 *
+//		 * @param ex the ValidationException related to JSON Schema validation.
+//		 * @return a ResponseEntity with status 400 (Bad Request) and a body containing
+//		 *         error details.
+//		 */
+//		@ExceptionHandler(ValidationException.class)
+//		public ResponseEntity<Map<String, Object>> handleValidationException(ValidationException ex) {
+//			List<String> errors = collectValidationErrors(ex);
+//			Map<String, Object> body = new HashMap<>();
+//			body.put("error", "Dữ liệu JSON không hợp lệ");
+//			body.put("details", errors);
+//			return ResponseEntity.badRequest().body(body);
+//		}
+//		
+//		  /**
+//	     * Helper method to collect all validation error messages from a
+//	     * {@code ValidationException}. Since a ValidationException may contain nested
+//	     * exceptions, this method recursively extracts all error messages.
+//	     *
+//	     * @param e the root ValidationException.
+//	     * @return a list of formatted error messages.
+//	     */
+//		private List<String> collectValidationErrors(ValidationException e) {
+//			List<String> errors = new ArrayList<>();
+//			if (e.getCausingExceptions().isEmpty()) {
+//				errors.add(formatErrorMessage(e));
+//			} else {
+//				for (ValidationException ve : e.getCausingExceptions()) {
+//					errors.addAll(collectValidationErrors(ve));
+//				}
+//			}
+//			return errors;
+//		}
+//		 /** 
+//	     * Helper method to format a validation error message for better readability.
+//	     * It extracts the field name from the "pointer to violation".
+//	     *
+//	     * @param e a single ValidationException instance.
+//	     * @return a formatted error message.
+//	     */
+//	    private String formatErrorMessage(ValidationException e) {
+//	        String pointer = e.getPointerToViolation(); // e.g., "/username"
+//	        if (pointer == null || pointer.isEmpty()) {
+//	            return e.getMessage();
+//	        } else {
+//	            return "Field `" + pointer.replace("/", "") + "`: " + e.getMessage();
+//	        }
+//	    }
 }
