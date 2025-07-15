@@ -1,6 +1,8 @@
 // src/AuthModal.jsx
 import React, { useState, useEffect } from "react";
 import { FcGoogle } from "react-icons/fc";
+import { Eye, EyeOff } from "lucide-react"; 
+
 import { X } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { auth } from '../firebase-config';
@@ -30,9 +32,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOtpSending, setIsOtpSending] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
+         setShowPassword(false);
+        setShowConfirmPassword(false);
         setView('login'); setEmail(''); setPassword(''); setConfirmPassword('');
         setOtpInput(''); setReceivedOtpFromServer(''); setLocalError('');
         dispatch(clearUserError());
@@ -71,7 +77,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const handleRequestOtp = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) { setLocalError("Mật khẩu xác nhận không khớp."); return; }
-    if (password.length < 6) { setLocalError("Mật khẩu phải có ít nhất 6 ký tự."); return; }
+    if (password.length < 8) { setLocalError("Mật khẩu phải có ít nhất 6 ký tự."); return; }
     setIsOtpSending(true); setLocalError(''); dispatch(clearUserError());
     try {
       const actionResult = await dispatch(sendOTPAPI({ email })).unwrap();
@@ -228,8 +234,28 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 <label htmlFor="password-login" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
                 <a href="#" className="text-xs text-amber-600 hover:text-amber-700 hover:underline" onClick={(e) => { e.preventDefault(); if (!currentLoadingState) alert("Chức năng Quên mật khẩu chưa được triển khai."); }}>Quên mật khẩu</a>
               </div>
-              <input id="password-login" type="password" placeholder="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"/>
-            </div>
+ <div className="relative">
+                <input 
+                  id="password-login" 
+                  // Thay đổi type dựa trên state
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                  disabled={isLoading || isOtpSending}
+                  className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+                />
+                {/* Nút bật/tắt hiển thị mật khẩu */}
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>            </div>
             <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
               {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
             </button>
@@ -254,12 +280,48 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             </div>
             <div className="mb-4">
               <label htmlFor="password-register" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
-              <input id="password-register" type="password" placeholder="password (ít nhất 6 ký tự)" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"/>
-            </div>
+<div className="relative">
+                <input 
+                  id="password-register" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="password (ít nhất 6 ký tự)" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                  disabled={isLoading || isOtpSending}
+                  className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>            </div>
             <div className="mb-5">
               <label htmlFor="confirm-password-register" className="block text-sm font-medium text-stone-600 mb-1">Nhập lại mật khẩu</label>
-              <input id="confirm-password-register" type="password" placeholder="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"/>
-            </div>
+<div className="relative">
+                <input 
+                  id="confirm-password-register" 
+                  type={showConfirmPassword ? "text" : "password"} 
+                  placeholder="password" 
+                  value={confirmPassword} 
+                  onChange={(e) => setConfirmPassword(e.target.value)} 
+                  required 
+                  disabled={isLoading || isOtpSending}
+                  className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                  aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>            </div>
             <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
               {isOtpSending ? 'Đang gửi OTP...' : 'Tiếp tục'}
             </button>

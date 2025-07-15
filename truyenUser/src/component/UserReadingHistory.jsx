@@ -86,10 +86,11 @@ const UserReadingHistory = () => {
     setExpandedNovelId(currentId => (currentId === novelId ? null : novelId));
   };
 
-  const handleRemoveItem = (novelIdToRemove) => {
+  const handleRemoveItem = (chapterIdToRemove) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa lịch sử đọc của truyện này?")) {
-      if (currentUser?.idUser && novelIdToRemove) {
-        dispatch(deleteHistory({ idUser: currentUser.idUser, idNovel: novelIdToRemove }));
+      console.log(`Xóa lịch sử đọc truyện với  ID ch: ${chapterIdToRemove}`);
+      if (currentUser?.idUser && chapterIdToRemove) {
+        dispatch(deleteHistory({ idUser: currentUser.idUser, idChapter: chapterIdToRemove }));
       }
     }
   };
@@ -178,7 +179,7 @@ const UserReadingHistory = () => {
                     <button onClick={() => handleToggleExpand(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600" title={isExpanded ? "Thu gọn" : "Xem thêm"}>
                       {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                     </button>
-                    <button onClick={() => handleRemoveItem(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-red-500" title="Xóa">
+                    <button onClick={() => handleRemoveItem(item.chapterId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-red-500" title="Xóa">
                       <FaTimes />
                     </button>
                   </div>
