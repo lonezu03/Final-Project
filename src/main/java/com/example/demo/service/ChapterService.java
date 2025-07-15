@@ -180,6 +180,8 @@ public class ChapterService {
 		}
 
 		chapter.setNovel(novel);
+		
+		
 		chapter.setViewChapter(0);
 		Boolean isHaveFile = false;
 		if (textFile != null && !textFile.isEmpty()) {
@@ -264,33 +266,79 @@ public class ChapterService {
  * @throws IOException nếu xảy ra lỗi khi đọc file
  */
 	public ChapterRespone updateChapter(ChapterUpdateRequest request, MultipartFile textFile) throws IOException {
-		Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter()).get();
-		Chapter chapter = chapterMapper.toChapterUpdate(request);
-
-		chapterOgirin = chapterMapper.toChapterbyChapter(chapter);
-		if (!chapterRepository.existsById(request.getIdChapter())) {
-			throw new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
-		} 
-
-		Novel novel = novelRepository.findById(request.getNovel()).get();
-
-		chapterOgirin.setNovel(novel);
-		if (textFile != null && !textFile.isEmpty()) {
-			String originalFilename = textFile.getOriginalFilename();
-			if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
-				String cotent = new String(textFile.getBytes(), StandardCharsets.UTF_8);
-				chapterOgirin.setContentChapter(cotent);
-			} else {
-				throw new AppException(ErrorCode.FILE_MUST_TXT);
-			}
-		}
+		
 		try {
-			chapterOgirin = chapterRepository.save(chapterOgirin);
+			Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter()).orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
+			
+			chapterMapper.updateChapter(request,chapterOgirin);
+
+			
+			Novel novel = novelRepository.findById(request.getNovel()).orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
+			
+			if (!novel.getIdNovel().equals(chapterOgirin.getNovel().getIdNovel())) {
+				throw new AppException(ErrorCode.NOVEL_NOT_CONTAIN_CHAPTER);
+			}
+
+			if (chapterOgirin.getIndexChapter() == null) {
+				Long lastChapterNumber = chapterRepository.findTopByNovelOrderByIndexChapterDesc(novel)
+						.map(Chapter::getIndexChapter) // Lấy ra chapterNumber từ chapter cuối cùng
+						.orElse((long) 0); // Nếu chưa có chương nào, trả về 0
+				chapterOgirin.setIndexChapter(lastChapterNumber + 1);
+
+			}
+
+//			chapterOgirin.setNovel(novel);
+
+			
+			Boolean isHaveFile = false;
+			if (textFile != null && !textFile.isEmpty()) {
+				String originalFilename = textFile.getOriginalFilename();
+				if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
+					String cotent = new String(textFile.getBytes(), StandardCharsets.UTF_8);
+					isHaveFile = true;
+					chapterOgirin.setContentChapter(cotent);
+				} else {
+					throw new AppException(ErrorCode.FILE_MUST_TXT);
+				}
+			}
+			
+//			if (novel.getTotalChapter()!=null) {
+//				novel.setTotalChapter(novel.getTotalChapter() + 1);
+	//
+//			}else {
+//				novel.setTotalChapter(0);
+	//
+//			}
+//			novelRepository.save(novel);
+
+			chapterOgirin= chapterRepository.save(chapterOgirin);
+			if (isHaveFile) {
+				ttsJobAsyncService.speakLongTextAsync(chapterOgirin.getContentChapter(), chapterOgirin.getIdChapter());
+
+			}
+
+			List<FollowNovel> followNovels = followNovelRepository.findByNovel_IdNovel(chapterOgirin.getNovel().getIdNovel());
+
+			for (FollowNovel followNovel : followNovels) {
+				try {
+					HistoryNotityCreationRequest historyNotityCreationRequest = HistoryNotityCreationRequest.builder()
+							.user(followNovel.getUser()).nameNovel(followNovel.getNovel().getNameNovel())
+							.titleChapter(chapterOgirin.getTitleChapter()).build();
+					createHistoryNotify(historyNotityCreationRequest);
+				} catch (Exception e) {
+					logger.info("updateChapter > try catch follower");
+					e.printStackTrace();
+				}
+			}
+			return chapterMapper.toChapterRespone(chapterOgirin);
 		} catch (Exception e) {
+			logger.info("update chapter> try catch finall");
 			e.printStackTrace();
+			throw new AppException(ErrorCode.UNKNOW_ERROR); 
 		}
 
-		return chapterMapper.toChapterRespone(chapterOgirin);
+
+		
 	}
 /**
  * Tạo thông báo lịch sử cho người dùng khi có chương mới.

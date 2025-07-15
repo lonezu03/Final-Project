@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -122,7 +123,7 @@ public class CommentService {
 	public CommentRespone updateComment(CommentUpdateRequest request) {
 		User user = userRepository.findByIdUser(request.getUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-		Chapter chapter = chapterRepository.findById(request.getIdchapter()).get();
+		Chapter chapter = chapterRepository.findById(request.getIdchapter()).orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
 
 		Comment comment = commentMapper.toCommentUpdate(request);
 		comment.setUser(user);
@@ -281,9 +282,12 @@ public class CommentService {
 
 		return commentPage.map(comment -> {
 
-			User user=userRepository.findByIdUser(request.getIdUser()).get();
-			CommentRespone commentRespone = commentMapper.toCommentRespone(comment);
-			commentRespone.setUrlImage(user.getAvatarUser());
+//			User user=userRepository.findByIdUser(request.getIdUser()).get();
+//			CommentRespone commentRespone = getUrlImage(comment);
+			CommentRespone commentRespone=commentMapper.toCommentRespone(comment);
+//			commentRespone.setUrlImage(comment.getUser().getAvatarUser());
+			
+			
 			boolean isLikedByRequestUser = false;
 			boolean isDislikeByRequestUser = false;
 
@@ -302,7 +306,22 @@ public class CommentService {
 
 			return commentRespone;
 		});
-
 	}
+	
+//	private CommentRespone getUrlImage(Comment comment){
+//		CommentRespone commentRespone = commentMapper.toCommentRespone(comment);
+//
+//		commentRespone.setUrlImage(comment.getUser().getAvatarUser());
+//		if (comment.getReplies()!=null && !comment.getReplies().isEmpty())  {
+//			List<CommentRespone> replyComment=new ArrayList<>();
+//			for (Comment reply : comment.getReplies()) {
+//	            CommentRespone replyResponse = getUrlImage(reply);
+//	            replyComment.add(replyResponse);
+//	        }
+//			commentRespone.setReplyComments(replyComment);
+//		}
+//		
+//		return commentRespone;
+//	}
 
 }

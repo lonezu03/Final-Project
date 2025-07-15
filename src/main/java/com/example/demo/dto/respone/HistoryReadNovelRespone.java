@@ -21,5 +21,6 @@ import lombok.experimental.FieldDefaults;
 public class HistoryReadNovelRespone {
 
 	String nameNovel;
+//	String
 	List<HistoryReadSubRespone> historyReadRespones;
 }

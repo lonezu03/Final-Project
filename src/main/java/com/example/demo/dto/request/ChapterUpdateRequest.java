@@ -15,9 +15,8 @@ import lombok.experimental.FieldDefaults;
 public class ChapterUpdateRequest {
 
 	String idChapter;
+	
 	String titleChapter;
-
-	Integer viewChapter;
 
 	String novel;
 }

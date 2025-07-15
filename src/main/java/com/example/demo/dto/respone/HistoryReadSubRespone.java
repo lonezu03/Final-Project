@@ -20,6 +20,8 @@ public class HistoryReadSubRespone {
 
 	String urlNovel;
 	
+	String idNovel;
+	
 	 String nameNovel;
 
 	 String titleChapter;

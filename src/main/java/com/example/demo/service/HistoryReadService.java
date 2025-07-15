@@ -62,6 +62,7 @@ public class HistoryReadService {
 	                HistoryReadSubRespone sub = historyReadMapper.toHistoryReadRespone(hr);
 	                sub.setNameNovel(novel.getNameNovel());
 	                sub.setUrlNovel(novel.getImageNovel());
+	                sub.setIdNovel(hr.getChapter().getNovel().getIdNovel());
 	                sub.setTitleChapter(hr.getChapter().getTitleChapter());
 	                return sub;
 	            }).collect(Collectors.toList());

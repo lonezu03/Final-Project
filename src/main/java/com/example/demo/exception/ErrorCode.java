@@ -28,8 +28,10 @@ public enum ErrorCode {
 	INVALID_JSON(1033,"Invalid json"),INVALID_JSON_SCHEMA(1034,"Invaild json schema"),
 	DEPOSIT_NOT_EXISTS(1035,"Deposit not exists"),USER_NOT_ENOUGH_COIN(1036,"User coin not exists")
 	,INVALID_TRANSACTION_TYPE(1037,"Invald transaction type"),FOLLOW_NOT_EXISTS(1038,"Follow not exists"),
-	REFRESH_TOKEN_NOT_EXISTS(1039,"Refresh token not exists"),REFRESH_TOKEN_EXPIRY(1040,"Refesh token expiry")
-	,TOKEN_NOT_VALID(1041,"Token not valid"),UNKNOW_ERROR(9999, "Unknow error");
+	REFRESH_TOKEN_NOT_EXISTS(1039,"Refresh token not exists"),REFRESH_TOKEN_EXPIRY(1040,"Refesh token expiry"),
+	DOB_CANNOT_BE_NOW(1041,"The day of birth cannot be now and least than 18 year old")
+	,TOKEN_NOT_VALID(1042,"Token not valid")
+	,NOVEL_NOT_CONTAIN_CHAPTER(1043,"Novel not contain this chapter"),UNKNOW_ERROR(9999, "Unknow error");
 
 	private int code;
 	private String message;

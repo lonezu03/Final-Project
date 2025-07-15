@@ -1,6 +1,9 @@
 package com.example.demo.service;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -96,6 +99,17 @@ public class AuthorService {
 	public AuthorRespone createAuthor(AuthorCreationRequest request, MultipartFile file) throws IOException {
 		Author author = authorMapper.toAuthor(request);
 
+		long year=ChronoUnit.YEARS.between(request.getDobAuthor(), LocalDate.now());
+
+		
+		if (request.getDobAuthor().isAfter(LocalDate.now()) || year<18) {
+			log.info("old"+year);
+
+			throw new AppException(ErrorCode.DOB_CANNOT_BE_NOW);
+		}
+		
+
+		
 		if (file != null && !file.isEmpty()) {
 			UploadFileRespone uploadFileRespone = uploadFileService.uploadFile(file);
 			author.setImageAuthor(uploadFileRespone.getUrl());
@@ -123,10 +137,9 @@ public class AuthorService {
  */
 	public AuthorRespone updateAuthor(AuthorUpdateRequest request, MultipartFile file) throws IOException {
 
-		Author author = authorMapper.toAuthorUpdate(request);
-
-		Set<Novel> novels = new HashSet<>(novelRepository.findAllById(request.getNovels()));
-
+		Author author=authorRepository.findById(request.getIdAuthor()).orElseThrow(() -> new AppException(ErrorCode.AUTHOR_NOT_EXISTED));
+		 authorMapper.updateAuthor(request,author);
+		
 		if (file != null && !file.isEmpty()) {
 
 			if (author.getPublicIDAuthor() != null && !author.getPublicIDAuthor().isEmpty()) {
@@ -138,12 +151,14 @@ public class AuthorService {
 			author.setImageAuthor(uploadFileRespone.getUrl());
 			author.setPublicIDAuthor(uploadFileRespone.getPublic_id());
 		}
-
 		author = authorRepository.save(author);
 
-		for (Novel novel : novels) {
-			novel.getAuthors().add(author);
-			novelRepository.save(novel);
+		if (request.getNovels()!=null && !request.getNovels().isEmpty()) {
+			Set<Novel> novels = new HashSet<>(novelRepository.findAllById(request.getNovels()));
+			for (Novel novel : novels) {
+				novel.getAuthors().add(author);
+				novelRepository.save(novel);
+			}
 		}
 
 		return authorMapper.toAuthorRespone(author);
