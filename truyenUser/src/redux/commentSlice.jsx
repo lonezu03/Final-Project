@@ -143,7 +143,7 @@ export const updateCommentContent = createAsyncThunk(
         // Lấy giá trị like/dislike hiện tại từ existingComment, nếu không có thì mặc định là 0
         // likeComment: existingComment.likeComment || 0,
         // dislikeComment: existingComment.dislikeComment || 0,
-        chapter: existingComment.chapter?.idChapter || idChapterOfComment, // API yêu cầu 'chapter' là idChapter (kiểu số)
+        idchapter: existingComment.chapter?.idChapter || idChapterOfComment, // API yêu cầu 'chapter' là idChapter (kiểu số)
         user: idUserPerformingUpdate // API yêu cầu 'user' là idUser (kiểu string) của người thực hiện
       };
 

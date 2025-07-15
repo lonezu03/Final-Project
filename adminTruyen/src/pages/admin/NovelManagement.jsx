@@ -125,7 +125,7 @@ const NovelManager = () => {
       {/* Form Modal */}
       {showForm && (
         <>
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={cancelForm}></div>
+          <div className="fixed inset-0 bg-gray opacity-50 bg-opacity-50 z-40" onClick={cancelForm}></div>
           <div className="fixed inset-0 flex justify-center items-center z-50 overflow-y-auto py-10">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
               <h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Sửa Thông Tin Truyện' : 'Tạo Truyện Mới'}</h2>

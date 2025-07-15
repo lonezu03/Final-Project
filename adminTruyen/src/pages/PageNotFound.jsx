@@ -7,7 +7,7 @@ const PageNotFound = () => {
       <img src="../src/assets/sub-icon/EmptyBox.png" alt="Page Not Found" width={100} height={100}/>
       <h1 className='font-extrabold text-3xl'>404 Page not found </h1>
       <p className='text-md text-gray-500'>The page you requested does not exist.</p>
-      <ButtonHov Title='Continue Shopping' classCustom='px-2'/>
+      {/* <ButtonHov Title='Continue Shopping' classCustom='px-2'/> */}
     </div>
   )
 }

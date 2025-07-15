@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import apiClient from '../services/api';
-
-const userApiBase = "https://truongthaiduongphanthanhvu.onrender.com/user";
+import { rooturl } from './element';
+const userApiBase = rooturl + '/user'; 
 
 // ====================================================================
 // ASYNC THUNKS (Hành động gọi API)

@@ -17,7 +17,7 @@ const [newAuthor, setNewAuthor] = useState({
   descriptionAuthor: '',
   nationalityAuthor: '',
   dobAuthor: '',
-  dodAuthor: '',
+  // dodAuthor: '',
   genderAuthor: 'MALE',
   novels: [],
 });
@@ -31,7 +31,14 @@ const novelOptions = novels?.map((novel) => ({
   value: novel.idNovel,
   label: novel.nameNovel,
 }));
-
+ const [currentAuthor, setCurrentAuthor] = useState(null); 
+    
+    
+useEffect(() => {
+  if (error) {
+    alert(error);
+  }
+}, [error]);
 
   const authorsPerPage = 5; // Number of authors per page
   const totalAuthors = authors.length;
@@ -47,11 +54,12 @@ const novelOptions = novels?.map((novel) => ({
   const formData = new FormData();
 
   const jsonPayload = new Blob([JSON.stringify({
+    // idAuthor: isEditing ? newAuthor.idAuthor : undefined, // Chỉ gửi id nếu đang chỉnh sửa
     nameAuthor: newAuthor.nameAuthor,
     descriptionAuthor: newAuthor.descriptionAuthor,
     nationalityAuthor: newAuthor.nationalityAuthor,
     dobAuthor: newAuthor.dobAuthor,
-    dodAuthor: newAuthor.dodAuthor,
+    // dodAuthor: newAuthor.dodAuthor,
     genderAuthor: newAuthor.genderAuthor,
     novels: newAuthor.novels.map(String), // nếu có
   })], { type: 'application/json' });
@@ -72,7 +80,7 @@ const novelOptions = novels?.map((novel) => ({
     descriptionAuthor: '',
     nationalityAuthor: '',
     dobAuthor: '',
-    dodAuthor: '',
+    // dodAuthor: '',
     genderAuthor: 'MALE',
     novels: [],
   });
@@ -84,12 +92,15 @@ const novelOptions = novels?.map((novel) => ({
 
 //hack handleEditClick
 const handleEditClick = (author) => {
+  setCurrentAuthor(author); // Lưu lại toàn bộ object tác giả
+
   setNewAuthor({
+    idAuthor: author.idAuthor,
     nameAuthor: author.nameAuthor || '',
     descriptionAuthor: author.descriptionAuthor || '',
     nationalityAuthor: author.nationalityAuthor || '',
     dobAuthor: author.dobAuthor || '',
-    dodAuthor: author.dodAuthor || '',
+    // dodAuthor: author.dodAuthor || '',
     genderAuthor: author.genderAuthor || 'MALE',
     novels: Array.isArray(author.novels) ? author.novels.map(n => n.idNovel) : [],
   });
@@ -99,7 +110,13 @@ const handleEditClick = (author) => {
   setShowForm(true);
   // Nếu bạn cần tracking ID để update sau này:
 };
-
+ const cancelForm = () => {
+        setShowForm(false);
+        setIsEditing(false);
+        setCurrentAuthor(null);
+        setImageFile(null);
+        setSelectedNovelIds([]);
+    };
   // Handle delete author
   const handleDelete = (id) => {
     console.log('Deleting author with ID:', id);
@@ -110,159 +127,154 @@ const handleEditClick = (author) => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  // if (error) return <div>Error: {error}</div>;
 
   return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Button mở form */}
+      <button
+        onClick={() => setShowForm(true)}
+        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded mb-4 transition"
+      >
+        Add Author
+      </button>
 
-    <div>
-        {/* Button mở form */}
-<button
-  onClick={() => setShowForm(true)}
-  className="bg-green-500 text-white px-4 py-2 rounded mb-4"
->
-  Add Author
-</button>
-
-{showForm && (
-  <div>
-    <div className="fixed inset-0 bg-gray-700 opacity-50 z-10" onClick={() => setShowForm(false)}></div>
-    <div className="fixed inset-0 flex justify-center items-center z-20">
-      <div className="bg-white p-6 rounded shadow-lg w-1/3">
-<h2 className="text-xl font-bold mb-4">
+      {showForm && (
+        <div>
+          <div
+            className="fixed inset-0 bg-gray-700 opacity-50 z-10"
+            onClick={() => setShowForm(false)}
+          ></div>
+          <div className="fixed inset-0 flex justify-center items-center z-20">
+<div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold mb-6 text-gray-800">
                 {isEditing ? 'Edit Author' : 'Create New Author'}
               </h2>
-        {[
-          ['nameAuthor', 'Name'],
-          ['descriptionAuthor', 'Description'],
-          ['nationalityAuthor', 'Nationality'],
-          ['dobAuthor', 'Date of Birth', 'date'],
-          ['dodAuthor', 'Date of Death', 'date']
-        ].map(([key, label, type = 'text']) => (
-          <div key={key} className="mb-3">
-            <label className="block mb-1">{label}</label>
-            <input
-              type={type}
-              value={newAuthor[key]}
-              onChange={(e) => setNewAuthor({ ...newAuthor, [key]: e.target.value })}
-              className="border p-2 w-full"
-            />
-          </div>
-        ))}
+              {[
+                ['nameAuthor', 'Name'],
+                ['descriptionAuthor', 'Description'],
+                ['nationalityAuthor', 'Nationality'],
+                ['dobAuthor', 'Date of Birth', 'date'],
+              ].map(([key, label, type = 'text']) => (
+                <div key={key} className="mb-4">
+                  <label className="block mb-1 font-medium text-gray-700">{label}</label>
+                  <input
+                    type={type}
+                    value={newAuthor[key]}
+                    onChange={(e) => setNewAuthor({ ...newAuthor, [key]: e.target.value })}
+                    className="border border-gray-300 rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+              ))}
 
-        {/* Gender */}
-        <label className="block mb-2">Gender</label>
-        <select
-          value={newAuthor.genderAuthor}
-          onChange={(e) => setNewAuthor({ ...newAuthor, genderAuthor: e.target.value })}
-          className="border p-2 w-full mb-4"
-        >
-          <option value="MALE">Male</option>
-          <option value="FEMALE">Female</option>
-          <option value="OTHER">Other</option>
-        </select>
-       <label className="block mb-2">Select Novels</label>
-        <Select
-          isMulti
-          options={novelOptions}
-          value={novelOptions.filter((opt) =>
-            newAuthor.novels.includes(opt.value)
-          )}
-          onChange={(selectedOptions) =>
-            setNewAuthor({
-              ...newAuthor,
-              novels: selectedOptions.map((opt) => opt.value),
-            })
-          }
-        />
+              {/* Gender */}
+              <label className="block mb-2 font-medium text-gray-700">Gender</label>
+              <select
+                value={newAuthor.genderAuthor}
+                onChange={(e) => setNewAuthor({ ...newAuthor, genderAuthor: e.target.value })}
+                className="border border-gray-300 rounded px-3 py-2 w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </select>
 
+              <label className="block mb-2 font-medium text-gray-700">Select Novels</label>
+              <Select
+                isMulti
+                options={novelOptions}
+                value={novelOptions.filter((opt) => newAuthor.novels.includes(opt.value))}
+                onChange={(selectedOptions) =>
+                  setNewAuthor({
+                    ...newAuthor,
+                    novels: selectedOptions.map((opt) => opt.value),
+                  })
+                }
+                className="mb-4"
+              />
 
-        {/* Image Upload */}
-        <label className="block mb-2">Upload Image</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImage(e.target.files[0])}
-          className="border p-2 w-full mb-4"
-        />
+              {/* Image Upload */}
+              <label className="block mb-2 font-medium text-gray-700">Upload Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImage(e.target.files[0])}
+                className="border border-gray-300 rounded px-3 py-2 w-full mb-4"
+              />
 
-        {/* Submit */}
-        <button
+              {/* Submit */}
+              <button
                 onClick={handleSubmit}
-                className="bg-blue-500 text-white p-2 rounded mb-2 w-full"
+                className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded mb-2 w-full transition"
                 disabled={loading}
               >
                 {loading
-                  ? isEditing ? "Updating..." : "Creating..."
-                  : isEditing ? "Save Changes" : "Create Novel"}
+                  ? isEditing
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : isEditing
+                  ? 'Save Changes'
+                  : 'Create Novel'}
               </button>
 
-        <button
-          onClick={() => setShowForm(false)}
-          className="bg-gray-500 text-white px-4 py-2 rounded w-full"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-    <div className="card">
-      
-      <div className="card-header">
-        <div className="card-title">Top Orders</div>
-      </div>
-    
+              <button
+                onClick={() => setShowForm(false)}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded w-full transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Product Table */}
-      <div className="card-body p-0">
-        <div className="relative h-[500px] w-full shrink-0 overflow-auto rounded-none [scrollbar-width:_thin]">
-          <table className="table">
-            <thead className="table-header">
-              <tr className="table-row">
-                <th className="table-head">#</th>
-                <th className="table-head">Author</th>
-                <th className="table-head">Biography</th>
-                <th className="table-head">Author Rating</th>
-                <th className="table-head">Actions</th>
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="mb-4">
+          <div className="text-xl font-semibold text-gray-800">Top Orders</div>
+        </div>
+
+        {/* Product Table */}
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
-
-            <tbody className="table-body">
-              {/* Ensure authors is an array before mapping */}
+            <tbody className="bg-white divide-y divide-gray-200">
               {Array.isArray(currentAuthors) && currentAuthors.length > 0 ? (
                 currentAuthors.map((author, index) => (
-                  <tr key={author.idAuthor} className="table-row">
-                    <td className="table-cell">{index + 1}</td> {/* Use index for numbering */}
-                    <td className="table-cell">
-                      <div className="flex w-max gap-x-4">
+                  <tr key={author.idAuthor}>
+                    <td className="px-4 py-2">{index + 1}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-x-4">
                         <img
-                          src={author.imageAuthor} // Correct image field
+                          src={author.imageAuthor}
                           alt={author.nameAuthor}
-                          className="size-14 rounded-lg object-cover"
+                          className="w-14 h-14 rounded-lg object-cover border border-gray-200"
                         />
-                        <div className="flex flex-col">
-                          <p>{author.nameAuthor}</p>
-                          <p className="font-normal text-slate-600 dark:text-shadow-slate-400">{author.descriptionAuthor}</p>
+                        <div>
+                          <p className="font-semibold text-gray-800">{author.nameAuthor}</p>
+                          {/* <p className="text-sm text-gray-600">{author.descriptionAuthor}</p> */}
                         </div>
                       </div>
                     </td>
-                    <td className="table-cell">{author.descriptionAuthor}</td>
-                    <td className="table-cell">
-                      <div className="flex items-center gap-x-2">
-                        <Star size={18} className="fill-yellow-600 stroke-yellow-600" />
-                        {/* Display N/A if rating is not available */}
-                        {author.rating || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="table-cell">
+                    <td className="px-4 py-2">{author.descriptionAuthor}</td>
+                    <td className="px-4 py-2">
                       <div className="flex items-center gap-x-4">
-                        <button className="text-blue-500 dark:text-blue-600"
-                        onClick={() => {handleEditClick(author)} }// Open edit form
+                        <button
+                          className="text-blue-500 hover:text-blue-700"
+                          onClick={() => {
+                            handleEditClick(author);
+                          }}
                         >
                           <PencilLine size={20} />
                         </button>
                         <button
-                          className="text-red-500"
+                          className="text-red-500 hover:text-red-700"
                           onClick={() => handleDelete(author.idAuthor)}
                         >
                           <Trash size={20} />
@@ -273,7 +285,9 @@ const handleEditClick = (author) => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="text-center">No authors available</td>
+                  <td colSpan="5" className="text-center py-4 text-gray-500">
+                    No authors available
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -281,27 +295,27 @@ const handleEditClick = (author) => {
         </div>
 
         {/* Pagination Controls */}
-        <div className="pagination-controls flex justify-center mt-4">
+        <div className="flex justify-center items-center mt-6 gap-x-4">
           <button
             onClick={() => paginate(currentPage - 1)}
             disabled={currentPage === 1}
-            className="pagination-btn"
+            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
           >
-            Previous
+            Trước
           </button>
-          <span className="pagination-text">
-            Page {currentPage} of {Math.ceil(totalAuthors / authorsPerPage)}
+          <span className="text-gray-700 font-medium">
+            Trang {currentPage} / {Math.ceil(totalAuthors / authorsPerPage)}
           </span>
           <button
             onClick={() => paginate(currentPage + 1)}
             disabled={currentPage === Math.ceil(totalAuthors / authorsPerPage)}
-            className="pagination-btn"
+            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
           >
-            Next
+            Sau
           </button>
         </div>
       </div>
-    </div></div>
+    </div>
   );
 };
 
