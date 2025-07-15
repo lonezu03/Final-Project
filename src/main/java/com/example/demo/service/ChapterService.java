@@ -313,6 +313,8 @@ public class ChapterService {
 
 			chapterOgirin= chapterRepository.save(chapterOgirin);
 			if (isHaveFile) {
+				TtsJob ttsJob=ttsJobRepository.findByIdChapter(chapterOgirin.getIdChapter()).get();
+				ttsJobRepository.deleteById(ttsJob.getId());
 				ttsJobAsyncService.speakLongTextAsync(chapterOgirin.getContentChapter(), chapterOgirin.getIdChapter());
 
 			}
