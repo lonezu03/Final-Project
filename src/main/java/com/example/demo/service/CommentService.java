@@ -283,8 +283,8 @@ public class CommentService {
 		return commentPage.map(comment -> {
 
 //			User user=userRepository.findByIdUser(request.getIdUser()).get();
-//			CommentRespone commentRespone = getUrlImage(comment);
-			CommentRespone commentRespone=commentMapper.toCommentRespone(comment);
+			CommentRespone commentRespone = getUrlImage(comment);
+//			CommentRespone commentRespone=commentMapper.toCommentRespone(comment);
 //			commentRespone.setUrlImage(comment.getUser().getAvatarUser());
 			
 			
@@ -308,20 +308,20 @@ public class CommentService {
 		});
 	}
 	
-//	private CommentRespone getUrlImage(Comment comment){
-//		CommentRespone commentRespone = commentMapper.toCommentRespone(comment);
-//
-//		commentRespone.setUrlImage(comment.getUser().getAvatarUser());
-//		if (comment.getReplies()!=null && !comment.getReplies().isEmpty())  {
-//			List<CommentRespone> replyComment=new ArrayList<>();
-//			for (Comment reply : comment.getReplies()) {
-//	            CommentRespone replyResponse = getUrlImage(reply);
-//	            replyComment.add(replyResponse);
-//	        }
-//			commentRespone.setReplyComments(replyComment);
-//		}
-//		
-//		return commentRespone;
-//	}
+	private CommentRespone getUrlImage(Comment comment){
+		CommentRespone commentRespone = commentMapper.toCommentRespone(comment);
+
+		commentRespone.setUrlImage(comment.getUser().getAvatarUser());
+		if (comment.getReplies()!=null && !comment.getReplies().isEmpty())  {
+			List<CommentRespone> replyComment=new ArrayList<>();
+			for (Comment reply : comment.getReplies()) {
+	            CommentRespone replyResponse = getUrlImage(reply);
+	            replyComment.add(replyResponse);
+	        }
+			commentRespone.setReplyComments(replyComment);
+		}
+		
+		return commentRespone;
+	}
 
 }
