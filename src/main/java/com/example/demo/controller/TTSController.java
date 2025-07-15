@@ -2,6 +2,8 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.TtsJob;
 import com.example.demo.entity.TtsSubJob;
+import com.example.demo.exception.AppException;
+import com.example.demo.exception.ErrorCode;
 import com.example.demo.repository.ITtsJobRepository;
 import com.example.demo.repository.ITtsSubJobRepository;
 import com.example.demo.service.AudioAssemblyService;
@@ -36,11 +38,22 @@ public class TTSController {
 	AudioAssemblyService audioAssemblyService;
 	ITtsJobRepository ttsJobRepository;
 	ITtsSubJobRepository ttsSubJobRepository;
-
+	
 	@NonFinal
 	@Value("${server.base-url}")
 	private String serverBaseUrl;
 
+	 
+	
+//	 @GetMapping("/by-chapter/{idChapter}")
+//	    public ResponseEntity<TtsJob> getByChapterId(@PathVariable String idChapter) {
+//	        TtsJob job = ttsJobRepository.findByIdChapter(idChapter)
+//	                .orElseThrow(() -> new AppException(ErrorCode.TTJOB_NOT_FOUND));
+//	        logger.info("id"+job.getId());
+//	        return ResponseEntity.ok(job);
+//	    }
+	
+	
 /**
  * API xử lý văn bản dài để tạo các đoạn âm thanh nhỏ (TTS).
  *
@@ -158,4 +171,6 @@ public class TTSController {
 			return ResponseEntity.ok(response);
 		}).orElse(ResponseEntity.notFound().build());
 	}
+	
+	
 }

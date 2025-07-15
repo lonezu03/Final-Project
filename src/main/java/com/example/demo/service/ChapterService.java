@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -97,12 +98,19 @@ public class ChapterService {
 						.map(t -> {
 							ChapterRespone chapterRespone = chapterMapper.toChapterRespone(t);
 
-							if (ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter()).isPresent()) {
-								TtsJob ttsJobOpt = ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter())
-										.get();
-								logger.info(ttsJobOpt.getFinalAudioUrl());
-								chapterRespone.setUrlAudio(ttsJobOpt.getFinalAudioUrl());
+							List<TtsJob> ttsJobs=ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter());
+							if (!ttsJobs.isEmpty() && ttsJobs!=null) {
+								// Lấy job mới nhất theo ngày tạo
+				                TtsJob latestJob = ttsJobs.stream()
+				                    .max(Comparator.comparing(TtsJob::getCreatedAt))
+				                    .orElse(null);
+
+				                if (latestJob != null) {
+				                    chapterRespone.setUrlAudio(latestJob.getFinalAudioUrl());
+				                }
 							}
+								
+							
 
 							return chapterRespone;
 						}).collect(Collectors.toList());
@@ -137,15 +145,19 @@ public class ChapterService {
 		
 		ChapterRespone chapterRespone=chapterMapper.toChapterRespone(chapters);
 		
-		Optional<TtsJob> ttsJob=ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter());
+		List<TtsJob> ttsJobs = ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter());
+        if (ttsJobs != null && !ttsJobs.isEmpty()) {
+            // Lấy job mới nhất theo ngày tạo
+            TtsJob latestJob = ttsJobs.stream()
+                .max(Comparator.comparing(TtsJob::getCreatedAt))
+                .orElse(null);
+
+            if (latestJob != null) {
+                chapterRespone.setUrlAudio(latestJob.getFinalAudioUrl());
+            }
+        }
+        
 		
-		if (ttsJob.isPresent() &&ttsJob.get().getStatus().equals("COMPLETED")) {
-			
-			TtsJob ttsJobOpt = ttsJobRepository.findByIdChapter(chapterRespone.getIdChapter())
-					.get();
-			logger.info(ttsJobOpt.getFinalAudioUrl());
-			chapterRespone.setUrlAudio(ttsJobOpt.getFinalAudioUrl());
-		}
 
 		
 		return chapterRespone;
@@ -266,82 +278,119 @@ public class ChapterService {
  * @throws IOException nếu xảy ra lỗi khi đọc file
  */
 	public ChapterRespone updateChapter(ChapterUpdateRequest request, MultipartFile textFile) throws IOException {
-		
 		try {
-			Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter()).orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
-			
-			chapterMapper.updateChapter(request,chapterOgirin);
+			logger.info("Bắt đầu updateChapter với idChapter = {}", request.getIdChapter());
 
-			
-			Novel novel = novelRepository.findById(request.getNovel()).orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
-			
+			// Bước 1: Tìm chapter gốc
+			Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter())
+				.orElseThrow(() -> {
+					logger.warn("Không tìm thấy chapter với id = {}", request.getIdChapter());
+					return new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
+				});
+			logger.info("Đã tìm thấy chapter gốc: {}", chapterOgirin.getIdChapter());
+
+			// Bước 2: Map thông tin update vào entity
+			chapterMapper.updateChapter(request, chapterOgirin);
+			logger.info("Đã cập nhật thông tin từ request vào chapter");
+
+			// Bước 3: Tìm novel
+			Novel novel = novelRepository.findById(request.getNovel())
+				.orElseThrow(() -> {
+					logger.warn("Không tìm thấy novel với id = {}", request.getNovel());
+					return new AppException(ErrorCode.NOVEL_NOT_EXISTED);
+				});
+			logger.info("Đã tìm thấy novel: {}", novel.getIdNovel());
+
+			// Bước 4: Kiểm tra chapter có thuộc novel không
 			if (!novel.getIdNovel().equals(chapterOgirin.getNovel().getIdNovel())) {
+				logger.warn("Novel không chứa chapter này: novelId={}, chapterNovelId={}",
+					novel.getIdNovel(), chapterOgirin.getNovel().getIdNovel());
 				throw new AppException(ErrorCode.NOVEL_NOT_CONTAIN_CHAPTER);
 			}
+			logger.info("Novel chứa chapter hợp lệ");
 
+			// Bước 5: Nếu indexChapter chưa có thì gán index mới
 			if (chapterOgirin.getIndexChapter() == null) {
 				Long lastChapterNumber = chapterRepository.findTopByNovelOrderByIndexChapterDesc(novel)
-						.map(Chapter::getIndexChapter) // Lấy ra chapterNumber từ chapter cuối cùng
-						.orElse((long) 0); // Nếu chưa có chương nào, trả về 0
+						.map(Chapter::getIndexChapter)
+						.orElse(0L);
 				chapterOgirin.setIndexChapter(lastChapterNumber + 1);
-
+				logger.info("Gán indexChapter mới: {}", chapterOgirin.getIndexChapter());
 			}
 
-//			chapterOgirin.setNovel(novel);
-
-			
+			// Bước 6: Kiểm tra file txt
 			Boolean isHaveFile = false;
 			if (textFile != null && !textFile.isEmpty()) {
+				logger.info("File được gửi lên: {}", textFile.getOriginalFilename());
+
 				String originalFilename = textFile.getOriginalFilename();
 				if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
 					String cotent = new String(textFile.getBytes(), StandardCharsets.UTF_8);
 					isHaveFile = true;
 					chapterOgirin.setContentChapter(cotent);
+					logger.info("Nội dung chương đã được cập nhật từ file .txt");
 				} else {
+					logger.warn("File không đúng định dạng .txt");
 					throw new AppException(ErrorCode.FILE_MUST_TXT);
 				}
 			}
-			
-//			if (novel.getTotalChapter()!=null) {
-//				novel.setTotalChapter(novel.getTotalChapter() + 1);
-	//
-//			}else {
-//				novel.setTotalChapter(0);
-	//
-//			}
-//			novelRepository.save(novel);
 
-			chapterOgirin= chapterRepository.save(chapterOgirin);
+			// Bước 7: Lưu chapter
+			chapterOgirin = chapterRepository.save(chapterOgirin);
+			logger.info("Đã lưu chapter thành công: {}", chapterOgirin.getIdChapter());
+
+			// Bước 8: Nếu có file thì cập nhật job TTS
 			if (isHaveFile) {
-				TtsJob ttsJob=ttsJobRepository.findByIdChapter(chapterOgirin.getIdChapter()).get();
-				ttsJobRepository.deleteById(ttsJob.getId());
-				ttsJobAsyncService.speakLongTextAsync(chapterOgirin.getContentChapter(), chapterOgirin.getIdChapter());
+//				logger.info("Đang xử lý TTS job cho chapterId = {}", chapterOgirin.getIdChapter());
+//				
+//				TtsJob ttsJob = ttsJobRepository.findByIdChapter(chapterOgirin.getIdChapter())
+//				        .orElseThrow(() -> new AppException(ErrorCode.TTJOB_NOT_FOUND));
+//
+//				// Load full subJobs để Hibernate biết cần xóa gì
+//				ttsJob.getSubJobs().size(); // force lazy loading
+//
+//				logger.info("ID của TtsJob là: {}", ttsJob.getId());
+//
+//				try {
+//				    ttsJobRepository.delete(ttsJob);  // <-- Ưu tiên dùng delete(entity) thay vì deleteById()
+//				} catch (Exception e) {
+//				    logger.error("Lỗi khi xóa TtsJob", e);
+//				    throw new AppException(ErrorCode.TTJOB_NOT_FOUND);
+//				}
 
+				ttsJobAsyncService.speakLongTextAsync(chapterOgirin.getContentChapter(), chapterOgirin.getIdChapter());
+				logger.info("TTS job đã được cập nhật lại");
 			}
 
+			// Bước 9: Gửi thông báo cho follower
 			List<FollowNovel> followNovels = followNovelRepository.findByNovel_IdNovel(chapterOgirin.getNovel().getIdNovel());
+			logger.info("Có {} follower sẽ nhận thông báo", followNovels.size());
 
 			for (FollowNovel followNovel : followNovels) {
 				try {
 					HistoryNotityCreationRequest historyNotityCreationRequest = HistoryNotityCreationRequest.builder()
-							.user(followNovel.getUser()).nameNovel(followNovel.getNovel().getNameNovel())
-							.titleChapter(chapterOgirin.getTitleChapter()).build();
+							.user(followNovel.getUser())
+							.nameNovel(followNovel.getNovel().getNameNovel())
+							.titleChapter(chapterOgirin.getTitleChapter())
+							.build();
 					createHistoryNotify(historyNotityCreationRequest);
+					logger.info("Đã gửi thông báo tới user: {}", followNovel.getUser().getIdUser());
 				} catch (Exception e) {
-					logger.info("updateChapter > try catch follower");
-					e.printStackTrace();
+					logger.warn("Lỗi khi gửi thông báo tới follower: {}", followNovel.getUser().getIdUser());
+//					e.printStackTrace();
 				}
 			}
+
+			logger.info("Hoàn tất updateChapter");
 			return chapterMapper.toChapterRespone(chapterOgirin);
+
 		} catch (Exception e) {
-			logger.info("update chapter> try catch finall");
-			e.printStackTrace();
-			throw new AppException(ErrorCode.UNKNOW_ERROR); 
+			logger.error("update chapter> try catch final - Lỗi xảy ra: {}", e.getMessage());
+//			e.printStackTrace();
+			throw new AppException(ErrorCode.UNKNOW_ERROR);
 		}
-
-
-		
 	}
+
 /**
  * Tạo thông báo lịch sử cho người dùng khi có chương mới.
  *

@@ -31,7 +31,8 @@ public enum ErrorCode {
 	REFRESH_TOKEN_NOT_EXISTS(1039,"Refresh token not exists"),REFRESH_TOKEN_EXPIRY(1040,"Refesh token expiry"),
 	DOB_CANNOT_BE_NOW(1041,"The day of birth cannot be now and least than 18 year old")
 	,TOKEN_NOT_VALID(1042,"Token not valid")
-	,NOVEL_NOT_CONTAIN_CHAPTER(1043,"Novel not contain this chapter"),UNKNOW_ERROR(9999, "Unknow error");
+	,NOVEL_NOT_CONTAIN_CHAPTER(1043,"Novel not contain this chapter")
+	,TTJOB_NOT_FOUND(1044,"TTJOB not found"),UNKNOW_ERROR(9999, "Unknow error");
 
 	private int code;
 	private String message;

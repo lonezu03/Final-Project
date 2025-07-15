@@ -31,6 +31,7 @@ public class TtsJob {
 
     private String idChapter;
     
-    @OneToMany(mappedBy = "parentJob", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "parentJob", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<TtsSubJob> subJobs = new HashSet<>();
+
 }
