@@ -34,6 +34,7 @@
       - GET:/api/payment/callback-success/**
       - GET:/api/payment/callback
       - POST:/api/payment/callbackk
+      - HEAD:/
     endpoints:
       "[/project/getAll]": "GET: member, manager, admin"
 
