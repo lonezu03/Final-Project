@@ -2,10 +2,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import apiClient from '../services/api';
-import { rooturl } from './element'; // Import đường dẫn gốc từ file element
+import { rooturl } from './element'; 
 const API_BASE_URL_COMMENT_PUBLIC = `${rooturl}/comment`;
 
-// --- API THUNKS ---
 
 // GET /comment/getAllByChapter/{idChapter}
 export const getCommentsByChapter = createAsyncThunk(
@@ -148,7 +147,7 @@ export const updateCommentContent = createAsyncThunk(
       };
 
       const response = await apiClient.put(`/comment/update`, payload);
-      if (response.data && (response.data.code === 200 || response.data.code === 1000) && response.data.result) {
+      if (response.data && ( response.data.code === 1000) && response.data.result) {
         return response.data.result; // API trả về comment đã được cập nhật
       }
       return rejectWithValue(response.data.message || 'Failed to update comment');

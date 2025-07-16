@@ -1,5 +1,7 @@
 // src/components/ChapterComments.jsx
 import React, { useEffect, useState, useRef } from 'react';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -242,11 +244,11 @@ const ChapterComments = ({ chapterId, novelId }) => {
           await dispatch(actionToDispatch).unwrap();
           if (successMessage) toast.success(successMessage);
           // Reset action status sau khi thành công
-          dispatch(resetActionStatus());
+          // dispatch(resetActionStatus());
           return true; // Báo hiệu thành công
       } catch(err) {
           toast.error(`${errorMessage}: ${err}`);
-          dispatch(resetActionStatus());
+          // dispatch(resetActionStatus());
           return false; // Báo hiệu thất bại
       }
   };

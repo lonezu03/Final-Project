@@ -52,7 +52,29 @@ useEffect(() => {
   e.preventDefault();
 
   const formData = new FormData();
-
+   const dob = new Date(newAuthor.dobAuthor);
+  const currentDate = new Date();
+   if (!newAuthor.dobAuthor) {
+    alert("Ngày sinh là bắt buộc.");
+    return;
+  }
+  if (dob > currentDate) {
+    alert("Ngày sinh không thể là ngày trong tương lai.");
+    return;
+  }
+   const age = currentDate.getFullYear() - dob.getFullYear();
+  if (age < 18) {
+    alert("Tác giả phải ít nhất 18 tuổi.");
+    return;
+  }
+  if (!newAuthor.nameAuthor || newAuthor.nameAuthor.length < 3 || newAuthor.nameAuthor.length > 100) {
+    alert('Tên tác giả phải có độ dài từ 3 đến 100 ký tự!');
+    return;
+  }
+  if (newAuthor.descriptionAuthor.length > 100) {
+    alert('Mô tả phải có độ dài tối đa 100 ký tự!');
+    return;
+  }
   const jsonPayload = new Blob([JSON.stringify({
     // idAuthor: isEditing ? newAuthor.idAuthor : undefined, // Chỉ gửi id nếu đang chỉnh sửa
     nameAuthor: newAuthor.nameAuthor,

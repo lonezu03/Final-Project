@@ -635,6 +635,7 @@ useEffect(() => {
       {showAudioPlayer && (currentChapterContent?.urlAudio || urlAudio) && (
         <AudioPlayer audioSrc={currentChapterContent?.urlAudio || urlAudio} onPrevChapter={handlePrevChapter} onNextChapter={handleNextChapter} isFirstChapter={isFirstChapter} isLastChapter={isLastChapter} novelTitle={currentNovel?.nameNovel} chapterTitle={currentChapterContent?.titleChapter} coverImage={currentNovel?.imageNovel} />
       )}
+      <div className='h-[62px]'></div>
     </div>
   );
 };

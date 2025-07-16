@@ -239,6 +239,7 @@ const initialState = {
     currentPage: 0,
     loading: false,
     error: null
+    
   },
   followedNovels: [], // Lưu các truyện mà người dùng đã theo dõi
 
@@ -248,6 +249,7 @@ const initialState = {
   getByIdLoading: false, // Loading cho getNovelById
   actionLoading: false, // Loading cho create, update, delete
   error: null,
+  // errorSearch: null, 
   pagination: initialPaginationState, // Pagination này sẽ dành cho searchResults
 };
 const novelSlice = createSlice({

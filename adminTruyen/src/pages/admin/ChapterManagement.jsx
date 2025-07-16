@@ -59,7 +59,11 @@ const ChapterManagement = ({ novel }) => {
   // Hàm xử lý khi submit form (Cả Tạo Mới và Cập Nhật)
   const handleSubmit = (e) => {
     e.preventDefault();
-
+    const chapterTitle = e.target.titleChapter.value;
+    if (!chapterTitle || chapterTitle.length < 3 || chapterTitle.length > 50) {
+        alert('Tên chương phải có độ dài từ 3 đến 100 ký tự!');
+        return;
+    }
     // 1. Tạo object 'request' chứa dữ liệu JSON
     const requestData = {
       titleChapter: e.target.titleChapter.value,

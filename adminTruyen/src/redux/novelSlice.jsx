@@ -2,14 +2,10 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 // import axios from 'axios'; // Không dùng axios gốc nữa
 import apiClient from '../services/api'; // BƯỚC 1: Import apiClient
 
-// Các API requests cho Novel
-// baseURL đã được định nghĩa trong apiClient, nên ta chỉ cần đường dẫn tương đối
 const apiPath = "/novel";
 
-// Giả sử API này không cần token (ai cũng xem được)
 export const getAllNovels = createAsyncThunk('novels/getAll', async (_, { rejectWithValue }) => {
   try {
-    // Nếu không cần token, có thể dùng apiClient hoặc axios gốc đều được
     const response = await apiClient.get(`${apiPath}/getAll`);
     return response.data.result;
   } catch (error) {
@@ -17,12 +13,10 @@ export const getAllNovels = createAsyncThunk('novels/getAll', async (_, { reject
   }
 });
 
-// Giả sử các API dưới đây ĐỀU CẦN TOKEN để xác thực admin
 export const getNovelById = createAsyncThunk('novels/getById', async (id, { rejectWithValue }) => {
   try {
     const response = await apiClient.get(`${apiPath}/${id}`);
-    // apiClient sẽ tự động đính kèm token
-    return response.data; // Giả sử API này trả về toàn bộ response.data
+    return response.data;
   } catch (error) {
     return rejectWithValue(error.response.data);
   }
@@ -39,8 +33,7 @@ export const createNovel = createAsyncThunk('novels/create', async (novelData, {
 
 export const updateNovel = createAsyncThunk('novels/update', async (novelData, { rejectWithValue }) => {
   try {
-    // API của bạn có thể dùng /update/{id} hoặc nhận id trong body
-    // Ở đây giả định nhận id trong body của novelData
+   
     const response = await apiClient.put(`${apiPath}/update`, novelData);
     return response.data.result;
   } catch (error) {
@@ -51,28 +44,23 @@ export const updateNovel = createAsyncThunk('novels/update', async (novelData, {
 export const deleteNovel = createAsyncThunk('novels/delete', async (id, { rejectWithValue }) => {
   try {
     const response = await apiClient.delete(`${apiPath}/${id}`);
-    // Backend nên trả về id của novel đã xóa để dễ xử lý ở frontend
-    // Nếu backend không trả về gì, ta có thể trả về id đã gửi đi
-    return id; // Trả về id để reducer có thể lọc ra
+   
+    return id; 
   } catch (error) {
     return rejectWithValue(error.response.data);
   }
 });
-// api link novel với author
 export const addAuthorToNovel = createAsyncThunk(
   'novels/addAuthor',
   async ({ idNovel, idAuthor }, { rejectWithValue }) => {
     try {
       const payload = { idNovel, idAuthor };
-      // API này dùng POST và nhận JSON body
       const response = await apiClient.post(`${apiPath}/addAuthor`, payload);
       
-      // Nếu có lỗi nghiệp vụ từ backend
       if (response.data && response.data.code !== 1000) {
         return rejectWithValue(response.data);
       }
       
-      // Thành công, trả về toàn bộ object novel đã được cập nhật
       return response.data.result;
     } catch (error) {
       return rejectWithValue(error.response?.data || { message: 'Lỗi không xác định.' });
@@ -178,7 +166,6 @@ const novelSlice = createSlice({
             }
         }
       )
-      // Bạn có thể thêm xử lý cho trường hợp pending và rejected của 2 action mới nếu cần
       .addMatcher(
         (action) => [addAuthorToNovel.pending.type, addCategoryToNovel.pending.type].includes(action.type),
         (state) => {
@@ -193,7 +180,6 @@ const novelSlice = createSlice({
             state.error = action.payload?.message || "Thao tác thất bại.";
         }
       );
-      // Bạn có thể thêm các case khác (getById) nếu cần xử lý state riêng
   }
 });
 

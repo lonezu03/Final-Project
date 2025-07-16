@@ -169,7 +169,14 @@ const handleAddCategorySubmit = (categoryId) => {
   // Hàm xử lý khi submit form (Cả Tạo Mới và Cập Nhật)
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+    if (!e.target.nameNovel.value || e.target.nameNovel.value.length < 3 || e.target.nameNovel.value.length > 100) {
+      alert('Tên truyện phải có độ dài từ 3 đến 100 ký tự!');
+      return;
+    }
+    if (e.target.descriptionNovel.value.length > 100) {
+      alert('Mô tả phải có độ dài tối đa 100 ký tự!');
+      return;
+    }
     // Tạo payload từ các input của form
     const payload = {
       nameNovel: e.target.nameNovel.value,
