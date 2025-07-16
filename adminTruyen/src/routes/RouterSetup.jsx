@@ -13,11 +13,12 @@ import { getAllCategories } from "@/redux/categorySlice";
 // Layout & Pages
 import AdminLayouts from "@/pages/layouts/AdminLayouts";
 import LoginAdmin from "@/pages/admin/LoginAdmin";
+import AuthorManager from "@/pages/admin/authorManager";
+import CategoryManagement from "@/pages/admin/CategoryManagement";
+import NovelManagement from "@/pages/admin/NovelManagement";
 import PageNotFound from "@/pages/PageNotFound";
 import {
-  Dashboard, CategoryManagement, NovelManagement,
-  CommentManagement, AnalyticsReport, CustomerManagement,
-  PaymentManagement
+  Dashboard
 } from "../pages";
 
 const adminTheme = createTheme({
@@ -80,17 +81,30 @@ const router = createBrowserRouter([
         </ThemeProvider>
       </ProtectedAdminRoute>
     ),
-    children: [
-      { index: true, element: <Dashboard /> },
-      { path: "categoris", element: <CategoryManagement /> },
-      { path: "novels", element: <NovelManagement /> },
-      { path: "payment", element: <PaymentManagement /> },
-      { path: "analytics-report", element: <AnalyticsReport /> },
-      { path: "customer", element: <CustomerManagement /> },
-      { path: "comment", element: <CommentManagement /> },
+     children: [
+      { 
+        index: true, // Khớp với path: "" của Dashboard
+        element: <Dashboard /> 
+      },
+      { 
+        path: "authors", // Khớp với path: "authors"
+        element: <AuthorManager /> // Component quản lý tác giả
+      },
+      { 
+        path: "categories", // Khớp với path: "categories"
+        element: <CategoryManagement /> 
+      },
+      { 
+        path: "novels", // Khớp với path: "novels"
+        element: <NovelManagement /> 
+      },
+      // Thêm các route khác của bạn ở đây nếu có
     ],
   },
-  { path: "*", element: <PageNotFound /> },
+  { 
+    path: "*", 
+    element: <PageNotFound /> 
+  },
 ]);
 
 export default function RouterSetup() {

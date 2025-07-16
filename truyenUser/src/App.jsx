@@ -55,7 +55,7 @@ const AppContent = () => {
   }
 
  if (currentUser?.idUser) {
-        //  dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+         dispatch(LyberiNovels({ idUser: currentUser.idUser }));
      }
 
 }, [dispatch, novels, categories, currentUser]); 
@@ -105,7 +105,7 @@ function App() {
     // Chỉ dispatch action nếu cờ là false
     if (!hasFetched.current) {
       console.log("Dispatching loadAndRefreshUser for the first time.");
-      // store.dispatch(loadAndRefreshUser());
+      store.dispatch(loadAndRefreshUser());
       
       // Sau khi dispatch, đặt cờ thành true để không bao giờ chạy lại nữa
       hasFetched.current = true;

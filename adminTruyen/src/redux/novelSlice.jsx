@@ -58,6 +58,50 @@ export const deleteNovel = createAsyncThunk('novels/delete', async (id, { reject
     return rejectWithValue(error.response.data);
   }
 });
+// api link novel với author
+export const addAuthorToNovel = createAsyncThunk(
+  'novels/addAuthor',
+  async ({ idNovel, idAuthor }, { rejectWithValue }) => {
+    try {
+      const payload = { idNovel, idAuthor };
+      // API này dùng POST và nhận JSON body
+      const response = await apiClient.post(`${apiPath}/addAuthor`, payload);
+      
+      // Nếu có lỗi nghiệp vụ từ backend
+      if (response.data && response.data.code !== 1000) {
+        return rejectWithValue(response.data);
+      }
+      
+      // Thành công, trả về toàn bộ object novel đã được cập nhật
+      return response.data.result;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Lỗi không xác định.' });
+    }
+  }
+);
+// api link novel với category
+/**
+ * Thêm một thể loại vào danh sách thể loại của một truyện.
+ * @param {object} payload - { idNovel: string, idCategory: string }
+ */
+export const addCategoryToNovel = createAsyncThunk(
+  'novels/addCategory',
+  async ({ idNovel, idCategory }, { rejectWithValue }) => {
+    try {
+      const payload = { idNovel, idCategory };
+      const response = await apiClient.post(`${apiPath}/addCategory`, payload);
+      
+      if (response.data && response.data.code !== 1000) {
+        return rejectWithValue(response.data);
+      }
+      
+      return response.data.result;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Lỗi không xác định.' });
+    }
+  }
+);
+
 
 const novelSlice = createSlice({
   name: 'novels',
@@ -112,7 +156,43 @@ const novelSlice = createSlice({
       .addCase(deleteNovel.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message || action.error.message;
-      });
+      })
+      .addMatcher(
+        // Điều kiện: action phải là `fulfilled` của một trong hai thunk này
+        (action) => [addAuthorToNovel.fulfilled.type, addCategoryToNovel.fulfilled.type].includes(action.type),
+        // Hàm xử lý
+        (state, action) => {
+            // loading nên được set là false trong các trường hợp pending riêng
+            state.loading = false; 
+            state.error = null;
+            
+            // action.payload là object novel đã được cập nhật từ API
+            const updatedNovel = action.payload;
+            
+            // Tìm index của novel cần cập nhật trong state.novels
+            const index = state.novels.findIndex((novel) => novel.idNovel === updatedNovel.idNovel);
+            
+            // Nếu tìm thấy, thay thế novel cũ bằng novel mới
+            if (index !== -1) {
+                state.novels[index] = updatedNovel;
+            }
+        }
+      )
+      // Bạn có thể thêm xử lý cho trường hợp pending và rejected của 2 action mới nếu cần
+      .addMatcher(
+        (action) => [addAuthorToNovel.pending.type, addCategoryToNovel.pending.type].includes(action.type),
+        (state) => {
+            state.loading = true;
+            state.error = null;
+        }
+      )
+      .addMatcher(
+        (action) => [addAuthorToNovel.rejected.type, addCategoryToNovel.rejected.type].includes(action.type),
+        (state, action) => {
+            state.loading = false;
+            state.error = action.payload?.message || "Thao tác thất bại.";
+        }
+      );
       // Bạn có thể thêm các case khác (getById) nếu cần xử lý state riêng
   }
 });

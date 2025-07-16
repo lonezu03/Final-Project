@@ -1,15 +1,63 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useRef  } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getAllNovels, createNovel, deleteNovel, updateNovel } from '../../redux/novelSlice';
-// Thêm icon BookOpen
-import { PencilLine, Trash, Star, BookMarked, BookOpen } from 'lucide-react'; 
-import Select from 'react-select';
+import { 
+    getAllNovels, createNovel, deleteNovel, updateNovel, 
+    addAuthorToNovel, addCategoryToNovel 
+} from '../../redux/novelSlice'; // Thêm icon BookOpen
 import ChapterManagement from './ChapterManagement';
+import { PencilLine, Trash, Star, BookOpen, UserPlus, Tag, MoreVertical } from 'lucide-react'; 
+import Select from 'react-select';
 
+const AddToNovelModal = ({
+    show,
+    onClose,
+    title,
+    options,
+    onSubmit,
+    isLoading
+}) => {
+    const [selectedId, setSelectedId] = useState(null);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (selectedId) {
+            onSubmit(selectedId);
+        }
+    };
+
+    if (!show) return null;
+
+    return (
+        <>
+            <div className="fixed inset-0 bg-black opacity-50 z-40" onClick={onClose}></div>
+            <div className="fixed inset-0 flex justify-center items-center z-50 p-4">
+                <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+                    <h3 className="text-xl font-bold mb-4">{title}</h3>
+                    <form onSubmit={handleSubmit}>
+                        <Select
+                            options={options}
+                            onChange={(option) => setSelectedId(option.value)}
+                            placeholder="Chọn một mục..."
+                            className="mb-4"
+                            autoFocus
+                        />
+                        <div className="flex justify-end gap-3">
+                            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">Hủy</button>
+                            <button type="submit" disabled={!selectedId || isLoading} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                                {isLoading ? 'Đang thêm...' : 'Thêm'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </>
+    );
+};
 const NovelManager = () => {
   const dispatch = useDispatch();
   const { novels, loading, error } = useSelector((state) => state.novels);
   const { authors } = useSelector((state) => state.authors);
+  const { categories } = useSelector((state) => state.categories); 
 
   // State để quản lý novel nào đang được chọn để xem chương
   const [selectedNovel, setSelectedNovel] = useState(null); 
@@ -20,12 +68,72 @@ const NovelManager = () => {
   const [currentNovel, setCurrentNovel] = useState(null); // Dùng để lưu novel đang edit
   const [image, setImage] = useState(null); // Dùng cho file ảnh upload
   const [selectedAuthorIds, setSelectedAuthorIds] = useState([]);
+  const [showAddAuthorModal, setShowAddAuthorModal] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [novelToUpdate, setNovelToUpdate] = useState(null); // Lưu lại novel đang được thao tác
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const dropdownRefs = useRef({}); // Dùng để xử lý click ra ngoài
 
+
+
+
+   useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openDropdownId && dropdownRefs.current[openDropdownId] && !dropdownRefs.current[openDropdownId].contains(event.target)) {
+                setOpenDropdownId(null);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [openDropdownId]);
+
+
+    // Hàm bật/tắt dropdown cho một novel cụ thể
+    const toggleDropdown = (novelId) => {
+        setOpenDropdownId(openDropdownId === novelId ? null : novelId);
+    };
   // Chuyển đổi author data cho component Select
-  const authorOptions = authors.map(author => ({
-    value: author.idAuthor,
-    label: author.nameAuthor,
-  }));
+  // const authorOptions = authors.map(author => ({
+  //   value: author.idAuthor,
+  //   label: author.nameAuthor,
+  // }));
+ const authorOptions = authors.map(author => ({ value: author.idAuthor, label: author.nameAuthor }));
+    const categoryOptions = categories.map(category => ({ value: category.idCategory, label: category.nameCategory }));
+
+    // Hàm xử lý khi thêm tác giả
+    const handleAddAuthorSubmit = (authorId) => {
+    if (novelToUpdate && authorId) {
+        dispatch(addAuthorToNovel({ idNovel: novelToUpdate.idNovel, idAuthor: authorId }))
+            .unwrap()
+            .then(() => {
+                setShowAddAuthorModal(false); // Đóng modal khi thành công
+                setNovelToUpdate(null);
+            })
+            .catch(err => {
+                console.error("Lỗi khi thêm tác giả:", err);
+                toast.error("Không thể thêm tác giả");
+            });
+    } else {
+        toast.error("Vui lòng chọn tác giả");
+    }
+};
+    
+const handleAddCategorySubmit = (categoryId) => {
+    if (novelToUpdate && categoryId) {
+        dispatch(addCategoryToNovel({ idNovel: novelToUpdate.idNovel, idCategory: categoryId }))
+            .unwrap()
+            .then(() => {
+                setShowAddCategoryModal(false);
+                setNovelToUpdate(null);
+            })
+            .catch(err => {
+                console.error("Lỗi khi thêm thể loại:", err);
+                toast.error("Không thể thêm thể loại");
+            });
+    } else {
+        toast.error("Vui lòng chọn thể loại");
+    }
+};
 
   // Hàm xử lý đóng form và reset các state liên quan
   const cancelForm = () => {
@@ -228,12 +336,49 @@ const NovelManager = () => {
                     <button title="Xóa truyện" className="text-red-600 hover:text-red-800" onClick={(e) => { e.stopPropagation(); handleDeleteNovel(novel.idNovel); }}>
                       <Trash size={20} />
                     </button>
+                       <div className="relative">
+                                            <button 
+                                                title="Thêm..." 
+                                                className="text-gray-600 hover:text-gray-900 p-2 rounded-full hover:bg-gray-200"
+                                                onClick={(e) => { e.stopPropagation(); toggleDropdown(novel.idNovel); }}
+                                            >
+                                                <MoreVertical size={18} />
+                                            </button>
+                                            
+                                            {/* Dropdown Menu - Hiển thị dựa trên state `openDropdownId` */}
+                                            {openDropdownId === novel.idNovel && (
+                                                <div className="absolute right-0 bottom-full mb-2 w-48 bg-white border rounded-md shadow-lg z-20">
+                                                    <button onClick={() => { setNovelToUpdate(novel); setShowAddAuthorModal(true); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                        <UserPlus size={16} /> Thêm tác giả
+                                                    </button>
+                                                    <button onClick={() => { setNovelToUpdate(novel); setShowAddCategoryModal(true); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                        <Tag size={16} /> Thêm thể loại
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+         <AddToNovelModal 
+                show={showAddAuthorModal}
+                onClose={() => setShowAddAuthorModal(false)}
+                title={`Thêm tác giả cho: ${novelToUpdate?.nameNovel}`}
+                options={authorOptions}
+                onSubmit={handleAddAuthorSubmit}
+                isLoading={loading}
+            />
+            <AddToNovelModal 
+                show={showAddCategoryModal}
+                onClose={() => setShowAddCategoryModal(false)}
+                title={`Thêm thể loại cho: ${novelToUpdate?.nameNovel}`}
+                options={categoryOptions}
+                onSubmit={handleAddCategorySubmit}
+                isLoading={loading}
+            />
       </div>
 
       {/* Pagination Controls */}

@@ -132,28 +132,25 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                         </Avatar>
                     </DropdownMenuTrigger>
 
-                    <DropdownMenuContent
+                    {/* <DropdownMenuContent
                         className={"dark:bg-gray-800"}
                         sideOffset={10}
                     >
                         <DropdownMenuLabel>My Account</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {/* 1. User Profile */}
                         <DropdownMenuItem className={"dark:hover:bg-blue-950"}>
                             <User className="mr-2 h-[1.2rem] w-[1.2rem]" />
                             Profile
                         </DropdownMenuItem>
-                        {/* 2. Setting Profile */}
                         <DropdownMenuItem className={"dark:hover:bg-blue-950"}>
                             <Settings className="mr-2 h-[1.2rem] w-[1.2rem]" />
                             Setting
                         </DropdownMenuItem>
-                        {/* 3. Logout */}
                         <DropdownMenuItem variant="destructive">
                             <LogOut className="mr-2 h-[1.2rem] w-[1.2rem]" />
                             Logout
                         </DropdownMenuItem>
-                    </DropdownMenuContent>
+                    </DropdownMenuContent> */}
                 </DropdownMenu>
             </div>
         </header>

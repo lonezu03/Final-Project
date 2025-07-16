@@ -5,12 +5,16 @@ import authorReducer from './authorSlice';
 import categoryReducer from './categorySlice';
 import chapterReducer from './chapterSlice';
 import userReducer from './userSlice';
+import statisticReducer from './statisticSlice';
+
 const rootReducer = combineReducers({
   novels: novelReducer,
   authors: authorReducer,
   categories: categoryReducer,
   chapters: chapterReducer,
   user: userReducer,
+  statistics: statisticReducer,
+
 });
 
 export default rootReducer;

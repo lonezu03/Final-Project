@@ -86,20 +86,21 @@ const UserReadingHistory = () => {
     setExpandedNovelId(currentId => (currentId === novelId ? null : novelId));
   };
 
-  const handleRemoveItem = (chapterIdToRemove) => {
+  const handleRemoveItem = (novelIdToRemove) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa lịch sử đọc của truyện này?")) {
-      console.log(`Xóa lịch sử đọc truyện với  ID ch: ${chapterIdToRemove}`);
-      if (currentUser?.idUser && chapterIdToRemove) {
-        dispatch(deleteHistory({ idUser: currentUser.idUser, idChapter: chapterIdToRemove }));
+      if (currentUser?.idUser && novelIdToRemove) {
+        dispatch(deleteHistory({ idUser: currentUser.idUser, idNovel: novelIdToRemove }));
       }
     }
   };
 
-  // Đổi disable link thành true nếu bạn muốn vô hiệu hóa toàn bộ link
+
+
   const mappedHistoryItems = Array.isArray(userHistory)
     ? userHistory
       .filter(item => activeTab === 'dangDoc' && Array.isArray(item.historyReadRespones) && item.historyReadRespones.length > 0)
       .map(novelHistoryGroup => {
+        // Sắp xếp các chương đã đọc trong truyện theo thời gian gần nhất
         const sortedChapters = [...novelHistoryGroup.historyReadRespones].sort((a, b) => {
             const dateA = convertApiTimeToDate(a.readingTime)?.getTime() || 0;
             const dateB = convertApiTimeToDate(b.readingTime)?.getTime() || 0;
@@ -107,6 +108,7 @@ const UserReadingHistory = () => {
         });
 
         const latestChapterRead = sortedChapters[0];
+        
         const novelId = novelHistoryGroup.idNovel || latestChapterRead.idNovel;
         const novelTitle = novelHistoryGroup.nameNovel || 'Tên truyện không xác định';
 
@@ -116,18 +118,21 @@ const UserReadingHistory = () => {
           novelLink: `/novel/${novelId}`,
           coverImage: latestChapterRead.urlNovel || `https://ui-avatars.com/api/?name=${encodeURIComponent(novelTitle.charAt(0))}&background=random`,
           title: novelTitle,
+          // Thông tin của chương đọc gần nhất để hiển thị ở dòng chính
           latestChapter: {
             id: latestChapterRead.id.idChapter,
             name: latestChapterRead.titleChapter || 'Chương ??',
             link: `/novel/${novelId}/chapter/${latestChapterRead.id.idChapter}`,
             timeFormatted: formatTimeAgo(convertApiTimeToDate(latestChapterRead.readingTime)),
           },
+          // Giữ lại toàn bộ danh sách chương đã đọc để hiển thị khi mở rộng
           allChaptersRead: sortedChapters.map(chap => ({
             id: chap.id.idChapter,
             name: chap.titleChapter || 'Chương ??',
             link: `/novel/${novelId}/chapter/${chap.id.idChapter}`,
             timeFormatted: formatTimeAgo(convertApiTimeToDate(chap.readingTime)),
           })),
+          // Thời gian của chương gần nhất để sắp xếp toàn bộ danh sách
           lastReadTimeRaw: convertApiTimeToDate(latestChapterRead.readingTime),
         };
       })
@@ -148,17 +153,26 @@ const UserReadingHistory = () => {
   return (
     <div className="container mx-auto my-8 p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-xl rounded-lg">
       <div className="flex border-b border-gray-200 dark:border-slate-700 mb-6">
+        {/* Tabs */}
         <button
           onClick={() => setActiveTab('dangDoc')}
           className={`px-4 py-3 text-sm font-medium transition-colors duration-150 ${activeTab === 'dangDoc' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
         >
           TRUYỆN ĐANG ĐỌC
         </button>
+        {/* <button
+          onClick={() => setActiveTab('danhDau')}
+          className={`px-4 py-3 text-sm font-medium transition-colors duration-150 ${activeTab === 'danhDau' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+        >
+          TRUYỆN ĐÁNH DẤU
+        </button> */}
       </div>
 
       {isUserHistoryLoading && <p className="text-center text-gray-500 dark:text-gray-400 py-8">Đang tải lịch sử...</p>}
 
       {!isUserHistoryLoading && activeTab === 'dangDoc' && mappedHistoryItems.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-8">Bạn chưa đọc truyện nào gần đây.</p>}
+      
+      {!isUserHistoryLoading && activeTab === 'danhDau' && <p className="text-center text-gray-500 dark:text-gray-400 py-8">Bạn chưa đánh dấu truyện nào.</p>}
 
       {!isUserHistoryLoading && activeTab === 'dangDoc' && mappedHistoryItems.length > 0 && (
         <div className="space-y-4">
@@ -166,12 +180,17 @@ const UserReadingHistory = () => {
             const isExpanded = expandedNovelId === item.novelId;
             return (
               <div key={item.uniqueKey} className="bg-gray-50 dark:bg-slate-700/50 rounded-md shadow-sm transition-all duration-300">
+                {/* Dòng chính của item */}
                 <div className="flex items-center p-4">
+                  <Link to={item.novelLink} className="flex-shrink-0 mr-4">
                   <img src={item.coverImage} alt={item.title} className="w-16 h-24 object-cover rounded" />
+                  </Link>
                   <div className="flex-grow">
+                    <Link to={item.novelLink} className="hover:underline">
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1 line-clamp-1" title={item.title}>{item.title}</h3>
+                    </Link>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Đã đọc đến: <span className="font-medium text-blue-600 dark:text-blue-400">{item.latestChapter.name}</span>
+                      Đã đọc đến: <Link to={item.latestChapter.link} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">{item.latestChapter.name}</Link>
                     </p>
                   </div>
                   <div className="flex-shrink-0 ml-4 flex items-center space-x-1">
@@ -179,21 +198,22 @@ const UserReadingHistory = () => {
                     <button onClick={() => handleToggleExpand(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600" title={isExpanded ? "Thu gọn" : "Xem thêm"}>
                       {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                     </button>
-                    <button onClick={() => handleRemoveItem(item.chapterId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-red-500" title="Xóa">
+                    <button onClick={() => handleRemoveItem(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-red-500" title="Xóa">
                       <FaTimes />
                     </button>
                   </div>
                 </div>
 
+                {/* Phần mở rộng */}
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-slate-600">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Lịch sử các chương đã đọc:</h4>
                     <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
                       {item.allChaptersRead.map(chapter => (
                         <li key={chapter.id} className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600 dark:text-gray-300 truncate" title={chapter.name}>
+                          <Link to={chapter.link} className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 hover:underline truncate" title={chapter.name}>
                             {chapter.name}
-                          </span>
+                          </Link>
                           <span className="text-xs text-gray-400 dark:text-gray-500 ml-4 whitespace-nowrap">{chapter.timeFormatted}</span>
                         </li>
                       ))}
