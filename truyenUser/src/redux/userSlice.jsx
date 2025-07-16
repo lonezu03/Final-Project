@@ -664,24 +664,46 @@ const userSlice = createSlice({
 
       // Delete History
       .addCase(deleteHistory.pending, (state) => {
-        state.historyLoading = true;
+        // Có thể thêm một state loading cụ thể cho việc xóa nếu muốn
+        // Ví dụ: state.isDeletingHistory = true;
         state.error = null;
         state.historyActionStatus = null;
       })
       .addCase(deleteHistory.fulfilled, (state, action) => {
-        state.historyLoading = false;
         state.historyActionStatus = action.payload.message || 'Lịch sử đã được xóa.';
-        // Sau khi xóa, bạn có thể muốn lọc state.userHistory
-        // Giả sử action.meta.arg là historyData đã gửi đi (chứa idUser, idNovel, idChapter)
-        if (action.meta.arg) {
-            const { idUser, idNovel, idChapter } = action.meta.arg;
-            state.userHistory = state.userHistory.filter(item =>
-                !(item.id.idUser === idUser && item.id.idNovel === idNovel /* && item.id.idChapter === idChapter nếu có */)
+        
+        // `action.meta.arg` là payload đã được gửi đi, ví dụ: { idUser, idChapter }
+        const payload = action.meta.arg;
+        if (!payload || !payload.idChapter) return;
+
+        const { idChapter } = payload;
+
+        // Lặp qua các nhóm truyện trong lịch sử
+        state.userHistory = state.userHistory
+          .map(novelGroup => {
+            // Kiểm tra xem nhóm này có chứa chương cần xóa không
+            const chapterExists = novelGroup.historyReadRespones.some(
+              chap => chap.id.idChapter === idChapter
             );
-        }
+
+            if (chapterExists) {
+              // Nếu có, tạo một bản sao của nhóm và lọc bỏ chương đã xóa
+              const updatedGroup = {
+                ...novelGroup,
+                historyReadRespones: novelGroup.historyReadRespones.filter(
+                  chap => chap.id.idChapter !== idChapter
+                ),
+              };
+              return updatedGroup;
+            }
+            
+            // Nếu không, giữ nguyên nhóm
+            return novelGroup;
+          })
+          // SAU KHI XÓA CHƯƠNG, LỌC BỎ CÁC NHÓM TRUYỆN RỖNG
+          .filter(novelGroup => novelGroup.historyReadRespones.length > 0);
       })
       .addCase(deleteHistory.rejected, (state, action) => {
-        state.historyLoading = false;
         state.error = action.payload;
         state.historyActionStatus = `Lỗi xóa lịch sử: ${action.payload}`;
       })

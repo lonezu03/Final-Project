@@ -85,11 +85,12 @@ const UserReadingHistory = () => {
   const handleToggleExpand = (novelId) => {
     setExpandedNovelId(currentId => (currentId === novelId ? null : novelId));
   };
+  const [deletingNovelId, setDeletingNovelId] = useState(null);
 
-  const handleRemoveItem = (novelIdToRemove) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa lịch sử đọc của truyện này?")) {
-      if (currentUser?.idUser && novelIdToRemove) {
-        dispatch(deleteHistory({ idUser: currentUser.idUser, idNovel: novelIdToRemove }));
+  const handleRemoveItem = (idChapter) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa lịch sử đọc của chương này?")) {
+      if (currentUser?.idUser && idChapter) {
+        dispatch(deleteHistory({ idUser: currentUser.idUser, idChapter: idChapter }));
       }
     }
   };
@@ -198,25 +199,37 @@ const UserReadingHistory = () => {
                     <button onClick={() => handleToggleExpand(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600" title={isExpanded ? "Thu gọn" : "Xem thêm"}>
                       {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                     </button>
-                    <button onClick={() => handleRemoveItem(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-red-500" title="Xóa">
+                    {/* <button onClick={() => handleRemoveItem(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-red-500" title="Xóa">
                       <FaTimes />
-                    </button>
+                    </button> */}
                   </div>
                 </div>
 
                 {/* Phần mở rộng */}
-                {isExpanded && (
+                  {isExpanded && (
                   <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-slate-600">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Lịch sử các chương đã đọc:</h4>
                     <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                      {item.allChaptersRead.map(chapter => (
-                        <li key={chapter.id} className="flex justify-between items-center text-sm">
-                          <Link to={chapter.link} className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 hover:underline truncate" title={chapter.name}>
-                            {chapter.name}
-                          </Link>
-                          <span className="text-xs text-gray-400 dark:text-gray-500 ml-4 whitespace-nowrap">{chapter.timeFormatted}</span>
-                        </li>
-                      ))}
+                      {item.allChaptersRead.map(chapter => {
+                        // const isDeletingThisChapter = deletingChapterId === chapter.id;
+                        return (
+                          <li key={chapter.id} className="flex justify-between items-center text-sm group">
+                            <Link to={chapter.link} className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 hover:underline truncate flex-grow" title={chapter.name}>
+                              {chapter.name}
+                            </Link>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-4 whitespace-nowrap flex-shrink-0">{chapter.timeFormatted}</span>
+                            {/* THÊM NÚT XÓA CHO TỪNG CHƯƠNG */}
+                            <button 
+                              onClick={() => handleRemoveItem(chapter.id)}
+                              className="ml-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Xóa lịch sử chương này"
+                              // disabled={isDeletingThisChapter}
+                            >
+                              <FaTimes />
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}

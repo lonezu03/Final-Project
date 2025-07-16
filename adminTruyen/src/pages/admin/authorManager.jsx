@@ -76,7 +76,7 @@ useEffect(() => {
     return;
   }
   const jsonPayload = new Blob([JSON.stringify({
-    // idAuthor: isEditing ? newAuthor.idAuthor : undefined, // Chỉ gửi id nếu đang chỉnh sửa
+    // idAuthor: isEditing ? newAuthor.idAuthor : undefined, 
     nameAuthor: newAuthor.nameAuthor,
     descriptionAuthor: newAuthor.descriptionAuthor,
     nationalityAuthor: newAuthor.nationalityAuthor,
