@@ -54,6 +54,8 @@ public class Novel {
 	@Enumerated(EnumType.STRING)
 	Status statusNovel;
 	String imageNovel;
+	
+	LocalDateTime delete_at;
 
 	@ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
 	@JoinTable(

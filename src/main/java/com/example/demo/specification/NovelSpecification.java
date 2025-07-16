@@ -51,6 +51,24 @@ public class NovelSpecification {
 //    }
 
     /**
+     * Tạo Specification để lọc các tiểu thuyết chưa bị xóa (delete_at = null),
+     * nếu biến isDelete truyền vào là null.
+     *
+     * @param isDelete nếu null thì lọc các tiểu thuyết chưa bị xóa
+     * @return Specification lọc theo điều kiện delete_at
+     */
+    public static Specification<Novel> filterDeleted(Boolean isDelete) {
+        return (root, query, cb) -> {
+            if (isDelete == null) {
+                // Nếu không truyền gì thì lọc theo delete_at là null (chưa bị xóa)
+                return cb.isNull(root.get("delete_at"));
+            }
+            // Nếu truyền true/false thì không lọc gì thêm, tức là không thêm điều kiện
+            return cb.conjunction(); // trả về điều kiện luôn đúng (không ảnh hưởng đến kết quả)
+        };
+    }
+    
+    /**
      * Tạo Specification để lọc các tiểu thuyết có tổng số chương > count.
      *
      * @param count Số chương tối thiểu

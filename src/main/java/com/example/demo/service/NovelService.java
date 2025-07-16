@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -80,7 +81,7 @@ public class NovelService {
 	            .collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
 
 	    
-		return novelRepository.findAll().stream().map(novel -> {
+		return novelRepository.findAllWithoutDeleted().stream().map(novel -> {
 			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
 			  Double avg = ratingMap.get(novel.getIdNovel());
 			  novelRespone.setRating(avg != null ? String.format("%.1f", avg) : "0");
@@ -156,7 +157,9 @@ public class NovelService {
 	 */
 	public NovelRespone updateNovel(NovelUpdateRequest request, MultipartFile file) throws IOException {
 
-		Novel novel = novelMapper.toNovelUpdate(request);
+		Novel novel=novelRepository.findById(request.getIdNovel()).orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
+		
+		novelMapper.updateNovel(request, novel);
 
 		if (file != null && !file.isEmpty()) {
 
@@ -181,13 +184,18 @@ public class NovelService {
 	 */
 	public String deleteById(String idNovel) {
 		try {
-			Novel novel = novelRepository.findById(idNovel).get();
-			if (!novel.getPublicIDNovel().isEmpty()) {
-				uploadFileService.deleteImage(novel.getPublicIDNovel());
-
-			}
-			novelRepository.deleteById(idNovel);
-			return idNovel;
+//			Novel novel = novelRepository.findById(idNovel).get();
+//			if (!novel.getPublicIDNovel().isEmpty()) {
+//				uploadFileService.deleteImage(novel.getPublicIDNovel());
+//
+//			}
+//			novelRepository.deleteById(idNovel);
+			
+			Novel novel=novelRepository.findById(idNovel).orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
+			
+			novel.setDelete_at(LocalDateTime.now());
+			novel= novelRepository.save(novel);
+			return novel.getIdNovel();
 		} catch (Exception e) {
 			throw new AppException(ErrorCode.DELETE_CONTRAINT);
 		}
@@ -309,6 +317,8 @@ public class NovelService {
 			spec = spec.and(NovelSpecification.byAuthorNames(criteria.getAuthorNames()));
 		}
 
+		spec=spec.and(NovelSpecification.filterDeleted(criteria.getIsDelete()));
+		
 		// 6. Lọc theo danh sách tên thể loại
 		if (criteria.getCategoryNames() != null && !criteria.getCategoryNames().isEmpty()) {
 			spec = spec.and(NovelSpecification.byCategoryNames(criteria.getCategoryNames()));

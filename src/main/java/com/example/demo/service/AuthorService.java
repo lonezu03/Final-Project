@@ -99,14 +99,17 @@ public class AuthorService {
 	public AuthorRespone createAuthor(AuthorCreationRequest request, MultipartFile file) throws IOException {
 		Author author = authorMapper.toAuthor(request);
 
-		long year=ChronoUnit.YEARS.between(request.getDobAuthor(), LocalDate.now());
+		if (request.getDobAuthor()!=null) {
+			long year=ChronoUnit.YEARS.between(request.getDobAuthor(), LocalDate.now());
 
-		
-		if (request.getDobAuthor().isAfter(LocalDate.now()) || year<18) {
-			log.info("old"+year);
+			
+			if (request.getDobAuthor().isAfter(LocalDate.now()) || year<18) {
+				log.info("old"+year);
 
-			throw new AppException(ErrorCode.DOB_CANNOT_BE_NOW);
+				throw new AppException(ErrorCode.DOB_CANNOT_BE_NOW);
+			}
 		}
+		
 		
 
 		
@@ -138,8 +141,23 @@ public class AuthorService {
 	public AuthorRespone updateAuthor(AuthorUpdateRequest request, MultipartFile file) throws IOException {
 
 		Author author=authorRepository.findById(request.getIdAuthor()).orElseThrow(() -> new AppException(ErrorCode.AUTHOR_NOT_EXISTED));
-		 authorMapper.updateAuthor(request,author);
+		 
+		if (request.getDobAuthor()!=null) {
+			long year=ChronoUnit.YEARS.between(request.getDobAuthor(), LocalDate.now());
+
+			
+			if (request.getDobAuthor().isAfter(LocalDate.now()) || year<18) {
+				log.info("old"+year);
+
+				throw new AppException(ErrorCode.DOB_CANNOT_BE_NOW);
+			}
+		}
 		
+		authorMapper.updateAuthor(request,author);
+		
+		 
+		 
+		 
 		if (file != null && !file.isEmpty()) {
 
 			if (author.getPublicIDAuthor() != null && !author.getPublicIDAuthor().isEmpty()) {
