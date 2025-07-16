@@ -17,9 +17,9 @@ const PaymentCallbackPage = () => {
 
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    dispatch(refreshUser());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(refreshUser());
+  // }, [dispatch]);
   return (
     // --- Giao diện nền sáng ---
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
