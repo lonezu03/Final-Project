@@ -1,19 +1,17 @@
 // src/AuthModal.jsx
 import React, { useState, useEffect } from "react";
 import { FcGoogle } from "react-icons/fc";
-import { Eye, EyeOff } from "lucide-react"; 
-
-import { X } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { auth } from '../firebase-config';
 import {
   GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword
 } from "firebase/auth";
 import {
-  registerUser, // API đăng ký chính
-  loginUserWithPassword, // API login email/password
-   loginUserByEmailOnly, // API login chỉ bằng email (nếu bạn có luồng này)
-  createUserByEmailOnly, // API tạo/đồng bộ user chỉ với email (cho Google)
+  registerUser,
+  loginUserWithPassword,
+  loginUserByEmailOnly,
+  createUserByEmailOnly,
   sendOTP as sendOTPAPI,
   clearUserError
 } from "../redux/userSlice";
@@ -34,10 +32,11 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
-         setShowPassword(false);
+        setShowPassword(false);
         setShowConfirmPassword(false);
         setView('login'); setEmail(''); setPassword(''); setConfirmPassword('');
         setOtpInput(''); setReceivedOtpFromServer(''); setLocalError('');
@@ -54,31 +53,30 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const switchToRegister = () => { if (!isLoading && !isOtpSending) setView('register'); };
   const switchToLogin = () => { if (!isLoading && !isOtpSending) setView('login'); };
 
-  // Hàm chung để xử lý gọi API backend và cập nhật UI
   const handleBackendOperation = async (thunkAction, payload, operationName = "Operation") => {
-    setIsLoading(true);
+    // Không set isLoading ở đây nữa, để hàm gọi có thể kiểm soát
     setLocalError('');
     try {
-      console.log(`Dispatching ${operationName} with payload:`, payload);
       const actionResult = await dispatch(thunkAction(payload)).unwrap();
-      if (onAuthSuccess) onAuthSuccess(actionResult); // Giả sử actionResult là user object
-      handleCloseModal();
-      return true;
+      // Chỉ gọi onAuthSuccess và handleCloseModal khi đăng nhập thành công
+      if (operationName === "Email/Password Login") {
+        if (onAuthSuccess) onAuthSuccess(actionResult);
+        handleCloseModal();
+      }
+      return actionResult; // Trả về kết quả để hàm gọi có thể sử dụng
     } catch (err) {
       console.error(`${operationName} Error:`, err);
-      setLocalError(typeof err === 'string' ? err : err?.message || `Lỗi ${operationName.toLowerCase()}.`);
-      return false;
-    } finally {
-      setIsLoading(false);
+      const errorMessage = typeof err === 'string' ? err : err?.message || `Lỗi ${operationName.toLowerCase()}.`;
+      setLocalError(errorMessage);
+      throw new Error(errorMessage); // Ném lỗi để hàm gọi có thể bắt được
     }
   };
-
 
   const handleRequestOtp = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) { setLocalError("Mật khẩu xác nhận không khớp."); return; }
-    if (password.length < 8) { setLocalError("Mật khẩu phải có ít nhất 6 ký tự."); return; }
-    setIsOtpSending(true); setLocalError(''); dispatch(clearUserError());
+    if (password.length < 6) { setLocalError("Mật khẩu phải có ít nhất 6 ký tự."); return; }
+    setIsOtpSending(true); setLocalError('');
     try {
       const actionResult = await dispatch(sendOTPAPI({ email })).unwrap();
       if (actionResult.otpSent && actionResult.receivedOtp) {
@@ -94,58 +92,68 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     }
   };
 
+  // =====================================================================
+  // SỬA ĐỔI CHÍNH: Thêm bước đăng nhập sau khi đăng ký
+  // =====================================================================
   const handleVerifyOtpAndRegister = async (e) => {
     e.preventDefault();
     if (String(otpInput) !== String(receivedOtpFromServer)) { setLocalError("Mã OTP không chính xác."); return; }
-    setLocalError(''); dispatch(clearUserError());
+    
+    setIsLoading(true);
+    setLocalError('');
+    
     try {
-      // 1. Gọi API backend để đăng ký user trước
-      const registrationPayload = {
-        emailUser: email,
-        passwordUser: password,
-        // dobUser: new Date().toISOString(),
-        // coin: 0,
-        // userNameUser: email.split('@')[0],
-        // firebaseUid: undefined // Chưa có uid vì chưa tạo Firebase
-      };
-      await handleBackendOperation(registerUser, registrationPayload, "User Registration");
-
-      // 2. Sau khi backend thành công, tạo user trên Firebase
+      // BƯỚC 1: Đăng ký trên Firebase
       await createUserWithEmailAndPassword(auth, email, password);
+      
+      // BƯỚC 2: Đăng ký trên Backend
+      const registrationPayload = { emailUser: email, passwordUser: password };
+      await dispatch(registerUser(registrationPayload)).unwrap();
+      
+      // BƯỚC 3: Tự động đăng nhập trên Backend để lấy token
+      const loginPayload = { email, password };
+      const loggedInUser = await dispatch(loginUserWithPassword(loginPayload)).unwrap();
+      
+      // Nếu tất cả các bước thành công
+      if (onAuthSuccess) onAuthSuccess(loggedInUser);
+      handleCloseModal();
+
     } catch (err) {
-      // Ưu tiên lỗi backend, sau đó lỗi Firebase
-      if (err?.code === 'auth/email-already-in-use') setLocalError("Email này đã được đăng ký trên Firebase.");
-      else if (err?.code === 'auth/weak-password') setLocalError("Mật khẩu quá yếu.");
-      else setLocalError(err?.message ? `Đăng ký thất bại: ${err.message}` : "Đăng ký thất bại.");
+      // Xử lý các lỗi có thể xảy ra
+      if (err?.code === 'auth/email-already-in-use') {
+        setLocalError("Email này đã được sử dụng. Vui lòng đăng nhập.");
+      } else if (err?.code === 'auth/weak-password') {
+        setLocalError("Mật khẩu quá yếu, vui lòng chọn mật khẩu khác.");
+      } else {
+        // Lỗi từ các thunk (registerUser, loginUserWithPassword)
+        const errorMessage = typeof err === 'string' ? err : err?.message || "Đăng ký hoặc đăng nhập thất bại.";
+        setLocalError(errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleEmailPasswordLogin = async (e) => {
     e.preventDefault();
-    setLocalError(''); dispatch(clearUserError());
+    setIsLoading(true); // Kiểm soát isLoading tại đây
     try {
-      // 1. Đăng nhập Firebase trước (không bắt buộc nếu backend tự xác thực password)
-      // Nếu backend có API /user/login nhận email/password và tự hash, bạn không cần bước này.
-      // Tuy nhiên, thông thường vẫn đăng nhập Firebase để lấy ID token hoặc user object.
-      const userCredential = await signInWithEmailAndPassword(auth, email, password); // eslint-disable-line @typescript-eslint/no-unused-vars
-
-      // 2. Gọi API backend /user/login
+      await signInWithEmailAndPassword(auth, email, password);
       const loginPayload = { email, password };
+      // Sử dụng lại hàm handleBackendOperation cho đăng nhập
       await handleBackendOperation(loginUserWithPassword, loginPayload, "Email/Password Login");
-
-    } catch (err) { // Lỗi từ Firebase signIn hoặc từ handleBackendOperation
-        if (['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'].includes(err.code)) {
-            setLocalError("Email hoặc mật khẩu không đúng.");
-        } else if (!err.message && typeof err === 'string') { // Lỗi từ rejectWithValue của thunk
-            setLocalError(err);
-        }
-         else {
-            setLocalError(err.message || `Đăng nhập thất bại.`);
-        }
+    } catch (err) {
+      if (['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'].includes(err.code)) {
+        setLocalError("Email hoặc mật khẩu không đúng.");
+      } else {
+        setLocalError(err.message || `Đăng nhập thất bại.`);
+      }
+    } finally {
+      setIsLoading(false); // Đảm bảo reset isLoading
     }
   };
 
-   const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async () => {
     setLocalError('');
     dispatch(clearUserError());
     const provider = new GoogleAuthProvider();
@@ -215,119 +223,117 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     }
   };
 
-
   if (!isOpen) return null;
   const currentLoadingState = isLoading || isOtpSending;
 
   const renderContent = () => {
-    // GIỮ NGUYÊN JSX CỦA BẠN CHO CÁC FORM
-    // (Copy lại phần này từ các ví dụ trước, đảm bảo các nút dùng `disabled={currentLoadingState}`)
-     if (view === 'login') {
+    if (view === 'login') {
       return (
         <form onSubmit={handleEmailPasswordLogin}>
-            <div className="mb-4">
-              <label htmlFor="email-login" className="block text-sm font-medium text-stone-600 mb-1">Email</label>
-              <input id="email-login" type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"/>
+          <div className="mb-4">
+            <label htmlFor="email-login" className="block text-sm font-medium text-stone-600 mb-1">Email</label>
+            <input id="email-login" type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50" />
+          </div>
+          <div className="mb-5">
+            <div className="flex justify-between items-baseline">
+              <label htmlFor="password-login" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
+              <a href="#" className="text-xs text-amber-600 hover:text-amber-700 hover:underline" onClick={(e) => { e.preventDefault(); if (!currentLoadingState) alert("Chức năng Quên mật khẩu chưa được triển khai."); }}>Quên mật khẩu</a>
             </div>
-            <div className="mb-5">
-              <div className="flex justify-between items-baseline">
-                <label htmlFor="password-login" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
-                <a href="#" className="text-xs text-amber-600 hover:text-amber-700 hover:underline" onClick={(e) => { e.preventDefault(); if (!currentLoadingState) alert("Chức năng Quên mật khẩu chưa được triển khai."); }}>Quên mật khẩu</a>
-              </div>
- <div className="relative">
-                <input 
-                  id="password-login" 
-                  // Thay đổi type dựa trên state
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  required 
-                  disabled={isLoading || isOtpSending}
-                  className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
-                />
-                {/* Nút bật/tắt hiển thị mật khẩu */}
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
-                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>            </div>
-            <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
-              {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
-            </button>
-            <p className="text-sm text-center text-stone-600 mt-5">Chưa có tài khoản?{' '}
-              <button type="button" onClick={switchToRegister} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Đăng ký ngay</button>
-            </p>
-            <div className="my-5 flex items-center">
-              <div className="flex-grow border-t border-stone-300"></div><span className="flex-shrink mx-2 text-xs text-stone-400">HOẶC</span><div className="flex-grow border-t border-stone-300"></div>
+            <div className="relative">
+              <input
+                id="password-login"
+                type={showPassword ? "text" : "password"}
+                placeholder="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={currentLoadingState}
+                className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
-            <button type="button" onClick={handleGoogleLogin} disabled={currentLoadingState} className="w-full flex items-center justify-center py-2.5 px-4 border border-stone-300 rounded-lg hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 transition-colors duration-150 text-stone-700 bg-white shadow-sm disabled:opacity-70 disabled:cursor-not-allowed">
-              <FcGoogle className="mr-2.5" size={22} />
-              {isLoading ? 'Đang xử lý Google...' : 'Đăng nhập bằng Google'}
-            </button>
+          </div>
+          <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
+            {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
+          </button>
+          <p className="text-sm text-center text-stone-600 mt-5">Chưa có tài khoản?{' '}
+            <button type="button" onClick={switchToRegister} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Đăng ký ngay</button>
+          </p>
+          <div className="my-5 flex items-center">
+            <div className="flex-grow border-t border-stone-300"></div><span className="flex-shrink mx-2 text-xs text-stone-400">HOẶC</span><div className="flex-grow border-t border-stone-300"></div>
+          </div>
+          <button type="button" onClick={handleGoogleLogin} disabled={currentLoadingState} className="w-full flex items-center justify-center py-2.5 px-4 border border-stone-300 rounded-lg hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 transition-colors duration-150 text-stone-700 bg-white shadow-sm disabled:opacity-70 disabled:cursor-not-allowed">
+            <FcGoogle className="mr-2.5" size={22} />
+            {isLoading ? 'Đang xử lý Google...' : 'Đăng nhập bằng Google'}
+          </button>
         </form>
       );
     } else if (view === 'register') {
       return (
         <form onSubmit={handleRequestOtp}>
-            <div className="mb-4">
-              <label htmlFor="email-register" className="block text-sm font-medium text-stone-600 mb-1">Email</label>
-              <input id="email-register" type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"/>
+          <div className="mb-4">
+            <label htmlFor="email-register" className="block text-sm font-medium text-stone-600 mb-1">Email</label>
+            <input id="email-register" type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50" />
+          </div>
+          <div className="mb-4">
+            <label htmlFor="password-register" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
+            <div className="relative">
+              <input
+                id="password-register"
+                type={showPassword ? "text" : "password"}
+                placeholder="password (ít nhất 6 ký tự)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={currentLoadingState}
+                className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
-            <div className="mb-4">
-              <label htmlFor="password-register" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
-<div className="relative">
-                <input 
-                  id="password-register" 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="password (ít nhất 6 ký tự)" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  required 
-                  disabled={isLoading || isOtpSending}
-                  className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
-                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>            </div>
-            <div className="mb-5">
-              <label htmlFor="confirm-password-register" className="block text-sm font-medium text-stone-600 mb-1">Nhập lại mật khẩu</label>
-<div className="relative">
-                <input 
-                  id="confirm-password-register" 
-                  type={showConfirmPassword ? "text" : "password"} 
-                  placeholder="password" 
-                  value={confirmPassword} 
-                  onChange={(e) => setConfirmPassword(e.target.value)} 
-                  required 
-                  disabled={isLoading || isOtpSending}
-                  className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
-                  aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                >
-                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>            </div>
-            <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
-              {isOtpSending ? 'Đang gửi OTP...' : 'Tiếp tục'}
-            </button>
-            <p className="text-sm text-center text-stone-600 mt-5">Đã có tài khoản?{' '}
-              <button type="button" onClick={switchToLogin} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Đăng nhập</button>
-            </p>
+          </div>
+          <div className="mb-5">
+            <label htmlFor="confirm-password-register" className="block text-sm font-medium text-stone-600 mb-1">Nhập lại mật khẩu</label>
+            <div className="relative">
+              <input
+                id="confirm-password-register"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={currentLoadingState}
+                className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+          </div>
+          <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
+            {isOtpSending ? 'Đang gửi OTP...' : 'Tiếp tục'}
+          </button>
+          <p className="text-sm text-center text-stone-600 mt-5">Đã có tài khoản?{' '}
+            <button type="button" onClick={switchToLogin} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Đăng nhập</button>
+          </p>
         </form>
       );
     } else if (view === 'otp') {
@@ -350,8 +356,8 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             {isLoading ? 'Đang đăng ký...' : 'Xác nhận và Đăng ký'}
           </button>
           <p className="text-sm text-center text-stone-600 mt-5">
-            <button type="button" onClick={() => {if (!currentLoadingState) setView('register')}} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Quay lại</button>
-             {' | '}
+            <button type="button" onClick={() => { if (!currentLoadingState) setView('register') }} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Quay lại</button>
+            {' | '}
             <button type="button" onClick={switchToLogin} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Về trang Đăng nhập</button>
           </p>
         </form>
