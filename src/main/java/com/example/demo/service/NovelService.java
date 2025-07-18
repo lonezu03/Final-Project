@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,24 +77,20 @@ public class NovelService {
 	 * @return Danh sách các đối tượng NovelRespone
 	 */
 	public List<NovelRespone> getAll() {
-	    List<NovelRatingProjection> avgRatings = reviewNovelRepository.findAverageRatingForAllNovels();
-	    Map<String, Double> ratingMap = avgRatings.stream()
-	            .collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
+		List<NovelRatingProjection> avgRatings = reviewNovelRepository.findAverageRatingForAllNovels();
+		Map<String, Double> ratingMap = avgRatings.stream()
+				.collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
 
-	    
 		return novelRepository.findAllWithoutDeleted().stream().map(novel -> {
 			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
-			  Double avg = ratingMap.get(novel.getIdNovel());
-			  novelRespone.setRating(avg != null ? String.format("%.1f", avg) : "0");
-				Integer totalFollow= followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
-				novelRespone.setTotalFollower(totalFollow);
-			    
-			    int totalView = novel.getChapters()
-			    	    .stream()
-			    	    .mapToInt(Chapter::getViewChapter)
-			    	    .sum();		    
-			    novelRespone.setTotalView(totalView);
-			
+			Double avg = ratingMap.get(novel.getIdNovel());
+			novelRespone.setRating(avg != null ? String.format("%.1f", avg) : "0");
+			Integer totalFollow = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
+			novelRespone.setTotalFollower(totalFollow);
+
+			int totalView = novel.getChapters().stream().mapToInt(Chapter::getViewChapter).sum();
+			novelRespone.setTotalView(totalView);
+
 			return novelRespone;
 		}).toList();
 
@@ -106,25 +103,21 @@ public class NovelService {
 	 * @return Đối tượng NovelRespone tương ứng
 	 */
 	public NovelRespone getNovel(String idNovel) {
-		 Novel novel = novelRepository.findById(idNovel)
-		            .orElseThrow(() -> new RuntimeException("Novel not found"));
-		 
-		 	Integer totalFollow= followNovelRepository.findByNovel_IdNovel(idNovel).size();
-		    NovelRespone respone = novelMapper.toNovelRespone(novel);
-		    respone.setTotalFollower(totalFollow);
-		    
-		    int totalView = novel.getChapters()
-		    	    .stream()
-		    	    .mapToInt(Chapter::getViewChapter)
-		    	    .sum();		    
-		    respone.setTotalView(totalView);
-		    
-		    // Gọi query lấy rating trung bình
-		    Double avg = reviewNovelRepository.findAverageRatingByNovelId(idNovel);
-		    respone.setRating(avg != null ? String.format("%.1f", avg) : "0");
+		Novel novel = novelRepository.findById(idNovel).orElseThrow(() -> new RuntimeException("Novel not found"));
 
-		    return respone;
-		
+		Integer totalFollow = followNovelRepository.findByNovel_IdNovel(idNovel).size();
+		NovelRespone respone = novelMapper.toNovelRespone(novel);
+		respone.setTotalFollower(totalFollow);
+
+		int totalView = novel.getChapters().stream().mapToInt(Chapter::getViewChapter).sum();
+		respone.setTotalView(totalView);
+
+		// Gọi query lấy rating trung bình
+		Double avg = reviewNovelRepository.findAverageRatingByNovelId(idNovel);
+		respone.setRating(avg != null ? String.format("%.1f", avg) : "0");
+
+		return respone;
+
 	}
 
 	/**
@@ -137,6 +130,17 @@ public class NovelService {
 	 */
 	public NovelRespone createNovel(NovelCreatationRequest request, MultipartFile file) throws IOException {
 		Novel novel = novelMapper.toNovel(request);
+		novel.setAuthors(new HashSet<>());
+		novel.setCategories(new HashSet<>());
+
+		List<Author> authors = authorRepository.findAllById(request.getAuthors());
+		List<Category> categories = categoryRepository.findAllById(request.getCategory());
+		for (Category category : categories) {
+			novel.getCategories().add(category);
+		}
+		for (Author author : authors) {
+			novel.getAuthors().add(author);
+		}
 
 		if (file != null && !file.isEmpty()) {
 			UploadFileRespone uploadFileRespone = uploadFileService.uploadFile(file);
@@ -145,6 +149,8 @@ public class NovelService {
 		}
 
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
+//		return novelMapper.toNovelRespone(novel);
+ 
 	}
 
 	/**
@@ -157,10 +163,23 @@ public class NovelService {
 	 */
 	public NovelRespone updateNovel(NovelUpdateRequest request, MultipartFile file) throws IOException {
 
-		Novel novel=novelRepository.findById(request.getIdNovel()).orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
-		
-		novelMapper.updateNovel(request, novel);
+		Novel novel = novelRepository.findById(request.getIdNovel())
+				.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
 
+		novelMapper.updateNovel(request, novel);
+		
+		novel.setAuthors(new HashSet<>());
+		novel.setCategories(new HashSet<>());
+		
+		List<Author> authors = authorRepository.findAllById(request.getAuthors());
+		List<Category> categories = categoryRepository.findAllById(request.getCategory());
+		for (Category category : categories) {
+			novel.getCategories().add(category);
+		}
+		for (Author author : authors) {
+			novel.getAuthors().add(author);
+		}
+		
 		if (file != null && !file.isEmpty()) {
 
 			if (novel.getPublicIDNovel() != null && !novel.getPublicIDNovel().isEmpty()) {
@@ -173,6 +192,7 @@ public class NovelService {
 		}
 
 		return novelMapper.toNovelRespone(novelRepository.save(novel));
+//		return novelMapper.toNovelRespone(novel);
 	}
 
 	/**
@@ -190,11 +210,12 @@ public class NovelService {
 //
 //			}
 //			novelRepository.deleteById(idNovel);
-			
-			Novel novel=novelRepository.findById(idNovel).orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
-			
+
+			Novel novel = novelRepository.findById(idNovel)
+					.orElseThrow(() -> new AppException(ErrorCode.NOVEL_NOT_EXISTED));
+
 			novel.setDelete_at(LocalDateTime.now());
-			novel= novelRepository.save(novel);
+			novel = novelRepository.save(novel);
 			return novel.getIdNovel();
 		} catch (Exception e) {
 			throw new AppException(ErrorCode.DELETE_CONTRAINT);
@@ -317,8 +338,8 @@ public class NovelService {
 			spec = spec.and(NovelSpecification.byAuthorNames(criteria.getAuthorNames()));
 		}
 
-		spec=spec.and(NovelSpecification.filterDeleted(criteria.getIsDelete()));
-		
+		spec = spec.and(NovelSpecification.filterDeleted(criteria.getIsDelete()));
+
 		// 6. Lọc theo danh sách tên thể loại
 		if (criteria.getCategoryNames() != null && !criteria.getCategoryNames().isEmpty()) {
 			spec = spec.and(NovelSpecification.byCategoryNames(criteria.getCategoryNames()));
@@ -341,7 +362,7 @@ public class NovelService {
 		}
 
 		// Chuyển đổi từ Page<Novel> sang Page<NovelDTO> để trả về cho client
-		 novelsPage.map(novel -> {
+		novelsPage.map(novel -> {
 			Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
 
 			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
@@ -350,33 +371,30 @@ public class NovelService {
 			novelRespone.setTotalFollower(finalTotalFollower);
 			return novelRespone;
 		});
-		 
+
 		// Lấy danh sách idNovel trong trang hiện tại
-		 List<String> novelIdsInPage = novelsPage.getContent()
-		         .stream()
-		         .map(Novel::getIdNovel)
-		         .collect(Collectors.toList());
+		List<String> novelIdsInPage = novelsPage.getContent().stream().map(Novel::getIdNovel)
+				.collect(Collectors.toList());
 
-		 // Lấy rating trung bình theo các novel trong trang này
-		 Map<String, Double> ratingMap = reviewNovelRepository.findAverageRatingByNovelIds(novelIdsInPage)
-		         .stream()
-		         .collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
-		 return novelsPage.map(novel -> {
-			    Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
+		// Lấy rating trung bình theo các novel trong trang này
+		Map<String, Double> ratingMap = reviewNovelRepository.findAverageRatingByNovelIds(novelIdsInPage).stream()
+				.collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
+		return novelsPage.map(novel -> {
+			Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
 
-			    NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
+			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
 
-			    // Gán rating trung bình
-			    Double avgRating = ratingMap.get(novel.getIdNovel());
-			    novelRespone.setRating(avgRating != null ? String.format("%.1f", avgRating) : "0");
+			// Gán rating trung bình
+			Double avgRating = ratingMap.get(novel.getIdNovel());
+			novelRespone.setRating(avgRating != null ? String.format("%.1f", avgRating) : "0");
 
-			    // Gán follow và follower
-			    boolean isFollow = followedNovelIds.contains(novel.getIdNovel());
-			    novelRespone.setIsFollow(isFollow);
-			    novelRespone.setTotalFollower(finalTotalFollower);
+			// Gán follow và follower
+			boolean isFollow = followedNovelIds.contains(novel.getIdNovel());
+			novelRespone.setIsFollow(isFollow);
+			novelRespone.setTotalFollower(finalTotalFollower);
 
-			    return novelRespone;
-			});
+			return novelRespone;
+		});
 
 	}
 

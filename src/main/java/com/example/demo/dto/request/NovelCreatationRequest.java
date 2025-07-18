@@ -1,5 +1,6 @@
 package com.example.demo.dto.request;
 
+import java.util.List;
 import java.util.Set;
 
 import com.example.demo.entity.Author;
@@ -24,5 +25,7 @@ public class NovelCreatationRequest {
 //	String rating;
 	Status statusNovel;
   
+	List<String> authors;
+	List<String> category;
 
 }
