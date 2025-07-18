@@ -13,6 +13,7 @@ const ChapterManagement = ({ novel }) => {
   // Dùng 1 state duy nhất để lưu object chương đang sửa
   const [currentChapter, setCurrentChapter] = useState(null); 
   const [file, setFile] = useState(null);
+  const [showFormpre, setShowFormpre] = useState(false);
 
   // Trích xuất novelId để làm dependency cho useEffect
   const novelId = novel?.idNovel;
@@ -55,6 +56,7 @@ const ChapterManagement = ({ novel }) => {
       dispatch(deleteChapter(chapterId));
     }
   };
+  
 
   // Hàm xử lý khi submit form (Cả Tạo Mới và Cập Nhật)
   const handleSubmit = (e) => {
@@ -99,6 +101,18 @@ const ChapterManagement = ({ novel }) => {
   const currentChaptersToDisplay = chapters.slice(indexOfFirstChapter, indexOfLastChapter);
   const paginate = (page) => setCurrentPage(page);
 
+  // State để lưu nội dung chương cần preview
+  const [previewContent, setPreviewContent] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Hàm xử lý khi nhấn nút Preview
+  const handlepreviewClick = (chapter) => {
+    setPreviewTitle(chapter.titleChapter);
+    setPreviewContent(chapter.contentChapter || 'Không có nội dung chương.');
+    setShowPreview(true);
+  };
+
   return (
     <div className="p-4 border-t-2 border-gray-200 mt-8">
       <h1 className="text-xl font-bold mb-4">Quản lý chương cho: <span className="text-blue-600">{novel.nameNovel}</span></h1>
@@ -106,6 +120,25 @@ const ChapterManagement = ({ novel }) => {
       <button onClick={() => { setIsEditing(false); setCurrentChapter(null); setShowForm(true); }} className="bg-green-500 text-white p-2 rounded mb-4 hover:bg-green-600 transition-colors">
         Thêm Chương Mới
       </button>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <>
+          <div className="fixed inset-0 bg-gray opacity-50 z-40" onClick={() => setShowPreview(false)}></div>
+          <div className="fixed inset-0 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+              <h2 className="text-2xl font-bold mb-4 text-center">Xem trước chương</h2>
+              <h3 className="text-lg font-semibold mb-2">{previewTitle}</h3>
+              <div className="mb-6 max-h-96 overflow-y-auto whitespace-pre-line border p-4 rounded bg-gray-50">
+                {previewContent}
+              </div>
+              <button onClick={() => setShowPreview(false)} className="bg-gray-500 text-white py-2 px-4 rounded-md w-full hover:bg-gray-600 transition-colors">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Form Modal */}
       {showForm && (
@@ -186,6 +219,9 @@ const ChapterManagement = ({ novel }) => {
                     <div className="flex justify-center gap-4">
                       <button onClick={() => handleEditClick(chapter)} className="text-blue-600 hover:text-blue-800" title="Sửa"><PencilLine size={18} /></button>
                       <button onClick={() => handleDeleteClick(chapter.idChapter)} className="text-red-600 hover:text-red-800" title="Xóa"><Trash size={18} /></button>
+                      <button onClick={() => handlepreviewClick(chapter)} className="text-green-600 hover:text-green-800" title="Xem trước">
+                        Xem trước
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -203,6 +239,7 @@ const ChapterManagement = ({ novel }) => {
               Sau
             </button>
           </div>
+          
         </>
       )}
     </div>
