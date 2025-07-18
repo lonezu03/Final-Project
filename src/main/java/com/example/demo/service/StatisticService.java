@@ -1,5 +1,7 @@
 package com.example.demo.service;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -90,7 +92,7 @@ public class StatisticService {
 		
 	}
 
-	public Map<String, Integer> statisticAmountByTime(SortDate type) {
+	public Map<String, Integer> statisticAmountByTime(SortDate type, String monthYear) {
 	    String pattern;
 
 	    switch (type) {
@@ -100,27 +102,46 @@ public class StatisticService {
 	        default -> throw new IllegalArgumentException("Invalid SortDate: " + type);
 	    }
 
-	    List<Object[]> rawData = historyDepositRepository.statisticAmountByTime(pattern);
-	    rawData.forEach(row -> log.info("Raw row: {}", Arrays.toString(row)));
+	    if (type == SortDate.MONTH && monthYear!=null && !monthYear.isEmpty()) {
+	        // Xử lý cho trường hợp thống kê theo từng ngày trong một tháng cụ thể
+	        pattern = "%Y-%m-%d";
+	        LocalDate date = LocalDate.parse(monthYear + "-01");  // Tháng/năm đầu vào, ví dụ "2025-07-01"
+	        int year = date.getYear();
+	        int month = date.getMonthValue();
+	        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();  // Số ngày trong tháng
 
-	    Map<String, Integer> result = new LinkedHashMap<>();
+	        Map<String, Integer> result = new LinkedHashMap<>();
+	        for (int day = 1; day <= daysInMonth; day++) {
+	            String key = String.format("%d-%02d-%02d", year, month, day);
+	            Integer sum = historyDepositRepository.statisticAmountByDay(key);  // Thực hiện query lấy số liệu theo ngày
+	            result.put(key, sum);
+	        }
+	        return result;
+	    } else {
+	        // Xử lý cho trường hợp khác như thống kê theo tháng, quý, năm, ...
+	        List<Object[]> rawData = historyDepositRepository.statisticAmountByTime(pattern);
+	        rawData.forEach(row -> log.info("Raw row: {}", Arrays.toString(row)));
 
-	    for (Object[] row : rawData) {
-	        String key = (String) row[0];
-	        Integer sum = ((Number) row[1]).intValue();
+	        Map<String, Integer> result = new LinkedHashMap<>();
 
-	        if (type == SortDate.QUARTER) {
-	            int month = Integer.parseInt(key.split("-")[1]);
-	            int quarter = (month - 1) / 3 + 1;
-	            String year = key.split("-")[0];
-	            key = "Q" + quarter + "/" + year;
+	        for (Object[] row : rawData) {
+	            String key = (String) row[0];
+	            Integer sum = ((Number) row[1]).intValue();
+
+	            if (type == SortDate.QUARTER) {
+	                int month = Integer.parseInt(key.split("-")[1]);
+	                int quarter = (month - 1) / 3 + 1;
+	                String year = key.split("-")[0];
+	                key = "Q" + quarter + "/" + year;
+	            }
+
+	            result.merge(key, sum, Integer::sum);
 	        }
 
-	        result.merge(key, sum, Integer::sum);
+	        return result;
 	    }
-
-	    return result;
 	}
+
 
 	private Comparator<StatisticNovel> getComparator(SortField sortBy, SortDirection direction) {
 	    Comparator<StatisticNovel> comparator = switch (sortBy) {

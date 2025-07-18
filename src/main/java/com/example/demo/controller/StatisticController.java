@@ -37,13 +37,15 @@ public class StatisticController {
 	}
 
 	@GetMapping("/amount")
-	public ApiRespone<Map<String, Integer>> statisticAmount(@RequestParam SortDate type) {
-	    Map<String, Integer> data = statisticService.statisticAmountByTime(type);
+	public ApiRespone<Map<String, Integer>> statisticAmount(@RequestParam SortDate type,@RequestParam(required = false) String monthYear) {
+
+	    Map<String, Integer> data = statisticService.statisticAmountByTime(type, monthYear);
 	    ApiRespone<Map<String, Integer>> response = ApiRespone.<Map<String, Integer>>builder()
 	            .result(data)
 	            .build();
 	    return response;
 	}
+
 
     
 }

@@ -32,4 +32,11 @@ public interface IHistoryDepositRepository extends JpaRepository<HistoryDeposit,
 		""")
 		List<Object[]> statisticAmountByTime(@Param("pattern") String pattern);
 
+		@Query(value = """
+		        SELECT IFNULL(SUM(amount_deposit), 0)
+		        FROM history_deposit
+		        WHERE DATE_FORMAT(date_create, '%Y-%m-%d') = :day
+		    """, nativeQuery = true)
+		    Integer statisticAmountByDay(@Param("day") String day);
+		
 }

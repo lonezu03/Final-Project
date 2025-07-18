@@ -133,15 +133,23 @@ public class NovelService {
 		novel.setAuthors(new HashSet<>());
 		novel.setCategories(new HashSet<>());
 
-		List<Author> authors = authorRepository.findAllById(request.getAuthors());
-		List<Category> categories = categoryRepository.findAllById(request.getCategory());
-		for (Category category : categories) {
-			novel.getCategories().add(category);
-		}
-		for (Author author : authors) {
-			novel.getAuthors().add(author);
-		}
+		if (request.getAuthors()!=null && !request.getAuthors().isEmpty()) {
+			List<Author> authors = authorRepository.findAllById(request.getAuthors());
+			for (Author author : authors) {
+				novel.getAuthors().add(author);
+			}
 
+		}
+		
+		if (request.getCategory()!=null && !request.getCategory().isEmpty()) {
+			List<Category> categories = categoryRepository.findAllById(request.getCategory());
+			for (Category category : categories) {
+				novel.getCategories().add(category);
+			}
+		}
+		
+		
+		
 		if (file != null && !file.isEmpty()) {
 			UploadFileRespone uploadFileRespone = uploadFileService.uploadFile(file);
 			novel.setImageNovel(uploadFileRespone.getUrl());
@@ -171,13 +179,19 @@ public class NovelService {
 		novel.setAuthors(new HashSet<>());
 		novel.setCategories(new HashSet<>());
 		
-		List<Author> authors = authorRepository.findAllById(request.getAuthors());
-		List<Category> categories = categoryRepository.findAllById(request.getCategory());
-		for (Category category : categories) {
-			novel.getCategories().add(category);
+		if (request.getAuthors()!=null && !request.getAuthors().isEmpty()) {
+			List<Author> authors = authorRepository.findAllById(request.getAuthors());
+			for (Author author : authors) {
+				novel.getAuthors().add(author);
+			}
+
 		}
-		for (Author author : authors) {
-			novel.getAuthors().add(author);
+		
+		if (request.getCategory()!=null && !request.getCategory().isEmpty()) {
+			List<Category> categories = categoryRepository.findAllById(request.getCategory());
+			for (Category category : categories) {
+				novel.getCategories().add(category);
+			}
 		}
 		
 		if (file != null && !file.isEmpty()) {
