@@ -176,9 +176,16 @@ public class ChapterService {
 	@Transactional
 	public ChapterRespone createChapter(ChapterCreationRequest request, MultipartFile textFile)
 			throws IOException, InterruptedException {
-		if (chapterRepository.existsByTitleChapter(request.getTitleChapter())) {
-			throw new AppException(ErrorCode.CHAPTER_EXISTSED);
-		}
+		List<Chapter> chapters=chapterRepository.findByTitleChapter(request.getTitleChapter()).get();
+		boolean isDuplicate = chapters.stream()
+			    .filter(chapter -> chapter.getNovel().getIdNovel().equals(request.getNovel()))
+			    .findAny()
+			    .isPresent();
+
+			if (isDuplicate) {
+			    throw new AppException(ErrorCode.CHAPTER_EXISTSED);
+			}
+
 		Chapter chapter = chapterMapper.toChapter(request);
 
 		Novel novel = novelRepository.findById(request.getNovel()).get();
@@ -279,6 +286,17 @@ public class ChapterService {
  */
 	public ChapterRespone updateChapter(ChapterUpdateRequest request, MultipartFile textFile) throws IOException {
 		try {
+			
+			List<Chapter> chapters=chapterRepository.findByTitleChapter(request.getTitleChapter()).get();
+			boolean isDuplicate = chapters.stream()
+				    .filter(chapter -> chapter.getNovel().getIdNovel().equals(request.getNovel()))
+				    .findAny()
+				    .isPresent();
+
+				if (isDuplicate) {
+				    throw new AppException(ErrorCode.CHAPTER_EXISTSED);
+				}
+			
 			logger.info("Bắt đầu updateChapter với idChapter = {}", request.getIdChapter());
 
 			// Bước 1: Tìm chapter gốc

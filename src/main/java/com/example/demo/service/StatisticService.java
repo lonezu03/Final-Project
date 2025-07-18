@@ -1,7 +1,9 @@
 package com.example.demo.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -92,54 +94,96 @@ public class StatisticService {
 		
 	}
 
-	public Map<String, Integer> statisticAmountByTime(SortDate type, String monthYear) {
-	    String pattern;
+	public Map<String, Integer> statisticAmountByTime(SortDate type, String daymonthYear) {
+		 Map<String, Integer> result = new LinkedHashMap<>();
 
-	    switch (type) {
-	        case DAY -> pattern = "%Y-%m-%d";
-	        case MONTH, QUARTER -> pattern = "%Y-%m";  // QUARTER sẽ xử lý thêm phía dưới
-	        case YEAR -> pattern = "%Y";
-	        default -> throw new IllegalArgumentException("Invalid SortDate: " + type);
-	    }
+		    // Parse ngày đầu vào một cách an toàn
+		    if (daymonthYear == null || daymonthYear.isEmpty()) {
+		        throw new IllegalArgumentException("daymonthYear must not be null or empty");
+		    }
 
-	    if (type == SortDate.MONTH && monthYear!=null && !monthYear.isEmpty()) {
-	        // Xử lý cho trường hợp thống kê theo từng ngày trong một tháng cụ thể
-	        pattern = "%Y-%m-%d";
-	        LocalDate date = LocalDate.parse(monthYear + "-01");  // Tháng/năm đầu vào, ví dụ "2025-07-01"
-	        int year = date.getYear();
-	        int month = date.getMonthValue();
-	        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();  // Số ngày trong tháng
+		    // Hỗ trợ tự động parse kể cả khi truyền vào dạng "2025", "2025-07", "2025-07-01"
+		    LocalDate date;
+		    try {
+		        if (daymonthYear.length() == 4) {
+		            date = LocalDate.parse(daymonthYear + "-01-01"); // chỉ có năm
+		        } else if (daymonthYear.length() == 7) {
+		            date = LocalDate.parse(daymonthYear + "-01"); // chỉ có tháng
+		        } else {
+		            date = LocalDate.parse(daymonthYear); // đủ yyyy-MM-dd
+		        }
+		    } catch (DateTimeParseException e) {
+		        throw new IllegalArgumentException("Invalid date format. Expect yyyy, yyyy-MM, or yyyy-MM-dd");
+		    }
 
-	        Map<String, Integer> result = new LinkedHashMap<>();
-	        for (int day = 1; day <= daysInMonth; day++) {
-	            String key = String.format("%d-%02d-%02d", year, month, day);
-	            Integer sum = historyDepositRepository.statisticAmountByDay(key);  // Thực hiện query lấy số liệu theo ngày
-	            result.put(key, sum);
-	        }
-	        return result;
-	    } else {
-	        // Xử lý cho trường hợp khác như thống kê theo tháng, quý, năm, ...
-	        List<Object[]> rawData = historyDepositRepository.statisticAmountByTime(pattern);
-	        rawData.forEach(row -> log.info("Raw row: {}", Arrays.toString(row)));
+		    switch (type) {
+		        case DAY -> {
+		            // Lấy 7 ngày trong tuần chứa ngày được truyền
+		            LocalDate startOfWeek = date.with(DayOfWeek.MONDAY);
+		            for (int i = 0; i < 7; i++) {
+		                LocalDate currentDay = startOfWeek.plusDays(i);
+		                String key = currentDay.toString(); // yyyy-MM-dd
+		                Integer sum = historyDepositRepository.statisticAmountByDay(key);
+		                result.put(key, sum);
+		            }
+		            return result;
+		        }
 
-	        Map<String, Integer> result = new LinkedHashMap<>();
+		        case MONTH -> {
+		            // Lấy từng ngày trong tháng chứa ngày truyền vào
+		            int year = date.getYear();
+		            int month = date.getMonthValue();
+		            int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
+		            for (int day = 1; day <= daysInMonth; day++) {
+		                String key = String.format("%d-%02d-%02d", year, month, day);
+		                Integer sum = historyDepositRepository.statisticAmountByDay(key);
+		                result.put(key, sum);
+		            }
+		            return result;
+		        }
 
-	        for (Object[] row : rawData) {
-	            String key = (String) row[0];
-	            Integer sum = ((Number) row[1]).intValue();
+		        case YEAR -> {
+		            // Lấy từng tháng trong năm chứa ngày truyền vào
+		            int year = date.getYear();
+		            for (int month = 1; month <= 12; month++) {
+		                String key = String.format("%d-%02d", year, month);
+		                Integer sum = historyDepositRepository.statisticAmountByMonth(key);
+		                result.put(key, sum);
+		            }
+		            return result;
+		        }
 
-	            if (type == SortDate.QUARTER) {
-	                int month = Integer.parseInt(key.split("-")[1]);
-	                int quarter = (month - 1) / 3 + 1;
-	                String year = key.split("-")[0];
-	                key = "Q" + quarter + "/" + year;
-	            }
+		        case YEAR_RANGE -> {
+		            // Trả về danh sách các năm và tổng tiền của từng năm
+		            List<Object[]> rawData = historyDepositRepository.statisticAmountByYear();
+		            for (Object[] row : rawData) {
+		                String year = (String) row[0];
+		                Integer sum = ((Number) row[1]).intValue();
+		                result.put(year, sum);
+		            }
+		            return result;
+		        }
 
-	            result.merge(key, sum, Integer::sum);
-	        }
+		        
+		        
+		        case QUARTER -> {
+		            // Lấy theo quý trên toàn bộ thời gian có dữ liệu
+		            String pattern = "%Y-%m";
+		            List<Object[]> rawData = historyDepositRepository.statisticAmountByTime(pattern);
+		            for (Object[] row : rawData) {
+		                String key = (String) row[0]; // yyyy-MM
+		                Integer sum = ((Number) row[1]).intValue();
+		                int month = Integer.parseInt(key.split("-")[1]);
+		                int quarter = (month - 1) / 3 + 1;
+		                String yearStr = key.split("-")[0];
+		                String quarterKey = "Q" + quarter + "/" + yearStr;
+		                result.merge(quarterKey, sum, Integer::sum);
+		            }
+		            return result;
+		        }
 
-	        return result;
-	    }
+		        default -> throw new IllegalArgumentException("Invalid SortDate: " + type);
+		    }
 	}
 
 

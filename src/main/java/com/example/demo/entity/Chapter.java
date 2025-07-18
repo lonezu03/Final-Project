@@ -50,6 +50,7 @@ public class Chapter {
 	@Column(nullable = false)
 	Long indexChapter;
 	
+	Integer coinPrice;
 
 	@ManyToOne
 	@JoinColumn(name = "id_Novel", nullable = false)

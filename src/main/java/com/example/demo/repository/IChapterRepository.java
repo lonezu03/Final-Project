@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface IChapterRepository extends JpaRepository<Chapter, String>{
-	Chapter findByTitleChapter(String titleChapter);
+	Optional<List<Chapter>> findByTitleChapter(String titleChapter);
 	boolean existsByTitleChapter(String titleChapter);
 	
 	List<Chapter> findByNovel_IdNovel(String idNovel);

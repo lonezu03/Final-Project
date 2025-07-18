@@ -18,5 +18,7 @@ public class ChapterUpdateRequest {
 	
 	String titleChapter;
 
+	Integer coinPrice;
+	
 	String novel;
 }

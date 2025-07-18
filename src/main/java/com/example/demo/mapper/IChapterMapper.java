@@ -25,6 +25,6 @@ public interface IChapterMapper {
 
 	@Mapping(target = "novel", ignore = true)
 	void updateChapter(ChapterUpdateRequest request, @MappingTarget Chapter chapter);
-
+ 
 	Chapter toChapterbyChapter(Chapter chapter);
 }

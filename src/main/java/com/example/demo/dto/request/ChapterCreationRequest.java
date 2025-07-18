@@ -18,5 +18,7 @@ public class ChapterCreationRequest {
 
 	String novel;
 
+	Integer coinPrice;
+	
 //	Long indexChapter;
 }
