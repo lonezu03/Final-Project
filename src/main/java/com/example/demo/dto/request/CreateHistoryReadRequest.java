@@ -22,7 +22,7 @@ public class CreateHistoryReadRequest {
 	String idChapter;
 
 	Integer readPlace;
-
+	Integer hearTime;
 //	String titleChapter;
 
 }

@@ -32,7 +32,8 @@ public enum ErrorCode {
 	DOB_CANNOT_BE_NOW(1041,"The day of birth cannot be now and least than 18 year old")
 	,TOKEN_NOT_VALID(1042,"Token not valid")
 	,NOVEL_NOT_CONTAIN_CHAPTER(1043,"Novel not contain this chapter")
-	,TTJOB_NOT_FOUND(1044,"TTJOB not found"),UNKNOW_ERROR(9999, "Unknow error");
+	,TTJOB_NOT_FOUND(1044,"TTJOB not found")
+	,NOVEL_CONVERT_CANNOT_HAVE_PRICE(1045,"Novel convert category cannot have price"),UNKNOW_ERROR(9999, "Unknow error");
 
 	private int code;
 	private String message;

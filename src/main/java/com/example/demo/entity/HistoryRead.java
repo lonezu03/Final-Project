@@ -42,7 +42,7 @@ public class HistoryRead {
 	
 	private Integer readPlace;
 	
-//	private String titleChapter;
+	private Integer hearTime;
 	
 	private LocalDateTime readingTime;
 }

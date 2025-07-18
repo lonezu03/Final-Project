@@ -8,6 +8,8 @@ import com.example.demo.dto.request.CategoryCreationRequest;
 import com.example.demo.dto.request.CategoryUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.CategoryRespone;
+import com.example.demo.entity.Category;
+import com.example.demo.repository.ICategoryRepository;
 import com.example.demo.service.CategoryService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public class CategoryController {
 
 	CategoryService categoryService;
-
+	ICategoryRepository iCategoryRepository;
 /**
  * API lấy danh sách tất cả thể loại trong hệ thống.
  *
@@ -43,6 +45,15 @@ public class CategoryController {
 	public ApiRespone<List<CategoryRespone>> getAllCategory() {
 		return ApiRespone.<List<CategoryRespone>>builder()
 				.result(categoryService.getAllCategory())
+				.build();
+	}
+	
+	@GetMapping("/getAll/idCate")
+	@Operation(summary = "Lấy danh sách tất cả thể loại", description = "Trả về danh sách đầy đủ các thể loại hiện có trong hệ thống.")
+	public ApiRespone<Category> idCate() {
+		Category category=iCategoryRepository.findByNameCategory("Truyện Convert");
+		return ApiRespone.<Category>builder()
+				.result(category)
 				.build();
 	}
 /**

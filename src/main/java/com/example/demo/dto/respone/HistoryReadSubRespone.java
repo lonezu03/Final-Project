@@ -27,6 +27,6 @@ public class HistoryReadSubRespone {
 	 String titleChapter;
 
 	 Integer readPlace;
-	
+	 Integer hearTime;
 	 LocalDateTime readingTime;
 }

@@ -401,7 +401,7 @@ public class UserService {
 
 		HistoryRead historyRead = HistoryRead.builder().id(historyId).chapter(chapter).readingTime(LocalDateTime.now())
 
-				.readPlace(readRequest.getReadPlace()).user(user).build();
+				.readPlace(readRequest.getReadPlace()).hearTime(readRequest.getHearTime()).user(user).build();
 
 
 		Optional<HistoryRead> historyReadPast = historyReadRepository.findByUser_IdUserAndChapter_IdChapter(user.getIdUser(),chapter.getIdChapter());
@@ -439,6 +439,7 @@ public class UserService {
 	                sub.setNameNovel(novel.getNameNovel());
 	                sub.setUrlNovel(novel.getImageNovel());
 	                sub.setTitleChapter(hr.getChapter().getTitleChapter());
+//	                sub.setHearTime(null)
 	                return sub;
 	            }).collect(Collectors.toList());
 
