@@ -68,7 +68,11 @@ const AudioPlayer = ({
   isLastChapter,
   novel, // <<== NHẬN PROP MỚI
   coverImage,
+  initialTime = 0, // Nhận prop này
+  onTimeUpdate, 
   className = '',
+  onProgressUpdate, // <<== THAY ĐỔI: Nhận prop mới
+
 }) => {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -76,7 +80,6 @@ const AudioPlayer = ({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isDarkModeInPlayer, setIsDarkModeInPlayer] = useState(true);
-
    const formatLargeNumber = (num) => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
@@ -86,6 +89,7 @@ const AudioPlayer = ({
     }
     return num;
   };
+ 
   // State cho âm lượng và tốc độ, có khởi tạo từ localStorage
   const [volume, setVolume] = useState(() => parseFloat(localStorage.getItem('audioPlayerVolume') || '1'));
   const [playbackRate, setPlaybackRate] = useState(() => parseFloat(localStorage.getItem('audioPlayerRate') || '1.0'));
@@ -95,30 +99,50 @@ const AudioPlayer = ({
     ratings: novel?.ratingCount || 'N/A',
   };
   // Effect chính để quản lý thẻ <audio>
-  useEffect(() => {
+    useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const setAudioData = () => {
-      setDuration(audio.duration || 0);
-      setCurrentTime(audio.currentTime || 0);
+    const handleLoadedData = () => {
+      setDuration(audio.duration);
+      if (initialTime > 0) {
+        audio.currentTime = initialTime;
+        setCurrentTime(initialTime);
+      }
     };
-    const setAudioTime = () => setCurrentTime(audio.currentTime || 0);
-    const handleAudioEnd = () => setIsPlaying(false);
+    
+    // Hàm này sẽ được gọi liên tục khi audio đang phát
+    const handleTimeUpdate = () => {
+      const newCurrentTime = audio.currentTime;
+      const newDuration = audio.duration;
+      
+      setCurrentTime(newCurrentTime); // Cập nhật UI của player
+      
+      // Chỉ tính toán và gửi đi nếu có tổng thời lượng và callback
+      if (newDuration > 0 && onProgressUpdate) {
+        const percentage = (newCurrentTime / newDuration) * 100;
+        
+        // GỬI CẢ % VÀ GIÂY LÊN CHO COMPONENT CHA
+        onProgressUpdate(percentage, newCurrentTime);
+      }
+    };
 
-    audio.addEventListener('loadedmetadata', setAudioData);
-    audio.addEventListener('timeupdate', setAudioTime);
-    audio.addEventListener('ended', handleAudioEnd);
+    const handleEnded = () => setIsPlaying(false);
 
-    // Dọn dẹp listeners
+    // Gắn các event listener
+    audio.addEventListener('loadeddata', handleLoadedData);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    // Dọn dẹp listeners khi component unmount hoặc audioSrc thay đổi
     return () => {
-      audio.removeEventListener('loadedmetadata', setAudioData);
-      audio.removeEventListener('timeupdate', setAudioTime);
-      audio.removeEventListener('ended', handleAudioEnd);
+      audio.removeEventListener('loadeddata', handleLoadedData);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
     };
-  }, []); // useEffect này chỉ cần chạy một lần
+  }, [audioSrc, initialTime, onProgressUpdate]); // Chạy lại effect này khi chương (audioSrc) thay đổi
 
-  // Effect để đồng bộ state với thuộc tính của thẻ audio
+  // Effect #2: Đồng bộ state với thuộc tính của thẻ audio
   useEffect(() => {
     const audio = audioRef.current;
     if (audio) {
@@ -127,19 +151,17 @@ const AudioPlayer = ({
     }
   }, [volume, isMuted, playbackRate]);
 
-  // Effect để lưu cài đặt vào localStorage
+  // Effect #3: Lưu cài đặt vào localStorage
   useEffect(() => {
     localStorage.setItem('audioPlayerVolume', volume.toString());
     localStorage.setItem('audioPlayerRate', playbackRate.toString());
   }, [volume, playbackRate]);
-  
-  // Effect để reset khi audioSrc thay đổi
+
+  // Effect #4: Reset trạng thái khi đổi chương
   useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    }
+    // Khi audioSrc thay đổi, effect #1 sẽ chạy lại và xử lý việc reset thời gian
+    // Chúng ta chỉ cần reset trạng thái isPlaying ở đây
+    setIsPlaying(false);
   }, [audioSrc]);
 
   const togglePlayPause = () => {

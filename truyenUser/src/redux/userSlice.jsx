@@ -146,13 +146,14 @@ export const sendOTP = createAsyncThunk(
 export const createHistory = createAsyncThunk(
   'user/createHistory',
   // Payload giờ sẽ là một object chứa các thông tin cần thiết
-  async ({  email, idChapter, readPlace }, { rejectWithValue }) => {
+  async ({  email, idChapter, readPlace,hearTime }, { rejectWithValue }) => {
     try {
       // Tạo payload JSON như trong Postman
       const payload = {
         email,
         idChapter,
         readPlace, // Vị trí đọc
+        hearTime,
       };
       console.log("Attempting to create/update history with payload:", JSON.stringify(payload, null, 2)); // Log payload
 

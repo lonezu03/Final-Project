@@ -36,12 +36,12 @@ export const getNovelStatistics = createAsyncThunk(
  */
 export const getAmountStatistics = createAsyncThunk(
   'statistic/getAmountStats',
-  async (type, { rejectWithValue }) => {
+  async ({ type, monthYear }, { rejectWithValue }) => {
     try {
       // Ví dụ type: 'MONTH'
       // Gửi type như một query param: ?type=MONTH
-      const response = await apiClient.get(`${apiPath}/amount`, { params: { type } });
-      
+      const response = await apiClient.get(`${apiPath}/amount`, { params: { type, monthYear } });
+
       if (response.data && response.data.code === 1000) {
         // API trả về một object, ví dụ: { "Tháng 1": 1000, "Tháng 2": 2000 }
         return response.data.result;

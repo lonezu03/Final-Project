@@ -15,8 +15,6 @@ import Star from 'lucide-react/dist/esm/icons/star';
 
 const AnalyticsReport = () => {
     const dispatch = useDispatch();
-    
-    // Lấy dữ liệu từ Redux store
     const { 
         novelStats, 
         amountStats, 
@@ -25,22 +23,17 @@ const AnalyticsReport = () => {
         error 
     } = useSelector((state) => state.statistics);
 
-    // State để quản lý các lựa chọn của người dùng
     const [novelSortBy, setNovelSortBy] = useState('totalView');
     const [amountType, setAmountType] = useState('MONTH');
-
-    // Gọi API khi component được tải hoặc khi lựa chọn thay đổi
-   useEffect(() => {
-    // Chuyển đổi camelCase (frontend) thành UPPER_SNAKE_CASE (backend yêu cầu)
-    const sortByForAPI = novelSortBy.replace(/([A-Z])/g, '_$1').toUpperCase();
     
-    const novelParams = { top: 10, sortBy: sortByForAPI, direction: 'DESC' };
-    dispatch(getNovelStatistics(novelParams));
-}, [dispatch, novelSortBy]);
+    // Sử dụng state để lưu ngày tháng đầy đủ (YYYY-MM-DD)
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
 
+    // useEffect gọi API doanh thu (logic này của bạn đã đúng)
     useEffect(() => {
-        dispatch(getAmountStatistics(amountType));
-    }, [dispatch, amountType]);
+        const amountParams = { type: amountType, monthYear: selectedDate };
+        dispatch(getAmountStatistics(amountParams));
+    }, [dispatch, amountType, selectedDate]);
 
     // Hàm định dạng số cho dễ đọc
     const formatNumber = (num) => {
@@ -51,10 +44,34 @@ const AnalyticsReport = () => {
     };
 
     // Chuẩn bị dữ liệu cho biểu đồ doanh thu
-    const overviewData = Object.entries(amountStats || {}).map(([key, value]) => ({
-        name: key,
-        total: value
-    }));
+    const overviewData = Object.entries(amountStats || {})
+        .map(([key, value]) => {
+            let label = key;
+            // Nếu đang xem theo tháng, key sẽ là 'YYYY-MM-DD'
+            // Chúng ta sẽ chỉ lấy phần ngày 'DD' để làm nhãn cho trục X
+            if (amountType === 'MONTH' && key.includes('-')) {
+                label = key.split('-')[2];
+            }
+            return {
+                name: label,
+                total: value === null ? 0 : value // Chuyển giá trị null thành 0
+            };
+        })
+        // Sắp xếp lại để đảm bảo các ngày/tháng/năm luôn theo đúng thứ tự
+        .sort((a, b) => {
+             if (!a.name || !b.name) {
+            return 0;
+        }
+
+        // Nếu cả hai name đều là số, sắp xếp theo số
+        if (!isNaN(a.name) && !isNaN(b.name)) {
+            return Number(a.name) - Number(b.name);
+        }
+
+        // Nếu là chuỗi, dùng localeCompare (bây giờ đã an toàn)
+        // Chuyển cả hai về string để chắc chắn
+        return String(a.name).localeCompare(String(b.name));
+    });
 
     // Chuẩn bị dữ liệu cho biểu đồ top 5 truyện
     // Lọc dữ liệu để chỉ vẽ các truyện có giá trị khác 0
@@ -108,14 +125,36 @@ console.log(topNovelsData); // Kiểm tra dữ liệu sau khi lọc
                 {/* Biểu đồ doanh thu */}
                 <div className="col-span-1 lg:col-span-4 bg-white p-4 rounded-lg shadow-md">
                     <div className="flex justify-between items-center mb-4">
+                        
                         <p className="font-bold text-lg text-gray-800">Tổng quan doanh thu</p>
-                        <select value={amountType} onChange={(e) => setAmountType(e.target.value)} className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500">
-                            <option value="DAY">Theo Ngày</option>
-                            <option value="MONTH">Theo Tháng</option>
-                            <option value="YEAR">Theo Năm</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                            <select 
+                                value={amountType} 
+                                onChange={(e) => setAmountType(e.target.value)} 
+                                className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                            >
+                                <option value="MONTH">Theo Tháng</option>
+                                <option value="YEAR">Theo Năm</option>
+                                <option value="DAY">Theo Ngày</option>
+
+                            </select>
+                            
+                            {/* Input chọn tháng, chỉ hiện khi amountType là 'MONTH' */}
+                            {amountType === 'MONTH' && (
+                                <input 
+                                    type="month" 
+                                    // Giá trị của input type="month" phải là 'YYYY-MM'
+                                    value={selectedDate.slice(0, 7)} 
+                                    onChange={(e) => {
+                                        // Khi người dùng chọn tháng, ta lấy ngày đầu tiên của tháng đó
+                                        setSelectedDate(`${e.target.value}-01`);
+                                    }}
+                                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                                />
+                            )}
+                        </div>
                     </div>
-                    {loadingAmountStats ? <div className="h-[300px] flex justify-center items-center text-gray-500">Đang tải dữ liệu...</div> : (
+                    {loadingAmountStats ? <div className="h-[300px] flex justify-center items-center">Đang tải...</div> : (
                         <ResponsiveContainer width="100%" height={300}>
                             <AreaChart data={overviewData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>

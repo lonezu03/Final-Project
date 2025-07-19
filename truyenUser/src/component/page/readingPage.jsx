@@ -64,6 +64,8 @@ const userHistory = useSelector((state) => state.user.userHistory);
   const [theme, setTheme] = useState(() => localStorage.getItem('readingTheme') || 'xam-nhat');
   const [showContinueDialog, setShowContinueDialog] = useState(false);
   const [savedScrollPosition, setSavedScrollPosition] = useState(null);
+  const [savedAudioPosition, setSavedAudioPosition] = useState(null);
+
   const mainContentAreaRef = useRef(null);
   const [showAudioPlayer, setShowAudioPlayer] = useState(true);
   const urlAudio = currentChapterContent?.urlAudio || null;
@@ -78,10 +80,25 @@ const userHistory = useSelector((state) => state.user.userHistory);
   const pagePaddingBottom = showAudioPlayer ? `${AUDIO_PLAYER_ACTUAL_HEIGHT_PX}px` : '0px';
   const readingHeaderStickyTop = `${NAVBAR_MAIN_HEIGHT_PX}px`;
   const lastKnownPosition = useRef(0);
- const contentRef = useRef(null); 
-const debounceTimerRef = useRef(null);
+  const contentRef = useRef(null); 
+  const debounceTimerRef = useRef(null);
+  const [currentAudioTime, setCurrentAudioTime] = useState(0);
 
   const getPositionKey = () => `reading_position_${novelId}_${chapterId}`;
+
+  //luu vị trí đọc audio
+  const [audioProgress, setAudioProgress] = useState(0);
+  const mainContentRef = useRef(null); // Gắn ref này vào thẻ <main>
+ const handleAudioProgressUpdate = (percentage, currentTimeInSeconds) => {
+    // Chỉ cập nhật state nếu giá trị thay đổi đáng kể để tránh re-render liên tục
+    // Làm tròn để so sánh
+    if (Math.floor(percentage) !== Math.floor(audioProgress)) {
+      setAudioProgress(percentage);
+    }
+    if (Math.floor(currentTimeInSeconds) !== Math.floor(currentAudioTime)) {
+      setCurrentAudioTime(currentTimeInSeconds);
+    }
+  };
 //  const latestDataRef = useRef({});
 //   useEffect(() => {
 //     latestDataRef.current = {
@@ -91,6 +108,30 @@ const debounceTimerRef = useRef(null);
 //       chapterId,
 //     };
 //   }, [currentUser, currentChapterContent, novelId, chapterId]);
+// useEffect theo doi audio
+ useEffect(() => {
+    // Chỉ thực hiện khi có ref, có tiến trình và người dùng đang phát audio
+    if (mainContentAreaRef.current && audioProgress > 0) {
+      
+      // Tổng chiều cao của nội dung bên trong <main>
+      const contentHeight = mainContentAreaRef.current.scrollHeight;
+      // Chiều cao của màn hình có thể thấy được
+      const viewportHeight = window.innerHeight;
+
+      // Tổng khoảng cách có thể cuộn được
+      const maxScrollableHeight = contentHeight - viewportHeight;
+      if (maxScrollableHeight <= 0) return; // Không cuộn nếu nội dung ngắn
+
+      // Tính toán vị trí cuộn mới dựa trên phần trăm
+      const newScrollTop = (audioProgress / 100) * maxScrollableHeight;
+
+      // Cuộn mượt mà
+      window.scrollTo({
+        top: newScrollTop,
+        behavior: 'smooth'
+      });
+    }
+  }, [audioProgress]);
  useEffect(() => {
     // Chỉ kiểm tra khi có đầy đủ thông tin cần thiết
     if (currentUser && chapterId && novelId) {
@@ -184,6 +225,7 @@ useEffect(() => {
   if (chapterHistoryFound && chapterHistoryFound.readPlace > 50) {
     console.log(`[Effect #4] TÌM THẤY! Vị trí đọc là ${chapterHistoryFound.readPlace}. Hiển thị dialog.`);
     setSavedScrollPosition(chapterHistoryFound.readPlace);
+    setSavedAudioPosition(chapterHistoryFound.hearTime || 0); // Lưu vị trí audio nếu có
     setShowContinueDialog(true);
   } else {
     console.log(`[Effect #4] Không tìm thấy lịch sử cho chương có chapterId: ${chapterId}`);
@@ -195,7 +237,7 @@ useEffect(() => {
 useEffect(() => {
   if (showContinueDialog && savedScrollPosition !== null) {
     // Đảm bảo vị trí đã lưu hợp lệ và dialog đã được hiển thị
-    window.scrollTo(0, savedScrollPosition); // Cuộn trang đến vị trí đã lưu
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn trang đến vị trí đã lưu
     console.log(`[Effect] Đang cuộn đến vị trí: ${savedScrollPosition}`);
   }
 }, [showContinueDialog, savedScrollPosition]);
@@ -232,6 +274,7 @@ useEffect(() => {
           // Giờ đây chapterId đã được đảm bảo có giá trị
           idChapter: currentChapterContent.idChapter  , // Gửi đi dưới dạng chuỗi là an toàn nhất
           readPlace,
+          hearTime: currentAudioTime, // Gửi thời gian nghe audio
         };
         console.log(`[Effect #5 - Debounced Save] Dispatching createHistory... Position: ${readPlace}`);
         vitrilandau = readPlace+400; // CẬP NHẬT VỊ TRÍ ĐỌC LẦN ĐẦU
@@ -429,7 +472,7 @@ useEffect(() => {
     setShowContinueDialog(false);
     localStorage.removeItem(getPositionKey());
   };
-
+  
   // ======================= FIX 2: SẮP XẾP LẠI THỨ TỰ KHAI BÁO =======================
   // BƯỚC 1: Khai báo các biến tính toán từ state (useMemo) trước.
   const { currentChapterIndex, prevChapterDetails, nextChapterDetails } = useMemo(() => {
@@ -632,8 +675,21 @@ useEffect(() => {
           </div>
         )}
       </div>
-      {showAudioPlayer && (currentChapterContent?.urlAudio || urlAudio) && (
-        <AudioPlayer audioSrc={currentChapterContent?.urlAudio || urlAudio} onPrevChapter={handlePrevChapter} onNextChapter={handleNextChapter} isFirstChapter={isFirstChapter} isLastChapter={isLastChapter} novelTitle={currentNovel?.nameNovel} chapterTitle={currentChapterContent?.titleChapter} coverImage={currentNovel?.imageNovel} />
+       {showAudioPlayer && (currentChapterContent?.urlAudio || urlAudio) && (
+        <AudioPlayer 
+          audioSrc={currentChapterContent?.urlAudio || urlAudio} 
+          onPrevChapter={handlePrevChapter} 
+          onNextChapter={handleNextChapter} 
+          isFirstChapter={isFirstChapter} 
+          isLastChapter={isLastChapter} 
+          novelTitle={currentNovel?.nameNovel} 
+          chapterTitle={currentChapterContent?.titleChapter} 
+          coverImage={currentNovel?.imageNovel}
+          onProgressUpdate={handleAudioProgressUpdate}
+
+          // THÊM CỨNG GIÁ TRỊ NÀY ĐỂ TEST
+          initialTime={savedAudioPosition} // Bắt đầu phát từ giây thứ 100
+        />
       )}
       <div className='h-[62px]'></div>
     </div>

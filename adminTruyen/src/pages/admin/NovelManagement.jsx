@@ -5,9 +5,99 @@ import {
     addAuthorToNovel, addCategoryToNovel 
 } from '../../redux/novelSlice'; // Thêm icon BookOpen
 import ChapterManagement from './ChapterManagement';
-import { PencilLine, Trash, Star, BookOpen, UserPlus, Tag, MoreVertical } from 'lucide-react'; 
+import { PencilLine, Trash, Star, BookOpen, UserPlus, Tag, ScanSearch } from 'lucide-react';
 import Select from 'react-select';
 
+
+
+const PreviewModal = ({ novel, onClose }) => {
+  if (!novel) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black opacity-50 z-40" onClick={onClose}></div>
+      <div className="fixed inset-0 flex justify-center items-center z-50 p-4">
+        <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-2xl font-bold">Xem trước: {novel.nameNovel}</h3>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              &times;
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+              <img 
+                src={novel.imageNovel} 
+                alt={novel.nameNovel} 
+                className="w-full h-64 object-cover rounded-md"
+              />
+            </div>
+            
+            <div className="md:col-span-2 space-y-4">
+              <div>
+                <h4 className="font-semibold text-lg">Thông tin cơ bản</h4>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <p className="text-sm text-gray-500">Trạng thái</p>
+                    <p>{novel.statusNovel === 'CONTINUE' ? 'Đang tiến hành' : 
+                        novel.statusNovel === 'COMPLETED' ? 'Hoàn thành' : 'Tạm ngưng'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Số chương</p>
+                    <p>{novel.totalChapter}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Đánh giá</p>
+                    <div className="flex items-center gap-1">
+                      <Star size={16} className="fill-yellow-500 stroke-yellow-500" />
+                      <span>{novel.rating}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-lg">Mô tả</h4>
+                <p className="mt-2 text-gray-700">{novel.descriptionNovel}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-lg">Tác giả</h4>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {novel.authors?.length > 0 ? (
+                    novel.authors.map(author => (
+                      <span key={author.idAuthor} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                        {author.nameAuthor}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">Chưa có tác giả</p>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-lg">Thể loại</h4>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {novel.categories?.length > 0 ? (
+                    novel.categories.map(category => (
+                      <span key={category.idCategory} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                        {category.nameCategory}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">Chưa có thể loại</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
 const AddToNovelModal = ({
     show,
     onClose,
@@ -61,7 +151,7 @@ const NovelManager = () => {
 
   // State để quản lý novel nào đang được chọn để xem chương
   const [selectedNovel, setSelectedNovel] = useState(null); 
-  
+  const [previewNovel, setPreviewNovel] = useState(null);
   // States cho Form
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -73,6 +163,7 @@ const NovelManager = () => {
   const [novelToUpdate, setNovelToUpdate] = useState(null); // Lưu lại novel đang được thao tác
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const dropdownRefs = useRef({}); // Dùng để xử lý click ra ngoài
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
 
 
 
@@ -97,8 +188,8 @@ const NovelManager = () => {
   //   value: author.idAuthor,
   //   label: author.nameAuthor,
   // }));
- const authorOptions = authors.map(author => ({ value: author.idAuthor, label: author.nameAuthor }));
-    const categoryOptions = categories.map(category => ({ value: category.idCategory, label: category.nameCategory }));
+  const authorOptions = authors.map(author => ({ value: author.idAuthor, label: author.nameAuthor }));
+  const categoryOptions = categories.map(category => ({ value: category.idCategory, label: category.nameCategory }));
 
     // Hàm xử lý khi thêm tác giả
     const handleAddAuthorSubmit = (authorId) => {
@@ -148,9 +239,10 @@ const handleAddCategorySubmit = (categoryId) => {
   const handleEditClick = (novel) => {
     // Lấy danh sách ID tác giả từ object novel
     const authorIds = Array.isArray(novel.authors) ? novel.authors.map(author => author.idAuthor) : [];
-    
+    const categoryIds = Array.isArray(novel.categories) ? novel.categories.map(cat => cat.idCategory) : [];
     setCurrentNovel(novel);
     setSelectedAuthorIds(authorIds); // Cập nhật state cho Select component
+    setSelectedCategoryIds(categoryIds);
     setIsEditing(true);
     setShowForm(true);
   };
@@ -173,8 +265,8 @@ const handleAddCategorySubmit = (categoryId) => {
       alert('Tên truyện phải có độ dài từ 3 đến 100 ký tự!');
       return;
     }
-    if (e.target.descriptionNovel.value.length > 100) {
-      alert('Mô tả phải có độ dài tối đa 100 ký tự!');
+    if (e.target.descriptionNovel.value.length > 200) {
+      alert('Mô tả có độ dài tối đa 200 ký tự!');
       return;
     }
     // Tạo payload từ các input của form
@@ -184,7 +276,8 @@ const handleAddCategorySubmit = (categoryId) => {
       //totalChapter: parseInt(e.target.totalChapter.value, 10) || 0,
       //rating: parseFloat(e.target.rating.value) || 0,
       statusNovel: e.target.statusNovel.value,
-     // authors: selectedAuthorIds.map(id => ({ idAuthor: id })), // Gửi dưới dạng list object
+      category: selectedCategoryIds,
+    authors: selectedAuthorIds,    // Mảng string
     };
     
     // Tạo FormData để có thể gửi cả file và dữ liệu JSON
@@ -271,7 +364,7 @@ const handleAddCategorySubmit = (categoryId) => {
                     <option value="DROP">Tạm ngưng</option>
                   </select>
                 </div>
-                {/* <div>
+                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tác giả</label>
                   <Select
                     isMulti
@@ -282,7 +375,19 @@ const handleAddCategorySubmit = (categoryId) => {
                     onChange={(selected) => setSelectedAuthorIds(selected.map(opt => opt.value))}
                     placeholder="Chọn tác giả..."
                   />
-                </div> */}
+                </div> 
+                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tác giả</label>
+                  <Select
+                    isMulti
+                    options={categoryOptions}
+                    className="basic-multi-select"
+                    classNamePrefix="select"
+                    defaultValue={categoryOptions.filter(option => selectedCategoryIds.includes(option.value))}
+                    onChange={(selected) => setSelectedCategoryIds(selected.map(opt => opt.value))}
+                    placeholder="Chọn thể loại..."
+                  />
+                </div> 
                 <div>
                   <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">Ảnh bìa</label>
                   <input id="image" type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} className="border border-gray-300 p-2 w-full rounded-md" />
@@ -343,33 +448,46 @@ const handleAddCategorySubmit = (categoryId) => {
                     <button title="Xóa truyện" className="text-red-600 hover:text-red-800" onClick={(e) => { e.stopPropagation(); handleDeleteNovel(novel.idNovel); }}>
                       <Trash size={20} />
                     </button>
-                       <div className="relative">
-                                            <button 
-                                                title="Thêm..." 
-                                                className="text-gray-600 hover:text-gray-900 p-2 rounded-full hover:bg-gray-200"
-                                                onClick={(e) => { e.stopPropagation(); toggleDropdown(novel.idNovel); }}
-                                            >
-                                                <MoreVertical size={18} />
-                                            </button>
-                                            
-                                            {/* Dropdown Menu - Hiển thị dựa trên state `openDropdownId` */}
-                                            {openDropdownId === novel.idNovel && (
-                                                <div className="absolute right-0 bottom-full mb-2 w-48 bg-white border rounded-md shadow-lg z-20">
-                                                    <button onClick={() => { setNovelToUpdate(novel); setShowAddAuthorModal(true); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                                        <UserPlus size={16} /> Thêm tác giả
-                                                    </button>
-                                                    <button onClick={() => { setNovelToUpdate(novel); setShowAddCategoryModal(true); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                                        <Tag size={16} /> Thêm thể loại
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                      <div className="relative">
+                      <button 
+                        title="Xem trước" 
+                        className="text-gray-600 hover:text-gray-900 p-2 rounded-full hover:bg-gray-200"
+                        onClick={(e) => { e.stopPropagation(); setPreviewNovel(novel); }}
+                      >
+                        <ScanSearch size={18} />
+                      </button>
+                      
+                      {/* Dropdown Menu - Hiển thị dựa trên state `openDropdownId` */}
+                      {openDropdownId === novel.idNovel && (
+                        <div className="absolute right-0 bottom-full mb-2 w-48 bg-white border rounded-md shadow-lg z-20">
+                          <button 
+                            onClick={() => { setNovelToUpdate(novel); setShowAddAuthorModal(true); setOpenDropdownId(null); }} 
+                            className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <UserPlus size={16} /> Thêm tác giả
+                          </button>
+                          <button 
+                            onClick={() => { setNovelToUpdate(novel); setShowAddCategoryModal(true); setOpenDropdownId(null); }} 
+                            className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <Tag size={16} /> Thêm thể loại
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {/* Preview Modal */}
+          {previewNovel && (
+            <PreviewModal 
+              novel={previewNovel} 
+              onClose={() => setPreviewNovel(null)} 
+            />
+          )}
          <AddToNovelModal 
                 show={showAddAuthorModal}
                 onClose={() => setShowAddAuthorModal(false)}
