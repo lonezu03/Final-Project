@@ -3,8 +3,9 @@ import React, { useState,useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
-import { Loader2 } from 'lucide-react'; // Icon loading
+import { Loader2 ,Download } from 'lucide-react'; // Icon loading
 import { refreshUser } from '../redux/userSlice';
+import { getChapterContentById } from '../redux/chapterSlice'; 
 
 // Import các action từ transactionSlice và userSlice
 import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
@@ -46,10 +47,65 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
   // Lấy state mới từ Redux
   const { currentUser } = useSelector((state) => state.user);
   const { createStatus, confirmStatus, pendingTransaction, createError } = useSelector((state) => state.transaction);
-  
+    const { currentNovel } = useSelector((state) => state.novels);
+
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const CHAPTER_PRICE = 3;
+  const [downloadingChapterId, setDownloadingChapterId] = useState(null); 
+  const handleDownload = async (chapter) => {
+    if (!chapter || !chapter.idChapter) return;
 
+    setDownloadingChapterId(chapter.idChapter); // Bật trạng thái loading
+    
+    try {
+      // 1. Dispatch action để lấy nội dung chi tiết của chương
+      const chapterContentResult = await dispatch(getChapterContentById({ 
+          novelId: novelId, 
+          chapterId: chapter.idChapter 
+      })).unwrap();
+
+      const content = chapterContentResult.contentChapter;
+      if (!content) {
+        throw new Error("Nội dung chương rỗng.");
+      }
+
+      // 2. Dọn dẹp và chuẩn bị nội dung file .txt
+      const chapterText = content
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/ /g, " ")
+        .replace(/<[^>]*>?/gm, '');
+
+      const fileContent = [
+        `Truyện: ${currentNovel?.nameNovel || 'Không rõ tên truyện'}`,
+        `Chương: ${chapter.titleChapter}`,
+        "====================================",
+        "\n",
+        chapterText,
+        "\n\n",
+        "------------------------------------",
+        `Tải về từ [Tên Website Của Bạn]`
+      ].join('\n');
+
+      // 3. Tạo tên file và kích hoạt tải về
+      const safeFileName = `${currentNovel?.nameNovel} - ${chapter.titleChapter}.txt`.replace(/[\\/:*?"<>|]/g, '-');
+      const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = safeFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Đã bắt đầu tải về chương!");
+
+    } catch (err) {
+      toast.error(`Lỗi khi tải chương: ${err.message || err}`);
+    } finally {
+      setDownloadingChapterId(null); // Tắt trạng thái loading
+    }
+  };
   // Effect để xử lý kết quả từ `createTransaction`
   useEffect(() => {
     if (createStatus === 'succeeded' && pendingTransaction) {
@@ -133,32 +189,45 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
         {chapters.map((chapter, index) => {
           const chapterNumberDisplay = `Chương ${chapter.chapterNumber || (currentPage - 1) * chaptersPerPage + index + 1}`;
           const chapterTitle = chapter.titleChapter || "Chưa có tiêu đề";
-          
           const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+          // Kiểm tra xem có đang tải chương này không
+          const isDownloading = downloadingChapterId === chapter.idChapter;
 
-            return (
-            <li key={chapter.idChapter} className="flex items-center justify-between border-b border-gray-700">
+          return (
+            <li key={chapter.idChapter} className="flex items-center justify-between border-b border-gray-700 py-1.5">
               <div className="flex items-center flex-grow min-w-0">
-                <span className="w-20 md:w-24 flex-shrink-0 text-left py-2.5 border-r border-gray-700 mr-3 pl-2 text-gray-400">{chapterNumberDisplay}</span>
+                <span className="w-20 md:w-24 flex-shrink-0 text-left mr-3 pl-2 text-gray-400">{chapterNumberDisplay}</span>
                 {isPurchased ? (
-                  <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className="py-2.5 flex-1 text-gray-200 hover:text-sky-400 truncate" title={chapterTitle}>
+                  <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className="flex-1 text-gray-200 hover:text-sky-400 truncate" title={chapterTitle}>
                     {chapterTitle}
                   </Link>
                 ) : (
-                  <span className="py-2.5 flex-1 text-gray-300 truncate" title={chapterTitle}>{chapterTitle}</span>
+                  <span className="flex-1 text-gray-300 truncate" title={chapterTitle}>{chapterTitle}</span>
                 )}
               </div>
 
-              {!isPurchased && (
-                <button
-                  onClick={() => handlePurchaseClick(chapter)}
-                  disabled={createStatus === 'loading' || confirmStatus === 'loading'}
-                  className="ml-3 px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors flex-shrink-0 my-1 disabled:opacity-50"
-                  title={`Mua chương ${chapterTitle}`}
-                >
-                  {CHAPTER_PRICE} xu
-                </button>
-              )}
+              {/* NÚT HÀNH ĐỘNG: MUA hoặc TẢI VỀ */}
+              <div className="ml-3 flex-shrink-0">
+                {isPurchased ? (
+                  <button
+                    onClick={() => handleDownload(chapter)}
+                    disabled={isDownloading}
+                    className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+                    title={`Tải về chương ${chapterTitle}`}
+                  >
+                    {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handlePurchaseClick(chapter)}
+                    disabled={createStatus === 'loading' || confirmStatus === 'loading'}
+                    className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors disabled:opacity-50"
+                    title={`Mua chương ${chapterTitle}`}
+                  >
+                    {CHAPTER_PRICE} xu
+                  </button>
+                )}
+              </div>
             </li>
           );
         })}
