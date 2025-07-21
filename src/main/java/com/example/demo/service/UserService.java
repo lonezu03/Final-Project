@@ -24,6 +24,7 @@ import com.example.demo.dto.request.UserUpdateCoinRequest;
 import com.example.demo.dto.request.UpdateHistoryRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
+import com.example.demo.dto.request.UserForgotPasswordRequest;
 import com.example.demo.dto.request.UserLoginByEmailRequest;
 import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
@@ -297,6 +298,45 @@ public class UserService {
 		return userRespone;
 	}
 
+	/**
+	 * Cập nhật password User
+	 */
+	public UserRespone updatePasswordUser(UserForgotPasswordRequest request) {
+		User user=userRepository.findById(request.getIdUser()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+		
+		user.setPasswordUser(passwordEncoder.encode(request.getPassword()));
+
+		
+	    user=	userRepository.save(user);
+	    
+	    UserRespone userRespone = userMapper.toUserRespone(user);
+		List<HistoryRead> allHistories = historyReadRepository.findByIDUser(user.getIdUser());
+		userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
+		
+		List<String> chapterBought = transactionRepository
+			    .findByUser_IdUser(user.getIdUser()).stream()
+			    .filter(t -> t.getStatusDeposit() == StatusDeposit.SUCCESS)
+			    .map(t -> t.getChapter().getIdChapter()) // giả sử bạn muốn lấy idChapter
+			    .toList();
+		
+	
+		
+		
+		userRespone.setChapterBought(chapterBought);
+		
+		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
+		userRespone.setHistoryDeposit(historyDepositRespones);
+
+		
+		userRespone.setHistoryDeposit(historyDepositRespones);
+		String refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+		String accessToken = authenticationService.generateToken(user, refreshToken);
+		userRespone.setToken(accessToken);
+	
+	
+		return userRespone;
+	}
+	
 	/**
 	 * Cấp quyền MANAGER cho người dùng theo ID.
 	 *

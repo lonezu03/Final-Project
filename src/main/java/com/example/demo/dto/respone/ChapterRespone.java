@@ -28,4 +28,7 @@ public class ChapterRespone {
 	String novel;
 	
 	String urlAudio;
+	
+	Integer coinPrice;
+
 }

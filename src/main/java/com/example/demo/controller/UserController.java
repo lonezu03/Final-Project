@@ -24,6 +24,7 @@ import com.example.demo.dto.request.RefreshUserRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
+import com.example.demo.dto.request.UserForgotPasswordRequest;
 import com.example.demo.dto.request.UserLoginByEmailRequest;
 import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
@@ -202,6 +203,14 @@ public class UserController {
 		return ApiRespone.<UserRespone>builder().result(userService.updateUser(request)).build();
 	}
 
+	/**
+	 * Cập nhật password người dùng
+	 */
+	@PutMapping(value = "/forgotPass")
+	@Operation(summary = "Cập nhật password người dùng", description = "Dùng khi quên mật khẩu")
+	public ApiRespone<UserRespone> updateUser(@RequestBody UserForgotPasswordRequest request) throws IOException {
+		return ApiRespone.<UserRespone>builder().result(userService.updatePasswordUser(request)).build();
+	}
 	/**
 	 * Xoá người dùng khỏi hệ thống theo ID.
 	 *
