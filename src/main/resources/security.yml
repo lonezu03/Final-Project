@@ -11,6 +11,8 @@
       - POST:/user/createUser
       - POST:/user/loginByEmail
       - POST:/user/createUserByEmail
+      - PUT:/user/forgotPass
+      - GET:/user/getId
       - POST:/chapter/getAll
       - GET:/chapter/increaseViewChapter/**
       - GET:/category/getAll
