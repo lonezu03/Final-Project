@@ -15,6 +15,7 @@ import {
   sendOTP as sendOTPAPI,
   clearUserError
 } from "../redux/userSlice";
+import ForgotPasswordView from './ForgotPasswordView'; 
 
 const logoUrl = "/logo-tc.png";
 
@@ -32,7 +33,11 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const switchToForgotPassword = () => {
+    if (!isLoading && !isOtpSending) {
+        setView('forgotPassword');
+    }
+  };
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
@@ -104,7 +109,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     
     try {
       // BƯỚC 1: Đăng ký trên Firebase
-      await createUserWithEmailAndPassword(auth, email, password);
+      // await createUserWithEmailAndPassword(auth, email, password);
       
       // BƯỚC 2: Đăng ký trên Backend
       const registrationPayload = { emailUser: email, passwordUser: password };
@@ -138,7 +143,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     e.preventDefault();
     setIsLoading(true); // Kiểm soát isLoading tại đây
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // await signInWithEmailAndPassword(auth, email, password);
       const loginPayload = { email, password };
       // Sử dụng lại hàm handleBackendOperation cho đăng nhập
       await handleBackendOperation(loginUserWithPassword, loginPayload, "Email/Password Login");
@@ -227,6 +232,14 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const currentLoadingState = isLoading || isOtpSending;
 
   const renderContent = () => {
+     if (view === 'forgotPassword') {
+        return (
+            <ForgotPasswordView 
+                onBackToLogin={switchToLogin} 
+                onAuthSuccess={onAuthSuccess} // <<== Truyền prop này vào
+            />
+        );
+    }
     if (view === 'login') {
       return (
         <form onSubmit={handleEmailPasswordLogin}>
@@ -237,8 +250,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
           <div className="mb-5">
             <div className="flex justify-between items-baseline">
               <label htmlFor="password-login" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
-              <a href="#" className="text-xs text-amber-600 hover:text-amber-700 hover:underline" onClick={(e) => { e.preventDefault(); if (!currentLoadingState) alert("Chức năng Quên mật khẩu chưa được triển khai."); }}>Quên mật khẩu</a>
-            </div>
+                <button 
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); switchToForgotPassword(); }}
+                  className="text-xs text-amber-600 hover:text-amber-700 hover:underline"
+                >
+                  Quên mật khẩu?
+                </button>            </div>
             <div className="relative">
               <input
                 id="password-login"
@@ -374,6 +392,8 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             {view === 'login' && 'Đăng nhập'}
             {view === 'register' && 'Đăng ký'}
             {view === 'otp' && 'Xác thực OTP'}
+              {view === 'forgotPassword' && 'Quên Mật Khẩu'}
+
           </h2>
           <button onClick={handleCloseModal} className="text-stone-500 hover:text-stone-700" aria-label="Đóng" disabled={currentLoadingState}>
             <X size={24} />

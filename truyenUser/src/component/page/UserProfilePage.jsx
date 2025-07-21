@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-
+import ForgotPasswordView from '../ForgotPasswordView'; 
+ 
 // Import các actions từ userSlice
 import {
   updateUserProfile,
@@ -203,13 +204,13 @@ const UserProfilePage = () => {
           <div className="mt-10 border-t border-gray-200 pt-8">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Bảo mật & Lịch sử</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* <button onClick={() => setShowPasswordDialog(true)} className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors text-left">
+              <button onClick={() => setShowPasswordDialog(true)} className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors text-left">
                 <KeyRound className="mr-4 text-red-500 flex-shrink-0" size={24} />
                 <div>
                   <span className="font-medium text-gray-800">Thay đổi mật khẩu</span>
                   <p className="text-xs text-gray-500">Nên thay đổi định kỳ để bảo vệ tài khoản.</p>
                 </div>
-              </button> */}
+              </button>
               <button onClick={() => navigate('/user/reading-history')} className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors text-left">
                 <BookOpen className="mr-4 text-green-500 flex-shrink-0" size={24} />
                 <div>

@@ -50,45 +50,147 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
     const { currentNovel } = useSelector((state) => state.novels);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const CHAPTER_PRICE = 3;
   const [downloadingChapterId, setDownloadingChapterId] = useState(null); 
   const handleDownload = async (chapter) => {
-    if (!chapter || !chapter.idChapter) return;
+  //   if (!chapter || !chapter.idChapter) return;
 
-    setDownloadingChapterId(chapter.idChapter); // Bật trạng thái loading
+  //   setDownloadingChapterId(chapter.idChapter); // Bật trạng thái loading
+    
+  //   try {
+  //     // 1. Dispatch action để lấy nội dung chi tiết của chương
+  //     const chapterContentResult = await dispatch(getChapterContentById({ 
+  //         novelId: novelId, 
+  //         chapterId: chapter.idChapter 
+  //     })).unwrap();
+
+  //     const content = chapterContentResult.contentChapter;
+  //     if (!content) {
+  //       throw new Error("Nội dung chương rỗng.");
+  //     }
+
+  //     // 2. Dọn dẹp và chuẩn bị nội dung file .txt
+  //     const chapterText = content
+  //       .replace(/<br\s*\/?>/gi, "\n")
+  //       .replace(/ /g, " ")
+  //       .replace(/<[^>]*>?/gm, '');
+
+  //     const fileContent = [
+  //       `Truyện: ${currentNovel?.nameNovel || 'Không rõ tên truyện'}`,
+  //       `Chương: ${chapter.titleChapter}`,
+  //       "====================================",
+  //       "\n",
+  //       chapterText,
+  //       "\n\n",
+  //       "------------------------------------",
+  //       `Tải về từ [Tên Website Của Bạn]`
+  //     ].join('\n');
+
+  //     // 3. Tạo tên file và kích hoạt tải về
+  //     const safeFileName = `${currentNovel?.nameNovel} - ${chapter.titleChapter}.txt`.replace(/[\\/:*?"<>|]/g, '-');
+  //     const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+  //     const url = URL.createObjectURL(blob);
+  //     const link = document.createElement('a');
+  //     link.href = url;
+  //     link.download = safeFileName;
+  //     document.body.appendChild(link);
+  //     link.click();
+  //     document.body.removeChild(link);
+  //     URL.revokeObjectURL(url);
+      
+  //     toast.success("Đã bắt đầu tải về chương!");
+
+  //   } catch (err) {
+  //     toast.error(`Lỗi khi tải chương: ${err.message || err}`);
+  //   } finally {
+  //     setDownloadingChapterId(null); // Tắt trạng thái loading
+  //   }
+  // };
+  if (!chapter || !chapter.idChapter) return;
+
+    setDownloadingChapterId(chapter.idChapter);
     
     try {
-      // 1. Dispatch action để lấy nội dung chi tiết của chương
+      // 1. Lấy nội dung chương
       const chapterContentResult = await dispatch(getChapterContentById({ 
           novelId: novelId, 
           chapterId: chapter.idChapter 
       })).unwrap();
 
-      const content = chapterContentResult.contentChapter;
-      if (!content) {
+      const contentHtml = chapterContentResult.contentChapter;
+      if (!contentHtml) {
         throw new Error("Nội dung chương rỗng.");
       }
 
-      // 2. Dọn dẹp và chuẩn bị nội dung file .txt
-      const chapterText = content
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/ /g, " ")
-        .replace(/<[^>]*>?/gm, '');
-
-      const fileContent = [
-        `Truyện: ${currentNovel?.nameNovel || 'Không rõ tên truyện'}`,
-        `Chương: ${chapter.titleChapter}`,
-        "====================================",
-        "\n",
-        chapterText,
-        "\n\n",
-        "------------------------------------",
-        `Tải về từ [Tên Website Của Bạn]`
-      ].join('\n');
+      // 2. Tạo Template HTML với CSS được nhúng (inline)
+      const htmlTemplate = `
+        <!DOCTYPE html>
+        <html lang="vi">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${currentNovel?.nameNovel} - ${chapter.titleChapter}</title>
+          <style>
+            /* Nhúng các quy tắc CSS quan trọng vào đây */
+            body {
+              font-family: 'Tahoma', sans-serif;
+              line-height: 1.8;
+              font-size: 20px;
+              background-color: #f0f0f0; /* Màu nền xám nhạt */
+              color: #333;
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              max-width: 800px;
+              margin: 20px auto;
+              padding: 20px 40px;
+              background-color: #ffffff; /* Nền trắng cho nội dung */
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+              font-size: 1.8em;
+              color: #1a1a1a;
+              border-bottom: 2px solid #ddd;
+              padding-bottom: 10px;
+              margin-bottom: 20px;
+            }
+            h2 {
+              font-size: 1.4em;
+              color: #2a2a2a;
+              margin-bottom: 25px;
+            }
+            p {
+              margin-bottom: 1.2em;
+            }
+            .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+                text-align: center;
+                font-size: 0.8em;
+                color: #888;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${currentNovel?.nameNovel || 'Không rõ tên truyện'}</h1>
+            <h2>${chapter.titleChapter}</h2>
+            <div class="content">
+              ${contentHtml}
+            </div>
+            <div class="footer">
+                <p>Tải về từ https://webtruyen-git-fontend-phan-thanh-vus-projects.vercel.app/</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
 
       // 3. Tạo tên file và kích hoạt tải về
-      const safeFileName = `${currentNovel?.nameNovel} - ${chapter.titleChapter}.txt`.replace(/[\\/:*?"<>|]/g, '-');
-      const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+      const safeFileName = `${currentNovel?.nameNovel} - ${chapter.titleChapter}.html`.replace(/[\\/:*?"<>|]/g, '-');
+      const blob = new Blob([htmlTemplate], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -98,12 +200,12 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      toast.success("Đã bắt đầu tải về chương!");
+      toast.success("Đã bắt đầu tải về file HTML!");
 
     } catch (err) {
       toast.error(`Lỗi khi tải chương: ${err.message || err}`);
     } finally {
-      setDownloadingChapterId(null); // Tắt trạng thái loading
+      setDownloadingChapterId(null);
     }
   };
   // Effect để xử lý kết quả từ `createTransaction`
@@ -192,6 +294,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
           const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
           // Kiểm tra xem có đang tải chương này không
           const isDownloading = downloadingChapterId === chapter.idChapter;
+          const coinPrice= chapter.coinPrice || 0; // Mặc định là 3 xu nếu không có giá cụ thể
 
           return (
             <li key={chapter.idChapter} className="flex items-center justify-between border-b border-gray-700 py-1.5">
@@ -224,7 +327,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
                     className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors disabled:opacity-50"
                     title={`Mua chương ${chapterTitle}`}
                   >
-                    {CHAPTER_PRICE} xu
+                    {coinPrice} xu
                   </button>
                 )}
               </div>

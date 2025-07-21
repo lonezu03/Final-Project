@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { changeUserPassword, clearUserError } from '../redux/userSlice'; // Sửa đường dẫn nếu cần
 import { X, KeyRound, Eye, EyeOff, Loader2 as LucideSpinner } from 'lucide-react';
-
+import { sendOTP, getUserIdByEmail, forgotPassword, loginUserWithPassword } from '../redux/userSlice';
+import { toast } from 'react-toastify';
 // Component con cho ô nhập mật khẩu có nút hiển thị/ẩn
 const PasswordInput = ({ id, value, onChange, placeholder, isVisible, onToggleVisibility }) => (
   <div className="relative">
@@ -30,16 +31,15 @@ const ChangePasswordDialog = ({ onClose, onNotification }) => {
   const dispatch = useDispatch();
   
   // Lấy trạng thái loading và error từ Redux
-  const { loading, error: reduxError } = useSelector((state) => state.user);
+  const { currentUser,loading, error: reduxError } = useSelector((state) => state.user);
 
   // State cục bộ cho form
-  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState('');
 
   // State cho việc hiển thị/ẩn mật khẩu
-  const [showOldPass, setShowOldPass] = useState(false);
+  // const [showOldPass, setShowOldPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
 
@@ -48,10 +48,10 @@ const ChangePasswordDialog = ({ onClose, onNotification }) => {
     dispatch(clearUserError());
   }, [dispatch]);
 
-  const handleSubmit = async (e) => {
+   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormError(''); // Reset lỗi form
-    dispatch(clearUserError()); // Reset lỗi redux
+    setFormError('');
+    // dispatch(clearUserError());
 
     if (newPassword.length < 6) {
       setFormError('Mật khẩu mới phải có ít nhất 6 ký tự.');
@@ -63,19 +63,37 @@ const ChangePasswordDialog = ({ onClose, onNotification }) => {
       return;
     }
     
+    // Đảm bảo có currentUser và idUser
+    if (!currentUser?.idUser) {
+        setFormError("Không thể xác định người dùng. Vui lòng đăng nhập lại.");
+        return;
+    }
+
     try {
-      // API của bạn không cần oldPassword, nhưng form vẫn hỏi để tăng bảo mật phía client.
-      // Thunk `changeUserPassword` chỉ cần `newPassword`.
-      await dispatch(changeUserPassword({ newPassword })).unwrap();
+      console.log("Đang đổi mật khẩu...", currentUser.idUser, newPassword);
+      // BƯỚC 1: Gọi thunk forgotPassword với idUser và mật khẩu mới
+      await dispatch(forgotPassword({ 
+          idUser: currentUser.idUser, 
+          password: newPassword 
+      })).unwrap();
+
+      // BƯỚC 3: Để đảm bảo token được làm mới, ta nên đăng nhập lại
+      await dispatch(loginUserWithPassword({ 
+          email: currentUser.emailUser, 
+          password: newPassword 
+      })).unwrap();
       
-      // Thông báo thành công và đóng dialog
-      onNotification('success', 'Đổi mật khẩu thành công!');
-      onClose();
+      // Đồng bộ đăng nhập với Firebase
+
+      // onNotification('success', 'Đổi mật khẩu và làm mới phiên đăng nhập thành công!');
+      toast.success('Đổi mật khẩu thành công!');
+      onClose(); // ĐÓNG DIALOG KHI TẤT CẢ THÀNH CÔNG
     } catch (err) {
-      // Lỗi sẽ được bắt bởi `unwrap()` và `err` sẽ là payload của rejected action
-      // Không cần setFormError nữa vì lỗi từ Redux sẽ được hiển thị
+      // Lỗi sẽ được bắt bởi .unwrap()
+      // reduxError sẽ tự động được cập nhật, không cần setFormError
     }
   };
+
 
   return (
     // Lớp phủ toàn màn hình

@@ -328,7 +328,7 @@ export const createReviewNovel = createAsyncThunk(
         { headers: { 'Content-Type': 'application/json' } }
       );
 
-      if (response.data && response.data.code === 200) {
+      if (response.data && response.data.code === 1000) {
         return response.data.result; // Trả về kết quả đánh giá mới
       } else {
         // Kiểm tra nếu API trả về lỗi khác
@@ -428,7 +428,21 @@ export const loadAndRefreshUser = createAsyncThunk(
     }
   }
 );
-
+// THUNK MỚI: Xử lý quên mật khẩu
+export const forgotPassword = createAsyncThunk(
+  'user/forgotPassword',
+  async ({ idUser, password }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put('/user/forgotPass', { idUser, password });
+      if (response.data && (response.data.code === 1000 ) && response.data.result) {
+        return response.data.result; // Trả về object user đã cập nhật
+      }
+      return rejectWithValue(response.data?.message || 'Cập nhật mật khẩu thất bại.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi cập nhật mật khẩu.');
+    }
+  }
+);
 // api upload avatar
 export const uploadAvatar = createAsyncThunk(
   'user/uploadAvatar',
@@ -454,7 +468,7 @@ export const uploadAvatar = createAsyncThunk(
       const response = await apiClient.post(url, formData);
 
       // Kiểm tra response từ server
-      if (response.data && (response.data.code === 1000 || response.data.code === 1073741824) && response.data.result) {
+      if (response.data && (response.data.code === 1000) && response.data.result) {
         // Trả về object user đã được cập nhật hoàn chỉnh
         return response.data.result;
       }
@@ -466,6 +480,25 @@ export const uploadAvatar = createAsyncThunk(
       const errorMessage = error.response?.data?.message || 'Lỗi khi tải lên avatar.';
       console.error("Upload Avatar API Error:", errorMessage, error.response);
       return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+export const getUserIdByEmail = createAsyncThunk(
+  'user/getIdByEmail',
+  async (email, { rejectWithValue }) => {
+    try {
+      // API này không cần token, nên có thể dùng axios hoặc apiClient đều được
+      const response = await axios.get(`${userApiBase}/getId?email=${encodeURIComponent(email)}`);
+      
+      // API trả về { code, message, result: "string" }
+      if (response.data && (response.data.code === 1000) && typeof response.data.result === 'string') {
+        return response.data.result; // Trả về chuỗi idUser
+      }
+      
+      return rejectWithValue(response.data?.message || 'Không tìm thấy người dùng với email này.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi khi tìm người dùng.');
     }
   }
 );
