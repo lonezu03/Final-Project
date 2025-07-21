@@ -211,6 +211,13 @@ public class UserController {
 	public ApiRespone<UserRespone> updateUser(@RequestBody UserForgotPasswordRequest request) throws IOException {
 		return ApiRespone.<UserRespone>builder().result(userService.updatePasswordUser(request)).build();
 	}
+	
+	@GetMapping("/getId")
+	@Operation(summary = "Lấy Id User", description = "Lấy Id User bằng email truyền vào")
+	public ApiRespone<String> getIdUser(@RequestParam String email) throws IOException {
+		return ApiRespone.<String>builder().result(userService.getIdUser(email)).build();
+	}
+	
 	/**
 	 * Xoá người dùng khỏi hệ thống theo ID.
 	 *

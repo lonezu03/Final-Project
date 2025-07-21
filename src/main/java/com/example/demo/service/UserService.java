@@ -337,6 +337,15 @@ public class UserService {
 		return userRespone;
 	}
 	
+	public String getIdUser(String email) {
+		User user=userRepository.findByEmailUser(email);
+		if (user==null) {
+			throw new AppException(ErrorCode.USER_NOT_EXISTED);
+		}
+
+		return user.getIdUser();
+	}
+	
 	/**
 	 * Cấp quyền MANAGER cho người dùng theo ID.
 	 *
