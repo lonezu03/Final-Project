@@ -209,6 +209,7 @@ public class UserController {
 	@PutMapping(value = "/forgotPass")
 	@Operation(summary = "Cập nhật password người dùng", description = "Dùng khi quên mật khẩu")
 	public ApiRespone<UserRespone> updateUser(@RequestBody UserForgotPasswordRequest request) throws IOException {
+		JsonSchemaValidator.validate(request, "UserUpdatePasswordSchema.json");
 		return ApiRespone.<UserRespone>builder().result(userService.updatePasswordUser(request)).build();
 	}
 	
