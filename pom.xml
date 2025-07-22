@@ -136,12 +136,7 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<dependency>
-			<groupId>com.microsoft.playwright</groupId>
-			<artifactId>playwright</artifactId>
-			<version>1.44.0</version> <!-- Kiểm tra phiên bản mới nhất trên Maven
-			Central -->
-		</dependency>
+
 
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
