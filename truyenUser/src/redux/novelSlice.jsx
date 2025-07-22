@@ -215,7 +215,26 @@ export const LyberiNovels = createAsyncThunk(
     }
   }
 );
+export const getAllReviews = createAsyncThunk(
+  'novels/getAllReviews',
+  async (idNovel, { rejectWithValue }) => {
+    try {
+      // SỬA LẠI TÊN ENDPOINT CHO KHỚP VỚI SWAGGER (CÓ CHỮ 'l' THỪA)
+      const response = await apiClient.get(`/novel/getlAllReviewNovel?idNovel=${idNovel}`);
+      
+      // Thêm kiểm tra code thành công
+      if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
+        return response.data.result; // Trả về mảng reviews từ API
+      }
+      
+      // Nếu code không phải 1000 hoặc không có result
+      return rejectWithValue(response.data?.message || 'Không thể tải đánh giá.');
 
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải đánh giá.');
+    }
+  }
+);
 // --- SLICE DEFINITION ---
 const initialPaginationState = {
   pageNumber: 0,
@@ -232,6 +251,7 @@ const initialPaginationState = {
 const initialState = {
   novels: [], // << State mới để lưu danh sách truyện gốc từ getAllNovels
   searchedNovels: [], 
+  reviews: [],
 
   hotNovels: {
     list: [],
@@ -415,7 +435,18 @@ const novelSlice = createSlice({
       .addCase(LyberiNovels.rejected, (state, action) => {
         state.error = action.payload;
         state.followedNovels = [];
-      });
+      }).addCase(getAllReviews.pending, (state) => {
+      state.loadingReviews = true;
+      state.errorReviews = null;
+    })
+    .addCase(getAllReviews.fulfilled, (state, action) => {
+      state.loadingReviews = false;
+      state.reviews = action.payload;
+    })
+    .addCase(getAllReviews.rejected, (state, action) => {
+      state.loadingReviews = false;
+      state.errorReviews = action.payload;
+    });
     
   }
 });
@@ -429,6 +460,5 @@ export const selectAllNovelsLoading = (state) => state.novels.loadingAll;
 export const selectSearchLoading = (state) => state.novels.searchLoading; // Đổi tên
 export const selectNovelsError = (state) => state.novels.error; // <<<< ĐẢM BẢO SELECTOR NÀY TỒN TẠI VÀ ĐƯỢC EXPORT
 export const selectSearchPagination = (state) => state.novels.pagination;
-
 
 export default novelSlice.reducer;

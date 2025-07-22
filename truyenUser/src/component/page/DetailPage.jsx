@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'; // Thêm useMemo
 import { useParams, Link, useNavigate } from 'react-router-dom'; // Thêm useNavigate
 import { useDispatch, useSelector } from 'react-redux';
-import { getNovelById,LyberiNovels } from '../../redux/novelSlice';
+import { getNovelById,LyberiNovels,getAllReviews  } from '../../redux/novelSlice';
 import {followNovel} from '../../redux/userSlice'
 import { getAllChapters } from '../../redux/chapterSlice'; // Action này lấy danh sách chương cho tab
 import { toast } from 'react-toastify';
@@ -12,6 +12,7 @@ import GoToChapterInput from '../GoToChapterInput'; // Đường dẫn component
 import PaginationControls from '../PaginationChapter'; // Đường dẫn component
 import ChapterListDisplay from '../ChapterListDisplay'; // Đường dẫn component
 import ReviewDialog from '../ReviewDialog'; // Import component dialog
+import NovelReviews from '../NovelReviews'; 
 
 const DetailPage = () => {
   const { novelId } = useParams();
@@ -35,6 +36,7 @@ const DetailPage = () => {
         // Gọi API để lấy thông tin truyện và danh sách chương
         dispatch(getNovelById(novelId));
         dispatch(getAllChapters(novelId));
+        dispatch(getAllReviews(novelId));
     }
   }, [dispatch, novelId]); 
  useEffect(() => {
@@ -326,7 +328,10 @@ const DetailPage = () => {
                 )}
               </div>
             )}
+                                        <NovelReviews />
+
           </div>
+
           <div className="w-full md:w-64 lg:w-80 md:flex-shrink-0">
             {storyDetails.ads.map(ad => (
               <div key={ad.id} className="bg-[#2d3038] p-1 rounded-lg shadow-lg mb-6">
@@ -341,8 +346,10 @@ const DetailPage = () => {
               </div>
             ))}
           </div>
+          
         </div>
       </div>
+
     </div>
   );
 };

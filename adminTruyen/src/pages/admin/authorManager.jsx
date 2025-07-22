@@ -252,7 +252,7 @@ const handleEditClick = (author) => {
 
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="mb-4">
-          <div className="text-xl font-semibold text-gray-800">Top Orders</div>
+          <div className="text-xl font-semibold text-gray-800">Tác giả </div>
         </div>
 
         {/* Product Table */}
