@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.demo.dto.request.HistoryDepositCreationRequest;
 import com.example.demo.dto.request.TransactionCreationRequest;
+import com.example.demo.dto.respone.TransactionRespone;
 import com.example.demo.entity.Chapter;
 import com.example.demo.entity.HistoryDeposit;
 import com.example.demo.entity.Transaction;
@@ -42,6 +43,13 @@ public class TransactionService {
 	IChapterRepository chapterRepository;
 	IHistoryDepositRepository historyDepositRepository;
 	IHistoryDepositMapper historyDepositMapper;
+	
+	public List<TransactionRespone> getTransactionByUser(String idUser){
+		List<TransactionRespone> transactions=transactionRepository.findByUser_IdUser(idUser).stream()
+				.map(transaction -> transactionMapper.toTransactionRespone(transaction)).toList();
+		return transactions;
+	}
+	
 	@Transactional
 	public boolean createTransactions(String userId, TransactionCreationRequest request) {
 	    try {

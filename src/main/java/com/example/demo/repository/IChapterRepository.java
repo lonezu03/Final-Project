@@ -25,4 +25,6 @@ public interface IChapterRepository extends JpaRepository<Chapter, String>{
      */
     Optional<Chapter> findTopByNovelOrderByIndexChapterDesc(Novel novel);
 
+    List<Chapter> findByIdChapterIn(List<String> idChapters);
+
 }

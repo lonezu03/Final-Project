@@ -6,6 +6,8 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +24,7 @@ import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.HistoryDepositUpdateRequest;
 import com.example.demo.dto.request.RefreshUserRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
+import com.example.demo.dto.request.UserCreateReportRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
 import com.example.demo.dto.request.UserForgotPasswordRequest;
@@ -64,6 +67,9 @@ public class UserController {
 	ReviewNovelService reviewNovelService;
 	HistoryDepositService historyDepositService;
 	RefreshTokenService refreshTokenService;
+	
+	private SimpMessagingTemplate messagingTemplate;
+	
 	private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	/**
@@ -158,25 +164,26 @@ public class UserController {
 		return ApiRespone.<UserRespone>builder().result(userService.loginByEmail(request)).build();
 	}
 
-    /**
-     * Endpoint to issue a new access token using a valid refresh token.
-     *
-     * @param refreshRequest Object containing the refresh token.
-     * @return An object containing a new access token and the old refresh token.
-     */
-    @PostMapping("/refreshUser")
-    @Operation(summary = "Refresh User", description = "Refresh user")
-    public ApiRespone<UserRespone> refreshUser(@RequestBody String token) {
-        try {
-            return ApiRespone.<UserRespone>builder().result(userService.refreshUser(token)).build();
-        }  catch (AppException e) {
-            logger.warn("Business error during refresh User: {}", e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("System error during refresh User: {}", e.getMessage(), e);
-            throw e;
-        }
-    }
+	/**
+	 * Endpoint to issue a new access token using a valid refresh token.
+	 *
+	 * @param refreshRequest Object containing the refresh token.
+	 * @return An object containing a new access token and the old refresh token.
+	 */
+	@PostMapping("/refreshUser")
+	@Operation(summary = "Refresh User", description = "Refresh user")
+	public ApiRespone<UserRespone> refreshUser(@RequestBody String token) {
+		try {
+			return ApiRespone.<UserRespone>builder().result(userService.refreshUser(token)).build();
+		} catch (AppException e) {
+			logger.warn("Business error during refresh User: {}", e.getMessage(), e);
+			throw e;
+		} catch (Exception e) {
+			logger.error("System error during refresh User: {}", e.getMessage(), e);
+			throw e;
+		}
+	}
+
 	/**
 	 * Cập nhật avatar cho người dùng.
 	 *
@@ -212,9 +219,10 @@ public class UserController {
 		JsonSchemaValidator.validate(request, "UserUpdatePasswordSchema.json");
 		return ApiRespone.<UserRespone>builder().result(userService.updatePasswordUser(request)).build();
 	}
-	
+
 	/**
 	 * Lấy Id User bằng email truyền vào
+	 * 
 	 * @param email
 	 * @return
 	 * @throws IOException
@@ -224,7 +232,7 @@ public class UserController {
 	public ApiRespone<String> getIdUser(@RequestParam String email) throws IOException {
 		return ApiRespone.<String>builder().result(userService.getIdUser(email)).build();
 	}
-	
+
 	/**
 	 * Xoá người dùng khỏi hệ thống theo ID.
 	 *
@@ -320,17 +328,13 @@ public class UserController {
 	ApiRespone<ReviewNovelId> deleteReviewNovel(@RequestBody ReviewNovelId reviewNovelId) {
 		return ApiRespone.<ReviewNovelId>builder().result(reviewNovelService.deleteReviewNovel(reviewNovelId)).build();
 	}
-//	@PostMapping("/register")
-//	UserDTO register(@RequestBody RegisterRequest registerRequest) {
-////		JsonSchemaValidator.validate(registerRequest, "registerSchema.json");
-//
-//		UserDTO userDTO = userService.createUser(registerRequest);
-//
-//		if (userDTO == null) {
-//			return null;
-//		} else {
-//			return userDTO;
-//		}
-//	}
+
+	@PostMapping("/report")
+	public ResponseEntity<?> remindUsersOfTasks(@RequestBody UserCreateReportRequest request) {
+	    // Send WebSocket notification to user
+		 messagingTemplate.convertAndSend("/topic/globalNotify", request);
+		    return ResponseEntity.ok("Gửi message đến tất cả clients đăng ký topic.");
+	}
+
 
 }

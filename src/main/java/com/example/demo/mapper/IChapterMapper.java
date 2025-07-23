@@ -7,6 +7,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import com.example.demo.dto.request.ChapterCreationRequest;
 import com.example.demo.dto.request.ChapterUpdateRequest;
+import com.example.demo.dto.respone.ChapterBoughtRespone;
 import com.example.demo.dto.respone.ChapterRespone;
 
 import com.example.demo.entity.Chapter;
@@ -27,4 +28,7 @@ public interface IChapterMapper {
 	void updateChapter(ChapterUpdateRequest request, @MappingTarget Chapter chapter);
  
 	Chapter toChapterbyChapter(Chapter chapter);
+	
+    ChapterBoughtRespone toChapterBoughtRespone(Chapter chapter);
+
 }

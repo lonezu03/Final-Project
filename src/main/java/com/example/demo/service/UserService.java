@@ -2,9 +2,12 @@ package com.example.demo.service;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -31,6 +34,7 @@ import com.example.demo.dto.request.UserUpdateRequest;
 import com.example.demo.dto.respone.HistoryDepositRespone;
 import com.example.demo.dto.respone.HistoryReadNovelRespone;
 import com.example.demo.dto.respone.HistoryReadSubRespone;
+import com.example.demo.dto.respone.NovelBoughtRespone;
 import com.example.demo.dto.respone.UploadFileRespone;
 import com.example.demo.dto.respone.UserLoginRespone;
 import com.example.demo.dto.respone.UserRespone;
@@ -265,7 +269,35 @@ public class UserService {
 	
 		return userRespone;
 	}
-
+	
+	/**
+	 * Lấy danh sách Novel đã mua chương
+	 */
+//	public List<NovelBoughtRespone> getNovelBought(List<String> chapterBought){
+//		List<Novel> novels=findNovelsByChapterIds(chapterBought);
+//		List<NovelBoughtRespone> novelBoughtRespones=novels.stream().map(t -> {
+//			
+//			NovelBoughtRespone novelBoughtRespone=new NovelBoughtRespone();
+//			
+//			novelBoughtRespone.setIdNovel(t.getIdNovel());
+//			novelBoughtRespone.setDescriptionNovel(t.getDescriptionNovel());
+//			novelBoughtRespone.setImageNovel(t.getImageNovel());
+//			novelBoughtRespone.setNameNovel(t.getNameNovel());
+//			
+//		}).toList();
+//		return novelBoughtRespones;
+//	}
+//	
+//	   public List<Novel> findNovelsByChapterIds(List<String> idChapters) {
+//	        List<Chapter> chapters = chapterRepository.findByIdChapterIn(idChapters);
+//	        Set<Novel> novels = new HashSet<>();
+//
+//	        for (Chapter chapter : chapters) {
+//	            novels.add(chapter.getNovel());
+//	        }
+//
+//	        return new ArrayList<>(novels);
+//	    }
 	/**
 	 * Đăng nhập người dùng bằng email (ví dụ qua Google). Nếu chưa tồn tại, tự động
 	 * tạo tài khoản.

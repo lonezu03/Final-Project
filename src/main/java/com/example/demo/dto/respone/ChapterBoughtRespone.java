@@ -1,6 +1,9 @@
 package com.example.demo.dto.respone;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import com.example.demo.enums.Status;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -10,26 +13,18 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 @Data
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ChapterRespone {
+public class ChapterBoughtRespone {
+
 	String idChapter;
-
 	String titleChapter;
-
-	String contentChapter;
-
-	Integer viewChapter;
-
+	String idNovel;
 	Long indexChapter;
-	
-	String novel;
-	
-	String urlAudio;
-	
-	Integer coinPrice;
+	String descriptionNovel;
+	LocalDateTime dateBuy;
+	String imageNovel;
+	Status statusNovel;
 
 }
