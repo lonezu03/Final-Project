@@ -56,6 +56,42 @@ export const refreshUserSession = createAsyncThunk(
   }
 );
 
+export const getalluser = createAsyncThunk(
+  'user/getalluser',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/user/getAllUser');
+      return response.data.result;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
+
+/**
+ * Cấp quyền manager cho user
+ */
+export const grantManagerRole = createAsyncThunk(
+  'user/grantManagerRole',
+  async (idUser, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/user/grantRole/${idUser}`);
+      
+      if (response.data && response.data.code === 1000 && response.data.result) {
+        return {
+          updatedUser: response.data.result,
+          idUser: idUser
+        };
+      }
+      return rejectWithValue(response.data?.message || 'Không thể cấp quyền manager.');
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return rejectWithValue('Không tìm thấy người dùng với ID này.');
+      }
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
 
 // ====================================================================
 // SLICE DEFINITION (Định nghĩa Slice)
@@ -67,6 +103,10 @@ const initialState = {
   loading: false, // Loading chung cho login, register,...
   isRefreshing: !!localStorage.getItem('authToken'), // Loading riêng cho việc refresh phiên
   error: null,
+  allUsers: [], // Danh sách tất cả người dùng
+  grantRoleLoading: false, // Loading riêng cho việc cấp quyền
+  grantRoleError: null,
+  grantRoleSuccess: null,
 };
 
 const userSlice = createSlice({
@@ -82,13 +122,16 @@ const userSlice = createSlice({
       localStorage.removeItem('currentUser');
       localStorage.removeItem('authToken');
     },
-     setUserFromStorage: (state, action) => {
+    setUserFromStorage: (state, action) => {
       state.currentUser = action.payload.user;
       state.token = action.payload.token;
-    
-  },
+    },
     clearUserError: (state) => {
       state.error = null;
+    },
+    clearGrantRoleStatus: (state) => {
+      state.grantRoleError = null;
+      state.grantRoleSuccess = null;
     },
   },
   extraReducers: (builder) => {
@@ -135,18 +178,54 @@ const userSlice = createSlice({
             localStorage.setItem('authToken', newToken);
         }
       })
-      // .addCase(refreshUserSession.rejected, (state, action) => {
-      //   state.isRefreshing = false;
-      //   // Khi refresh thất bại, xóa thông tin đăng nhập cũ
-      //   state.currentUser = null;
-      //   state.token = null;
-      //   localStorage.removeItem('currentUser');
-      //   localStorage.removeItem('authToken');
-      //   console.error('Refresh session rejected:', action.payload);
-      // });
+      // ---- Xử lý cho LẤY TẤT CẢ USER ----
+      .addCase(getalluser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getalluser.fulfilled, (state, action) => { 
+        state.loading = false;
+        state.allUsers = action.payload; // Lưu danh sách người dùng vào state
+      })
+      .addCase(getalluser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload; // Gán lỗi để hiển thị trên UI
+      })
+      // ---- Xử lý cho CẤP QUYỀN MANAGER ----
+      .addCase(grantManagerRole.pending, (state) => {
+        state.grantRoleLoading = true;
+        state.grantRoleError = null;
+        state.grantRoleSuccess = null;
+      })
+      .addCase(grantManagerRole.fulfilled, (state, action) => {
+        state.grantRoleLoading = false;
+        state.grantRoleSuccess = 'Cấp quyền manager thành công!';
+        
+        const { updatedUser, idUser } = action.payload;
+        
+        // Cập nhật user trong danh sách allUsers
+        const userIndex = state.allUsers.findIndex(user => user.idUser === idUser);
+        if (userIndex !== -1) {
+          state.allUsers[userIndex] = updatedUser;
+        }
+        
+        // Nếu user được cấp quyền là current user, cập nhật thông tin và token
+        if (state.currentUser && state.currentUser.idUser === idUser) {
+          state.currentUser = updatedUser;
+          if (updatedUser.token) {
+            state.token = updatedUser.token;
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            localStorage.setItem('authToken', updatedUser.token);
+          }
+        }
+      })
+      .addCase(grantManagerRole.rejected, (state, action) => {
+        state.grantRoleLoading = false;
+        state.grantRoleError = action.payload;
+      });
   }
 });
 
 // Export các actions và reducer
-export const { logoutUser, clearUserError,setUserFromStorage } = userSlice.actions;
+export const { logoutUser, clearUserError, setUserFromStorage, clearGrantRoleStatus } = userSlice.actions;
 export default userSlice.reducer;

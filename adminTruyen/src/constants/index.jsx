@@ -14,32 +14,42 @@ export const navbarLinks = [
         ],
     },
     {
-        title: "Authors",
+        title: "Tác giả",
         links: [
             {
-                label: "All Authors",
+                label: "Tất cả tác giả",
                 icon: Users,
                 path: "authors", // Bỏ dấu /
             },
         ],
     },
     {
-        title: "Categories",
+        title: "thể loại",
         links: [
             {
-                label: "Categories",
+                label: "Thể loại",
                 icon: MessageSquare,
                 path: "categories", // Bỏ dấu /
             },
         ],
     },
     {
-        title: "Novels",
+        title: "Tiểu thuyết",
         links: [
             {
-                label: "Novels",
+                label: "Tiểu thuyết",
                 icon: Package,
                 path: "novels", // Sửa thành chữ thường và bỏ dấu /
+            },
+        ],
+    },
+     {
+        title: "Người dùng",
+        links: [
+            {
+                label: "Người dùng",
+                icon: Package,
+                path: "user", // Sửa thành chữ thường và bỏ dấu /
             },
         ],
     },

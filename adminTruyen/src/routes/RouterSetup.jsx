@@ -9,7 +9,7 @@ import { getAllAuthors } from "@/redux/authorSlice";
 import { getAllNovels } from "@/redux/novelSlice";
 import { getAllCategories } from "@/redux/categorySlice";
 // `loadUserFromStorage` không còn cần thiết ở đây nữa
-
+import UserManager from "@/pages/UserManager";
 // Layout & Pages
 import AdminLayouts from "@/pages/layouts/AdminLayouts";
 import LoginAdmin from "@/pages/admin/LoginAdmin";
@@ -97,6 +97,14 @@ const router = createBrowserRouter([
       { 
         path: "novels", // Khớp với path: "novels"
         element: <NovelManagement /> 
+      },
+       { 
+        path: "user", // Khớp với path: "user"
+        element: <UserManager /> 
+      },
+       { 
+        path: "transaction", // Khớp với path: "transaction"
+        element: <UserManager /> 
       },
       // Thêm các route khác của bạn ở đây nếu có
     ],

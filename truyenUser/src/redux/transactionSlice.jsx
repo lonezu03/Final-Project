@@ -35,6 +35,20 @@ export const confirmTransactions = createAsyncThunk(
     }
   }
 );
+export const getTransactions = createAsyncThunk(
+  'transaction/getTransactions',
+  async (idUser, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.get(`/transaction/getTransaction?idUser=${idUser}`);
+      if (response.data && response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data?.message || 'Không thể lấy danh sách giao dịch.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
 
 // --- Slice Definition ---
 const initialState = {
@@ -42,7 +56,12 @@ const initialState = {
   createError: null,
   confirmStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
   confirmError: null,
+  
   pendingTransaction: null, // Lưu giao dịch đang chờ xác nhận
+  transactions: [],
+  transactionLoading: false, // Separate loading for transactions
+  error: null,
+  transactionError: null,
 };
 
 const transactionSlice = createSlice({
@@ -80,6 +99,18 @@ const transactionSlice = createSlice({
       .addCase(confirmTransactions.rejected, (state, action) => {
         state.confirmStatus = 'failed';
         state.confirmError = action.payload;
+      })
+       .addCase(getTransactions.pending, (state) => {
+        state.transactionLoading = true;
+        state.transactionError = null;
+      })
+      .addCase(getTransactions.fulfilled, (state, action) => {
+        state.transactionLoading = false;
+        state.transactions = action.payload;
+      })
+      .addCase(getTransactions.rejected, (state, action) => {
+        state.transactionLoading = false;
+        state.transactionError = action.payload;
       });
   },
 });

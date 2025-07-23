@@ -31,8 +31,14 @@ const AnalyticsReport = () => {
 
     // useEffect gọi API doanh thu (logic này của bạn đã đúng)
     useEffect(() => {
+            const sortByForAPI = novelSortBy.replace(/([A-Z])/g, '_$1').toUpperCase();
+
         const amountParams = { type: amountType, monthYear: selectedDate };
+        const novelParams = { top: 10, sortBy: sortByForAPI, direction: 'DESC' };
+
         dispatch(getAmountStatistics(amountParams));
+        dispatch(getNovelStatistics(novelParams));
+
     }, [dispatch, amountType, selectedDate]);
 
     // Hàm định dạng số cho dễ đọc
