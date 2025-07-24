@@ -44,9 +44,21 @@ public class TransactionService {
 	IHistoryDepositRepository historyDepositRepository;
 	IHistoryDepositMapper historyDepositMapper;
 	
-	public List<TransactionRespone> getTransactionByUser(String idUser){
+		public List<TransactionRespone> getTransactionByUser(String idUser){
 		List<TransactionRespone> transactions=transactionRepository.findByUser_IdUser(idUser).stream()
-				.map(transaction -> transactionMapper.toTransactionRespone(transaction)).toList();
+				.map(transaction -> {
+					TransactionRespone transactionRespone= transactionMapper.toTransactionRespone(transaction);
+					ChapterBoughtRespone chapterBoughtRespone=new ChapterBoughtRespone();
+					chapterBoughtRespone.setDescriptionNovel(transaction.getChapter().getNovel().getDescriptionNovel());
+					chapterBoughtRespone.setIdChapter(transaction.getChapter().getIdChapter());
+					chapterBoughtRespone.setIdNovel(transaction.getChapter().getNovel().getIdNovel());
+					chapterBoughtRespone.setImageNovel(transaction.getChapter().getNovel().getImageNovel());
+					chapterBoughtRespone.setIndexChapter(transaction.getChapter().getIndexChapter());
+					chapterBoughtRespone.setStatusNovel(transaction.getChapter().getNovel().getStatusNovel());
+					chapterBoughtRespone.setTitleChapter(transaction.getChapter().getTitleChapter());
+					transactionRespone.setChapter(chapterBoughtRespone);
+					return transactionRespone;
+				}).toList();
 		return transactions;
 	}
 	
