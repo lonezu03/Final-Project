@@ -27,38 +27,49 @@ import PaymentCallbackPage from './component/PaymentCallbackPage'; // Import com
 
 // AppContent bây giờ chỉ chịu trách nhiệm fetch dữ liệu không thay đổi thường xuyên
 const AppContent = () => {
+
   const dispatch = useDispatch();
   const novels = useSelector((state) => state.novels.novels);
   const categories = useSelector((state) => state.categories.categories);
-    const initialFetchDone = useRef(false);
-
-  // State để lưu thông báo nhận được từ WebSocket
   const [notifications, setNotifications] = useState([]);
-  
-  // Lấy thông tin người dùng từ Redux store
-  const currentUser = useSelector((state) => state.user.currentUser); 
+  const currentUser = useSelector((state) => state.user.currentUser);
+  // Dùng ref để đảm bảo chỉ fetch 1 lần nếu dữ liệu đã có
+  const fetchedNovels = useRef(false);
+  const fetchedCategories = useRef(false);
+  const fetchedLibrary = useRef(false);
 
   // Xử lý khi nhận thông báo từ WebSocket
   const handleNotificationMessage = (message) => {
-    // Thêm thông báo vào trạng thái
     setNotifications((prevNotifications) => [...prevNotifications, message]);
   };
 
- useEffect(() => {
-  // Chỉ fetch nếu dữ liệu chưa tồn tại
-  if (!novels || novels.length == 0) {
-    dispatch(getAllNovels());
-  }
+  // Chỉ fetch novels 1 lần nếu chưa có
+  useEffect(() => {
+    if (!fetchedNovels.current && (!novels || novels.length === 0)) {
+      dispatch(getAllNovels());
+      fetchedNovels.current = true;
+    }
+  }, [dispatch, novels]);
 
-  if (!categories || categories.length === 0) {
-    // dispatch(getAllCategories());
-  }
+  // Chỉ fetch categories 1 lần nếu chưa có
+  useEffect(() => {
+    if (!fetchedCategories.current && (!categories || categories.length === 0)) {
+      // dispatch(getAllCategories());
+      fetchedCategories.current = true;
+    }
+  }, [dispatch, categories]);
 
- if (currentUser?.idUser) {
-         dispatch(LyberiNovels({ idUser: currentUser.idUser }));
-     }
-
-}, [dispatch, novels, categories, currentUser]); 
+  // Chỉ fetch library khi user đổi và chưa fetch cho user đó
+  useEffect(() => {
+    if (currentUser?.idUser && !fetchedLibrary.current) {
+      dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+      fetchedLibrary.current = true;
+    }
+    // Reset flag nếu user logout
+    if (!currentUser?.idUser) {
+      fetchedLibrary.current = false;
+    }
+  }, [dispatch, currentUser]);
 
   return (
     <Router>

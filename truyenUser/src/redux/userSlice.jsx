@@ -339,6 +339,30 @@ export const createReviewNovel = createAsyncThunk(
     }
   }
 );
+
+// API xóa đánh giá tiểu thuyết
+export const deleteReview = createAsyncThunk(
+  'user/deleteReview',
+  async ({ idUser, idNovel }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.delete(
+        `${rooturl}/user/deleteReviewNovel`,
+        {
+          data: { idUser, idNovel },
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+
+      if (response.data && response.data.code === 1000) {
+        return { idUser, idNovel }; // Trả về thông tin để remove khỏi state
+      } else {
+        return rejectWithValue(response.data?.message || 'Lỗi khi xóa đánh giá.');
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi xóa đánh giá.');
+    }
+  }
+);
 export const followNovel = createAsyncThunk(
   'user/followNovel',
   async ({ idUser, idNovel }, { rejectWithValue }) => {
@@ -805,6 +829,18 @@ const userSlice = createSlice({
         state.reviewData = action.payload; // Lưu kết quả đánh giá mới vào state
       })
       .addCase(createReviewNovel.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload; // Lưu lỗi nếu có
+      })
+      .addCase(deleteReview.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteReview.fulfilled, (state, action) => {
+        state.loading = false;
+        // Có thể thêm logic xử lý khác nếu cần
+      })
+      .addCase(deleteReview.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload; // Lưu lỗi nếu có
       })

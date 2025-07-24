@@ -231,27 +231,20 @@ useEffect(() => {
 }, [dispatch, currentUser?.idUser]); // Chỉ phụ thuộc vào user ID
 
 // Effect #4: Hiển thị dialog "ĐỌC TIẾP?" (chạy khi có lịch sử hoặc nội dung chương)
-
+// Luôn set savedAudioPosition = 0 khi vào chương mới, chỉ khi ấn Đọc tiếp mới truyền vị trí đã lưu
 useEffect(() => {
   // Điều kiện tiên quyết: chỉ chạy khi có đủ dữ liệu
   if (loadingContent || !currentChapterContent || !Array.isArray(userHistory) || userHistory.length === 0) {
+    setSavedAudioPosition(0); // reset audio về 0 khi vào chương mới
     return;
   }
 
-  // console.log("[Effect #4] Bắt đầu kiểm tra dialog (chỉ tìm theo chapterId)...");
-
   let chapterHistoryFound = null;
-
-  // Duyệt qua từng nhóm truyện trong lịch sử
   for (const novelGroup of userHistory) {
-    // Nếu nhóm truyện có mảng các chương đã đọc
     if (novelGroup && Array.isArray(novelGroup.historyReadRespones)) {
-      // Tìm chương có id khớp trong mảng này
       const found = novelGroup.historyReadRespones.find(
         (chap) => String(chap.id?.idChapter) === String(chapterId)
       );
-
-      // Nếu tìm thấy, gán kết quả và thoát khỏi vòng lặp ngay lập tức
       if (found) {
         chapterHistoryFound = found;
         break;
@@ -259,24 +252,26 @@ useEffect(() => {
     }
   }
 
-  // Nếu đã tìm thấy lịch sử của chương này và có vị trí đọc hợp lệ -> hiển thị dialog
   if (chapterHistoryFound && chapterHistoryFound.readPlace > 50) {
-    // console.log(`[Effect #4] TÌM THẤY! Vị trí đọc là ${chapterHistoryFound.readPlace}. Hiển thị dialog.`);
     setSavedScrollPosition(chapterHistoryFound.readPlace);
-    setSavedAudioPosition(chapterHistoryFound.hearTime || 0); // Lưu vị trí audio nếu có
     setShowContinueDialog(true);
+    // KHÔNG setSavedAudioPosition ở đây, chỉ set khi ấn Đọc tiếp
   } else {
-    // console.log(`[Effect #4] Không tìm thấy lịch sử cho chương có chapterId: ${chapterId}`);
+    setSavedAudioPosition(0); // reset audio về 0 nếu không có lịch sử
   }
-
 }, [userHistory, loadingContent, currentChapterContent, chapterId]);
 
 // Effect set lại scroll position khi dialog được xác nhận
+// Khi vào chương mới, luôn scroll về top 0
+useEffect(() => {
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}, [chapterId]);
+
+// Khi ấn Đọc tiếp mới scroll tới vị trí đã lưu
 useEffect(() => {
   if (showContinueDialog && savedScrollPosition !== null) {
-    // Đảm bảo vị trí đã lưu hợp lệ và dialog đã được hiển thị
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn trang đến vị trí đã lưu
-    // console.log(`[Effect] Đang cuộn đến vị trí: ${savedScrollPosition}`);
+    // Không scroll ở đây nữa, chỉ show dialog
+    // (Scroll sẽ thực hiện khi user ấn Đọc tiếp)
   }
 }, [showContinueDialog, savedScrollPosition]);
 // Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC (trước đây là Effect #4)
@@ -488,23 +483,31 @@ useEffect(() => {
 
 
   const handleConfirmContinue = () => {
-    // Chỉ cần kiểm tra có vị trí đã lưu không
+    // Khi ấn Đọc tiếp, set lại audio về vị trí đã lưu
     if (savedScrollPosition !== null) {
-      console.log(`[Confirm Continue] Yêu cầu cuộn window đến vị trí: ${savedScrollPosition}`);
-      
-      // Dùng setTimeout để đảm bảo việc cuộn xảy ra sau khi dialog đã đóng
-      // và trình duyệt có thời gian để tính toán lại layout.
       setTimeout(() => {
-        // Dùng window.scrollTo() để cuộn toàn bộ trang
         window.scrollTo({
           top: savedScrollPosition,
-          behavior: 'smooth' // Hiệu ứng cuộn mượt mà
+          behavior: 'smooth'
         });
-      }, 100); 
+      }, 100);
     }
-    // Ẩn dialog sau khi đã xử lý
+    // Lấy lại vị trí audio từ lịch sử (nếu có)
+    if (savedAudioPosition === 0 && userHistory && Array.isArray(userHistory)) {
+      for (const novelGroup of userHistory) {
+        if (novelGroup && Array.isArray(novelGroup.historyReadRespones)) {
+          const found = novelGroup.historyReadRespones.find(
+            (chap) => String(chap.id?.idChapter) === String(chapterId)
+          );
+          if (found && found.hearTime) {
+            setSavedAudioPosition(found.hearTime);
+            break;
+          }
+        }
+      }
+    }
     setShowContinueDialog(false);
-};
+  };
   const handleCancelContinue = () => {
     setShowContinueDialog(false);
     localStorage.removeItem(getPositionKey());

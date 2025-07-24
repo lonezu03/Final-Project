@@ -76,8 +76,13 @@ const AudioPlayer = ({
   
   // THÊM STATE ĐỂ THEO DÕI TRẠNG THÁI TUA
   const [isSeeking, setIsSeeking] = useState(false);
-const [isManualSeeking, setIsManualSeeking] = useState(false);
-const seekTimeoutRef = useRef(null);
+  const [isManualSeeking, setIsManualSeeking] = useState(false);
+  const seekTimeoutRef = useRef(null);
+  
+  // THÊM STATE ĐỂ THEO DÕI KHẢ NĂNG TUA CỦA SERVER
+  const [rangeSupport, setRangeSupport] = useState('unknown'); // 'supported', 'not-supported', 'unknown'
+  const [isBuffering, setIsBuffering] = useState(false);
+  const rangeCheckRef = useRef(false);
 
 // Lấy vị trí phát hiện tại
 const position = audioRef.current?.currentTime || 0;
@@ -105,6 +110,33 @@ const position = audioRef.current?.currentTime || 0;
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Kiểm tra khả năng Range Request của server
+    const checkRangeSupport = async () => {
+      if (rangeCheckRef.current || !audioSrc) return;
+      rangeCheckRef.current = true;
+      
+      try {
+        const response = await fetch(audioSrc, { 
+          method: 'HEAD',
+          headers: { 'Range': 'bytes=0-1' }
+        });
+        
+        const acceptRanges = response.headers.get('Accept-Ranges');
+        const statusCode = response.status;
+        
+        if (acceptRanges === 'bytes' || statusCode === 206) {
+          setRangeSupport('supported');
+          console.log('[AudioPlayer] Server hỗ trợ Range Request');
+        } else {
+          setRangeSupport('not-supported');
+          console.log('[AudioPlayer] Server KHÔNG hỗ trợ Range Request, sẽ sử dụng fallback');
+        }
+      } catch (error) {
+        console.warn('[AudioPlayer] Không thể kiểm tra Range support:', error);
+        setRangeSupport('unknown');
+      }
+    };
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
@@ -142,8 +174,13 @@ const position = audioRef.current?.currentTime || 0;
       }
     };
 
+    const handleWaiting = () => setIsBuffering(true);
+    const handleCanPlay = () => setIsBuffering(false);
+    const handleLoadStart = () => setIsBuffering(true);
+
     // Gửi thời gian hiện tại khi play/pause
     const handlePlay = () => {
+      setIsBuffering(false);
       if (onProgressUpdate && duration > 0) {
         onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
       }
@@ -157,10 +194,15 @@ const position = audioRef.current?.currentTime || 0;
     // Thêm event listener cho seeking và seeked
     const handleSeeking = () => {
       setIsManualSeeking(true);
+      setIsBuffering(true);
     };
     const handleSeeked = () => {
       setIsManualSeeking(false);
+      setIsBuffering(false);
     };
+
+    // Kiểm tra Range support khi audio src thay đổi
+    checkRangeSupport();
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -168,6 +210,9 @@ const position = audioRef.current?.currentTime || 0;
     audio.addEventListener('seeked', handleSeeked);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('loadstart', handleLoadStart);
 
     // Gửi thời gian hiện tại khi mount nếu có duration
     if (onProgressUpdate && duration > 0) {
@@ -181,8 +226,11 @@ const position = audioRef.current?.currentTime || 0;
       audio.removeEventListener('seeked', handleSeeked);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('loadstart', handleLoadStart);
     };
-  }, [duration, isManualSeeking, onProgressUpdate]);
+  }, [duration, isManualSeeking, onProgressUpdate, audioSrc]);
 
   // Effect #2: Đồng bộ state với thuộc tính của thẻ audio
   useEffect(() => {
@@ -203,6 +251,9 @@ const position = audioRef.current?.currentTime || 0;
   useEffect(() => {
     setIsPlaying(false);
     setIsSeeking(false); // Reset trạng thái tua khi đổi chương
+    setRangeSupport('unknown'); // Reset range support check
+    setIsBuffering(false);
+    rangeCheckRef.current = false; // Reset range check flag
   }, [audioSrc]);
 
   // THÊM EFFECT ĐỂ ĐỒNG BỘ initialTime MỚI KHI audioSrc THAY ĐỔI
@@ -224,17 +275,38 @@ useEffect(() => {
     }
     };
 
-    // Sửa lại hàm handleSeek
+    // Sửa lại hàm handleSeek với fallback cho trường hợp không hỗ trợ Range
     const handleSeek = (event) => {
     const audio = audioRef.current;
     if (!audio || !duration) {
       console.log('[handleSeek] Không có audio hoặc duration');
       return;
     }
+    
     const seekToTime = (parseFloat(event.target.value) / 100) * duration;
-    console.log('[handleSeek] Seek bar value:', event.target.value, '=> seekToTime:', seekToTime);
-    // Đặt currentTime trực tiếp, không setState thủ công
-    audio.currentTime = seekToTime;
+    console.log('[handleSeek] Seek bar value:', event.target.value, '=> seekToTime:', seekToTime, 'Range support:', rangeSupport);
+    
+    // Nếu server không hỗ trợ Range Request, cảnh báo người dùng
+    if (rangeSupport === 'not-supported') {
+      console.warn('[handleSeek] Server không hỗ trợ Range Request, tua có thể không chính xác');
+      // Vẫn thử tua nhưng với timeout ngắn hơn để không làm treo UI
+      try {
+        audio.currentTime = seekToTime;
+        // Đặt timeout ngắn để kiểm tra xem tua có thành công không
+        setTimeout(() => {
+          if (Math.abs(audio.currentTime - seekToTime) > 5) {
+            console.warn('[handleSeek] Tua không chính xác, có thể cần đợi file tải hoàn tất');
+          }
+        }, 1000);
+      } catch (error) {
+        console.error('[handleSeek] Lỗi khi tua (server không hỗ trợ Range):', error);
+        return;
+      }
+    } else {
+      // Server hỗ trợ Range Request, tua bình thường
+      audio.currentTime = seekToTime;
+    }
+    
     console.log('[handleSeek] Sau khi set audio.currentTime:', audio.currentTime);
     // Nếu đang phát thì play lại (một số trình duyệt cần gọi play sau khi set currentTime)
     if (!audio.paused) {
@@ -380,18 +452,37 @@ useEffect(() => {
           </div>
 
           {/* 2b. Hiển thị thời gian & Thanh tiến trình */}
-          <div className="flex-grow flex items-center space-x-2 mx-1 sm:mx-2 min-w-[120px] sm:min-w-[180px] md:min-w-[220px]">
+          <div className="flex-grow flex items-center space-x-2 mx-1 sm:mx-2 min-w-[120px] sm:min-w-[180px] md:min-w-[220px] relative">
             <span className="text-xs font-medium whitespace-nowrap">{formatTime(currentTime)} / {formatTime(duration)}</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={duration > 0 ? (currentTime / duration) * 100 : 0}
-              onChange={handleSeek}
-              className="w-full h-1.5 bg-gray-400 rounded-lg appearance-none cursor-pointer accent-slate-700 disabled:bg-gray-300"
-              disabled={!duration}
-              title="Tua nhanh"
-            />
+            <div className="relative flex-grow">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={duration > 0 ? (currentTime / duration) * 100 : 0}
+                onChange={handleSeek}
+                className="w-full h-1.5 bg-gray-400 rounded-lg appearance-none cursor-pointer accent-slate-700 disabled:bg-gray-300"
+                disabled={!duration}
+                title="Tua nhanh"
+              />
+              
+              {/* Hiển thị cảnh báo Range Request */}
+              {rangeSupport === 'not-supported' && (
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                  ⚠️ Tua có thể không chính xác
+                </div>
+              )}
+              
+              {/* Hiển thị trạng thái buffering */}
+              {isBuffering && (
+                <div className="absolute -top-8 right-0 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    Đang tải...
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 2c. Âm lượng, Tốc độ & Tùy chọn khác */}

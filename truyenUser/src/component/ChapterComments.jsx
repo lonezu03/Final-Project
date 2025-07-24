@@ -297,23 +297,27 @@ const ChapterComments = ({ chapterId, novelId }) => {
     );
     if (success) handleCancelEdit();
   };
-   useEffect(() => {
+  // Tối ưu chống spam API: chỉ fetch khi chapterId hoặc currentPage đổi
+  const fetchedCommentsRef = useRef({});
+  useEffect(() => {
     if (chapterId) {
-      const searchCriteria = {
-        idChapter: chapterId,
-        parentOnly: true, // Chỉ lấy comment gốc
-        idUser: currentUser?.idUser, // Thêm idUser để lấy thông tin người dùng nếu cần
-      };
-      const pageable = {
-        page: currentPage,
-        size: 10, // Ví dụ: 10 comment mỗi trang
-        // sort: ['timeComment,desc'] // Sắp xếp theo thời gian mới nhất
-      };
-      dispatch(searchComments({ searchCriteria, pageable }));
+      const key = `${chapterId}_${currentPage}`;
+      if (!fetchedCommentsRef.current[key]) {
+        const searchCriteria = {
+          idChapter: chapterId,
+          parentOnly: true,
+          idUser: currentUser?.idUser,
+        };
+        const pageable = {
+          page: currentPage,
+          size: 10,
+        };
+        dispatch(searchComments({ searchCriteria, pageable }));
+        fetchedCommentsRef.current[key] = true;
+      }
     }
-    
     return () => { dispatch(clearComments()); };
-  }, [dispatch, chapterId, currentPage]); // Chạy lại khi chuyển trang (currentPage thay đổi)
+  }, [dispatch, chapterId, currentPage, currentUser?.idUser]);
 
   // Hàm chuyển trang
   const handlePageChange = (newPage) => {

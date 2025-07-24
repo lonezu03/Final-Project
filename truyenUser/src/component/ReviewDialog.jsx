@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createReviewNovel } from '../redux/userSlice';
+import { getAllReviews } from '../redux/novelSlice';
 import { FaStar, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
@@ -66,6 +67,8 @@ const ReviewDialog = ({ novelId, novelTitle, onClose }) => {
       .unwrap()
       .then(() => {
         toast.success("Cảm ơn bạn đã gửi đánh giá!");
+        // Reload reviews để cập nhật giao diện
+        dispatch(getAllReviews(novelId));
         onClose();
       })
       .catch((error) => {

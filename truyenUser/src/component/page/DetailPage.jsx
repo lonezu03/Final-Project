@@ -27,18 +27,26 @@ const DetailPage = () => {
   const chaptersPerPageInList = 50;
   const { currentUser, followedNovels } = useSelector((state) => state.user);
 
-   useEffect(() => {
+  // Chỉ fetch dữ liệu khi novelId đổi, tránh spam API
+  const fetchedNovel = React.useRef({});
+  useEffect(() => {
     if (novelId) {
-        // Reset lại các state khi chuyển qua truyện mới
-        setActiveTab('summary');
-        setCurrentChapterListPage(1);
-        
-        // Gọi API để lấy thông tin truyện và danh sách chương
+      setActiveTab('summary');
+      setCurrentChapterListPage(1);
+      if (!fetchedNovel.current[novelId]) {
         dispatch(getNovelById(novelId));
         dispatch(getAllChapters(novelId));
         dispatch(getAllReviews(novelId));
+        fetchedNovel.current[novelId] = true;
+      }
     }
-  }, [dispatch, novelId]); 
+    // Reset flag nếu novelId không còn
+    return () => {
+      if (!novelId) {
+        fetchedNovel.current = {};
+      }
+    };
+  }, [dispatch, novelId]);
  useEffect(() => {
     // Khi component mount và có người dùng, tải danh sách truyện họ đã theo dõi
     if (currentUser?.idUser&&followedNovels) {

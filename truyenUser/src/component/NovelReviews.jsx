@@ -1,9 +1,13 @@
 // src/components/NovelReviews.jsx
 
 import React from 'react';
-import { useSelector } from 'react-redux';
-import { FaStar, FaUserCircle } from 'react-icons/fa';
+import { useSelector, useDispatch } from 'react-redux';
+import { FaStar, FaUserCircle, FaTrash } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react';
+import { deleteReview } from '../redux/userSlice';
+import { getAllReviews } from '../redux/novelSlice';
+import { toast } from 'react-toastify';
+import { useParams } from 'react-router-dom';
 
 // Hàm helper để render sao
 const renderStars = (rating) => {
@@ -17,17 +21,26 @@ const renderStars = (rating) => {
     );
 };
 
-// Hàm helper để format ngày
-const formatDate = (dateString) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+// Hàm helper để format ngày từ mảng [year, month, day, hour, minute, second]
+const formatDate = (dateArray) => {
+    if (!Array.isArray(dateArray) || dateArray.length < 5) return '';
+    try {
+        // [year, month, day, hour, minute, ...]
+        const [year, month, day, hour, minute] = dateArray;
+        const dateObj = new Date(year, month - 1, day, hour, minute);
+        return dateObj.toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    } catch {
+        return '';
+    }
 };
 
-const ReviewItem = ({ review }) => (
+const ReviewItem = ({ review, currentUser, onDelete }) => (
     <div className="bg-[#2d3038] p-4 rounded-lg border border-gray-700">
         <div className="flex items-center mb-3">
             {review.avatarUser ? (
@@ -41,9 +54,19 @@ const ReviewItem = ({ review }) => (
                     {renderStars(review.rating)}
                     <span className="ml-2">({review.rating.toFixed(1)})</span>
                     <span className="mx-2">·</span>
-                    <span>{formatDate(review.createdAt)}</span>
+                    <span>{formatDate(review.reviewTime)}</span>
                 </div>
             </div>
+            {/* Nút xóa - chỉ hiện nếu là review của user hiện tại */}
+            {currentUser && review.id.idUser === currentUser.idUser && (
+                <button
+                    onClick={() => onDelete(review.id.idUser, review.id.idNovel)}
+                    className="ml-2 p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors"
+                    title="Xóa đánh giá"
+                >
+                    <FaTrash size={14} />
+                </button>
+            )}
         </div>
         <div className="space-y-3 text-sm text-gray-300 prose prose-sm prose-invert max-w-none">
             {review.reviewMC && <p><strong>Nhân vật chính:</strong> {review.reviewMC}</p>}
@@ -55,8 +78,25 @@ const ReviewItem = ({ review }) => (
 );
 
 const NovelReviews = () => {
+    const dispatch = useDispatch();
+    const { novelId } = useParams();
+    
     // Lấy dữ liệu reviews từ novelSlice
     const { reviews, loadingReviews, errorReviews } = useSelector((state) => state.novels);
+    const { currentUser, loading: userLoading } = useSelector((state) => state.user);
+
+    const handleDeleteReview = async (idUser, idNovel) => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) {
+            try {
+                await dispatch(deleteReview({ idUser, idNovel })).unwrap();
+                toast.success('Xóa đánh giá thành công!');
+                // Reload reviews để cập nhật giao diện
+                dispatch(getAllReviews(novelId));
+            } catch (error) {
+                toast.error(`Lỗi khi xóa đánh giá: ${error}`);
+            }
+        }
+    };
 
     if (loadingReviews) {
         return (
@@ -76,10 +116,21 @@ const NovelReviews = () => {
             <h2 className="text-xl font-semibold mb-4 border-l-4 border-sky-500 pl-3 text-gray-200">
                 Đánh giá từ độc giả ({reviews.length})
             </h2>
+            {userLoading && (
+                <div className="text-center py-2">
+                    <Loader2 className="animate-spin inline-block text-sky-400" size={20} />
+                    <span className="ml-2 text-gray-400">Đang xử lý...</span>
+                </div>
+            )}
             {reviews.length > 0 ? (
                 <div className="space-y-4">
-                    {reviews.map(review => (
-                        <ReviewItem key={review.idReview} review={review} />
+                    {reviews.map((review, index) => (
+                        <ReviewItem 
+                            key={review.id ? `${review.id.idUser}-${review.id.idNovel}` : index} 
+                            review={review} 
+                            currentUser={currentUser}
+                            onDelete={handleDeleteReview}
+                        />
                     ))}
                 </div>
             ) : (

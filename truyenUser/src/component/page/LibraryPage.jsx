@@ -40,14 +40,33 @@ const LibraryPage = () => {
   const { followedNovels, loading: novelsLoading, error: novelsError } = useSelector((state) => state.novels);
   const { transactions, transactionLoading, transactionError } = useSelector((state) => state.transaction);
 
+  // Chỉ fetch khi user đổi hoặc khi chuyển tab, tránh spam API
+  const fetchedFollowed = React.useRef(false);
+  const fetchedPurchased = React.useRef(false);
+
   useEffect(() => {
     if (!currentUser) {
       toast.info('Vui lòng đăng nhập để xem thư viện.');
       navigate('/');
       return;
     }
-    dispatch(LyberiNovels({ idUser: currentUser.idUser }));
-    dispatch(getTransactions({ idUser: currentUser.idUser }));
+    // Chỉ fetch truyện theo dõi 1 lần cho user hiện tại
+    if (!fetchedFollowed.current) {
+      dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+      fetchedFollowed.current = true;
+    }
+    // Chỉ fetch truyện đã mua 1 lần cho user hiện tại
+    if (!fetchedPurchased.current) {
+      dispatch(getTransactions({ idUser: currentUser.idUser }));
+      fetchedPurchased.current = true;
+    }
+    // Reset flag nếu user logout
+    return () => {
+      if (!currentUser?.idUser) {
+        fetchedFollowed.current = false;
+        fetchedPurchased.current = false;
+      }
+    };
   }, [dispatch, currentUser, navigate]);
 
   // Logic cho tab "Truyện đã mua"
