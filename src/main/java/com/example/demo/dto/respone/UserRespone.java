@@ -35,6 +35,9 @@ public class UserRespone {
 
 	Integer coin;
 
+	String role;
+
+
 	List<CommentRespone> commentRespones;
 	List<String> chapterBought;
 	List<HistoryReadNovelRespone> historyRead;

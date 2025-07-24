@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.example.demo.dto.request.HistoryDepositCreationRequest;
 import com.example.demo.dto.request.TransactionCreationRequest;
 import com.example.demo.dto.respone.TransactionRespone;
+import com.example.demo.dto.respone.ChapterBoughtRespone;
 import com.example.demo.entity.Chapter;
 import com.example.demo.entity.HistoryDeposit;
 import com.example.demo.entity.Transaction;
@@ -56,6 +57,7 @@ public class TransactionService {
 					chapterBoughtRespone.setIndexChapter(transaction.getChapter().getIndexChapter());
 					chapterBoughtRespone.setStatusNovel(transaction.getChapter().getNovel().getStatusNovel());
 					chapterBoughtRespone.setTitleChapter(transaction.getChapter().getTitleChapter());
+					chapterBoughtRespone.setDateBuy(transaction.getDateBuy());
 					transactionRespone.setChapter(chapterBoughtRespone);
 					return transactionRespone;
 				}).toList();
