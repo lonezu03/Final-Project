@@ -5,10 +5,6 @@ import {
 } from 'react-icons/fa';
 import { IoMdSunny } from "react-icons/io";
 
-// Dữ liệu giả định
-const MOCK_STATS = { chapters: "6905", reads: "2400526", ratings: "1" };
-const MOCK_COVER_IMAGE_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAKrSURBVFhH7ZfRbhxFFIDfbVXaVChAVMCSjUUGXIAx0LmyuAJHyoQLN8GFG9GiIyEHiB0kLgwZARKyEWgkTQoFId0oJdHdNLVPdT89vl/Vqc5B//RcvupV1VPTU9X7qdP5H9QKVLVTNQA9QL3APKAfsLVb9QG2AVuAacAUYBjQDoT3A0kNaARaAduBqg07A7cA84A2oF+T9LBgK2AW0IlIsG0AAS5P0y2AbWACMAo4YgY7gSRTtVPaDBRklj2lTDDgTWDnB3A7EOokKj1QNoOk+V5M9AwQW5fS7gPqjJNJHLbBOkEfdHBmKgK8BvS7SfoR2AYkPZoWnN0A3P15hKj3P9uB6ZBUzVCk+QN4y7qQpP2W7A5EfcDkG2QnARsCb1fVd0n6CrAZyM1d0PciAP8a0J9Jejh5R8kGZD9tYMyK1N02Ad8DgiQpLwK3XvN61zTfR2aA8fXgG8BLwGvAEaANyA2yT0l6GNgCJPQQ8xclnRNpXUvSOEp6bK6G1FvTVqTmkfQLMAHISgHqgBTgLSAH2KzcDuQG2SfAcTYb8CDwGvBGpLfM0xZkIWAr0EukPUsKAb0aY1lPmgNbgDyAylp7SyNpH/MLeUUMQUb8P1A7U+p9RSm3cvykG0DdZzSgP1Hqa7UBrQEbIJcHkP2QfQYkHVZbr0y0PwCftoB/ATBfpnEtd2EslK4rK3IA2QesAzYBSYE3QNcBlQbtAZsAnYDBAI/k9kf0s2A7MLlFmgPYBJS7uXZE67gXWwO0bUAD4LpLtkugfYBLQD2gK5DtQG6A7QE0RMg2IKsB9UCLsC4q0kQDpPmB7EAfUB8oBaYBOwCzUnQvQBEQf0sV8P4B9tEGoN+PAAAAAElFTkSuQmCC";
-
 // Component con để quản lý việc chọn tốc độ phát
 const PlaybackSpeedControl = ({ currentSpeed, onSpeedChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -59,20 +55,17 @@ const PlaybackSpeedControl = ({ currentSpeed, onSpeedChange }) => {
   );
 };
 
-
 const AudioPlayer = ({
   audioSrc,
   onPrevChapter,
   onNextChapter,
   isFirstChapter,
   isLastChapter,
-  novel, // <<== NHẬN PROP MỚI
+  novel,
   coverImage,
-  initialTime = 0, // Nhận prop này
-  onTimeUpdate, 
+  initialTime = 0,
   className = '',
-  onProgressUpdate, // <<== THAY ĐỔI: Nhận prop mới
-
+  onProgressUpdate,
 }) => {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -80,7 +73,15 @@ const AudioPlayer = ({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isDarkModeInPlayer, setIsDarkModeInPlayer] = useState(true);
-   const formatLargeNumber = (num) => {
+  
+  // THÊM STATE ĐỂ THEO DÕI TRẠNG THÁI TUA
+  const [isSeeking, setIsSeeking] = useState(false);
+const [isManualSeeking, setIsManualSeeking] = useState(false);
+const seekTimeoutRef = useRef(null);
+
+// Lấy vị trí phát hiện tại
+const position = audioRef.current?.currentTime || 0;
+  const formatLargeNumber = (num) => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
     }
@@ -93,54 +94,95 @@ const AudioPlayer = ({
   // State cho âm lượng và tốc độ, có khởi tạo từ localStorage
   const [volume, setVolume] = useState(() => parseFloat(localStorage.getItem('audioPlayerVolume') || '1'));
   const [playbackRate, setPlaybackRate] = useState(() => parseFloat(localStorage.getItem('audioPlayerRate') || '1.0'));
-   const novelStats = {
+  
+  const novelStats = {
     chapters: novel?.totalChapter || 'N/A',
     reads: formatLargeNumber(novel?.viewNovel || 0),
     ratings: novel?.ratingCount || 'N/A',
   };
+
   // Effect chính để quản lý thẻ <audio>
-    useEffect(() => {
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleLoadedData = () => {
+    const handleLoadedMetadata = () => {
       setDuration(audio.duration);
-      if (initialTime > 0) {
-        audio.currentTime = initialTime;
-        setCurrentTime(initialTime);
+      // Set initial time sau khi đã load metadata
+      if (initialTime > 0 && !isNaN(initialTime)) {
+        const safeInitialTime = Math.min(Math.max(0, initialTime), audio.duration);
+        const seekAndPlay = async () => {
+          try {
+            audio.currentTime = safeInitialTime;
+            await new Promise((resolve) => {
+              const handleSeeked = () => {
+                audio.removeEventListener('seeked', handleSeeked);
+                resolve();
+              };
+              audio.addEventListener('seeked', handleSeeked);
+            });
+            setCurrentTime(safeInitialTime);
+            if (onProgressUpdate && duration > 0) {
+              onProgressUpdate((safeInitialTime / duration) * 100, safeInitialTime);
+            }
+          } catch (error) {
+            console.error('Error setting initial time:', error);
+          }
+        };
+        seekAndPlay();
       }
     };
-    
-    // Hàm này sẽ được gọi liên tục khi audio đang phát
+
     const handleTimeUpdate = () => {
-      const newCurrentTime = audio.currentTime;
-      const newDuration = audio.duration;
-      
-      setCurrentTime(newCurrentTime); // Cập nhật UI của player
-      
-      // Chỉ tính toán và gửi đi nếu có tổng thời lượng và callback
-      if (newDuration > 0 && onProgressUpdate) {
-        const percentage = (newCurrentTime / newDuration) * 100;
-        
-        // GỬI CẢ % VÀ GIÂY LÊN CHO COMPONENT CHA
-        onProgressUpdate(percentage, newCurrentTime);
+      if (!isManualSeeking) {
+        setCurrentTime(audio.currentTime);
+        if (duration > 0 && onProgressUpdate) {
+          onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+        }
       }
     };
 
-    const handleEnded = () => setIsPlaying(false);
-
-    // Gắn các event listener
-    audio.addEventListener('loadeddata', handleLoadedData);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
-
-    // Dọn dẹp listeners khi component unmount hoặc audioSrc thay đổi
-    return () => {
-      audio.removeEventListener('loadeddata', handleLoadedData);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
+    // Gửi thời gian hiện tại khi play/pause
+    const handlePlay = () => {
+      if (onProgressUpdate && duration > 0) {
+        onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+      }
     };
-  }, [audioSrc, initialTime, onProgressUpdate]); // Chạy lại effect này khi chương (audioSrc) thay đổi
+    const handlePause = () => {
+      if (onProgressUpdate && duration > 0) {
+        onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+      }
+    };
+
+    // Thêm event listener cho seeking và seeked
+    const handleSeeking = () => {
+      setIsManualSeeking(true);
+    };
+    const handleSeeked = () => {
+      setIsManualSeeking(false);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('seeking', handleSeeking);
+    audio.addEventListener('seeked', handleSeeked);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+
+    // Gửi thời gian hiện tại khi mount nếu có duration
+    if (onProgressUpdate && duration > 0) {
+      onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+    }
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('seeking', handleSeeking);
+      audio.removeEventListener('seeked', handleSeeked);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+    };
+  }, [duration, isManualSeeking, onProgressUpdate]);
 
   // Effect #2: Đồng bộ state với thuộc tính của thẻ audio
   useEffect(() => {
@@ -159,52 +201,153 @@ const AudioPlayer = ({
 
   // Effect #4: Reset trạng thái khi đổi chương
   useEffect(() => {
-    // Khi audioSrc thay đổi, effect #1 sẽ chạy lại và xử lý việc reset thời gian
-    // Chúng ta chỉ cần reset trạng thái isPlaying ở đây
     setIsPlaying(false);
+    setIsSeeking(false); // Reset trạng thái tua khi đổi chương
   }, [audioSrc]);
+
+  // THÊM EFFECT ĐỂ ĐỒNG BỘ initialTime MỚI KHI audioSrc THAY ĐỔI
+useEffect(() => {
+  if (audioRef.current && typeof initialTime === 'number') {
+    audioRef.current.currentTime = initialTime;
+  }
+}, [initialTime, audioSrc]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
     if (audio && audioSrc) {
       if (isPlaying) {
-        audio.pause();
+      audio.pause();
       } else {
-        audio.play().catch(error => console.error("Lỗi khi phát audio:", error));
+      audio.play().catch(error => console.error("Lỗi khi phát audio:", error));
       }
       setIsPlaying(!isPlaying);
     }
-  };
+    };
 
-  const handleSeek = (event) => {
+    // Sửa lại hàm handleSeek
+    const handleSeek = (event) => {
     const audio = audioRef.current;
-    if (audio && duration > 0) {
-      const seekToTime = (parseFloat(event.target.value) / 100) * duration;
-      audio.currentTime = seekToTime;
-      setCurrentTime(seekToTime);
+    if (!audio || !duration) {
+      console.log('[handleSeek] Không có audio hoặc duration');
+      return;
     }
-  };
-
-  const handleVolumeChange = (event) => {
+    const seekToTime = (parseFloat(event.target.value) / 100) * duration;
+    console.log('[handleSeek] Seek bar value:', event.target.value, '=> seekToTime:', seekToTime);
+    // Đặt currentTime trực tiếp, không setState thủ công
+    audio.currentTime = seekToTime;
+    console.log('[handleSeek] Sau khi set audio.currentTime:', audio.currentTime);
+    // Nếu đang phát thì play lại (một số trình duyệt cần gọi play sau khi set currentTime)
+    if (!audio.paused) {
+      audio.play().then(() => {
+        console.log('[handleSeek] Đã gọi play() sau khi tua, currentTime:', audio.currentTime);
+      }).catch((err) => {
+        console.error('[handleSeek] Lỗi khi play sau tua:', err);
+      });
+    } else {
+      console.log('[handleSeek] Audio đang pause, không gọi play(). currentTime:', audio.currentTime);
+    }
+    setTimeout(() => {
+      if (audio) {
+        console.log('[handleSeek] 200ms sau tua, currentTime:', audio.currentTime);
+      }
+    }, 200);
+    };
+    const handleVolumeChange = (event) => {
     const newVolume = parseFloat(event.target.value);
     setVolume(newVolume);
     if (isMuted && newVolume > 0) {
       setIsMuted(false);
     }
-  };
-  
-  const toggleMute = () => setIsMuted(!isMuted);
+    };
+    
+    const toggleMute = () => setIsMuted(!isMuted);
 
-  const formatTime = (timeInSeconds) => {
+    const formatTime = (timeInSeconds) => {
     if (isNaN(timeInSeconds) || timeInSeconds < 0) return '0:00';
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  };
+    };
 
-  const rewind = (seconds = 10) => { if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - seconds); };
-  const fastForward = (seconds = 10) => { if (audioRef.current) audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + seconds); };
+    // SỬA LẠI HÀM rewind VÀ fastForward với cách tiếp cận tương tự
+  const rewind = (seconds = 10) => { 
+    if (audioRef.current && duration > 0) {
+      const audio = audioRef.current;
+      const wasPlaying = !audio.paused;
+      
+      if (wasPlaying) {
+        audio.pause();
+      }
+      
+      setIsSeeking(true);
+      const newTime = Math.max(0, audio.currentTime - seconds);
+      audio.currentTime = newTime;
+      setCurrentTime(newTime);
+      
+      // Gửi progress update
+      if (onProgressUpdate) {
+        const percentage = (newTime / duration) * 100;
+        onProgressUpdate(percentage, newTime);
+      }
+      
+      // Clear timeout cũ
+      if (seekTimeoutRef.current) {
+        clearTimeout(seekTimeoutRef.current);
+      }
+      
+      seekTimeoutRef.current = setTimeout(() => {
+        setIsSeeking(false);
+        if (wasPlaying) {
+          audio.play().catch(error => console.error("Lỗi khi tiếp tục phát audio:", error));
+        }
+      }, 200);
+    }
+  };
+  
+  const fastForward = (seconds = 10) => { 
+    if (audioRef.current && duration > 0) {
+      const audio = audioRef.current;
+      const wasPlaying = !audio.paused;
+      
+      if (wasPlaying) {
+        audio.pause();
+      }
+      
+      setIsSeeking(true);
+      const newTime = Math.min(duration, audio.currentTime + seconds);
+      audio.currentTime = newTime;
+      setCurrentTime(newTime);
+      
+      // Gửi progress update
+      if (onProgressUpdate) {
+        const percentage = (newTime / duration) * 100;
+        onProgressUpdate(percentage, newTime);
+      }
+      
+      // Clear timeout cũ
+      if (seekTimeoutRef.current) {
+        clearTimeout(seekTimeoutRef.current);
+      }
+      
+      seekTimeoutRef.current = setTimeout(() => {
+        setIsSeeking(false);
+        if (wasPlaying) {
+          audio.play().catch(error => console.error("Lỗi khi tiếp tục phát audio:", error));
+        }
+      }, 200);
+    }
+  };
+  
   const togglePlayerDarkMode = () => setIsDarkModeInPlayer(!isDarkModeInPlayer);
+
+  // Cleanup timeout khi component unmount
+  useEffect(() => {
+    return () => {
+      if (seekTimeoutRef.current) {
+        clearTimeout(seekTimeoutRef.current);
+      }
+    };
+  }, []);
   
   return (
     <>
@@ -282,7 +425,24 @@ const AudioPlayer = ({
           </button>
         </div>
 
-        <audio ref={audioRef} src={audioSrc || ""} preload="metadata" />
+        <audio
+          ref={audioRef}
+          src={audioSrc}
+          preload="auto"
+          playsInline
+          controls={false}
+          onLoadedMetadata={(e) => {
+            const audio = e.target;
+            setDuration(audio.duration);
+            if (initialTime > 0) {
+              audio.currentTime = initialTime;
+            }
+          }}
+          onEnded={() => {
+            setIsPlaying(false);
+            setCurrentTime(duration);
+          }}
+        />
       </div>
     </>
   );

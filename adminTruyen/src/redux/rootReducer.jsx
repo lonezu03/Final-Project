@@ -6,6 +6,7 @@ import categoryReducer from './categorySlice';
 import chapterReducer from './chapterSlice';
 import userReducer from './userSlice';
 import statisticReducer from './statisticSlice';
+import transactionReducer from './transactionSlice';
 
 const rootReducer = combineReducers({
   novels: novelReducer,
@@ -14,6 +15,7 @@ const rootReducer = combineReducers({
   chapters: chapterReducer,
   user: userReducer,
   statistics: statisticReducer,
+  transaction: transactionReducer,
 
 });
 

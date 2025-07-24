@@ -37,11 +37,25 @@ export const confirmTransactions = createAsyncThunk(
 );
 export const getTransactions = createAsyncThunk(
   'transaction/getTransactions',
-  async (idUser, { rejectWithValue }) => {
+  async ({ idUser, statusDeposit = 'SUCCESS' }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.get(`/transaction/getTransaction?idUser=${idUser}`);
+      const response = await apiClient.get(`/transaction/getTransaction?idUser=${idUser}&statusDeposit=${statusDeposit}`);
       if (response.data && response.data.code === 1000) {
-        return response.data.result;
+        // Transform the novelBought object into a flat array of chapter IDs
+        const novelBought = response.data.result.novelBought || {};
+        const purchasedChapters = Object.values(novelBought).reduce((acc, novel) => {
+          if (novel.chapterBoughtRespone && Array.isArray(novel.chapterBoughtRespone)) {
+            const chapterIds = novel.chapterBoughtRespone.map(chapter => chapter.idChapter);
+            return [...acc, ...chapterIds];
+          }
+          return acc;
+        }, []);
+
+        return {
+          user: response.data.result.user,
+          purchasedChapters, // Flat array of chapter IDs
+          novelBought, // Original novelBought object for additional data
+        };
       }
       return rejectWithValue(response.data?.message || 'Không thể lấy danh sách giao dịch.');
     } catch (error) {
@@ -49,6 +63,7 @@ export const getTransactions = createAsyncThunk(
     }
   }
 );
+
 
 // --- Slice Definition ---
 const initialState = {
@@ -58,8 +73,11 @@ const initialState = {
   confirmError: null,
   
   pendingTransaction: null, // Lưu giao dịch đang chờ xác nhận
-  transactions: [],
-  transactionLoading: false, // Separate loading for transactions
+transactions: {
+    user: null,
+    purchasedChapters: [], // Store chapter IDs
+    novelBought: {}, // Store full novelBought data
+  },  transactionLoading: false, // Separate loading for transactions
   error: null,
   transactionError: null,
 };
@@ -100,13 +118,17 @@ const transactionSlice = createSlice({
         state.confirmStatus = 'failed';
         state.confirmError = action.payload;
       })
-       .addCase(getTransactions.pending, (state) => {
+      .addCase(getTransactions.pending, (state) => {
         state.transactionLoading = true;
         state.transactionError = null;
       })
       .addCase(getTransactions.fulfilled, (state, action) => {
         state.transactionLoading = false;
-        state.transactions = action.payload;
+        state.transactions = {
+          user: action.payload.user,
+          purchasedChapters: action.payload.purchasedChapters,
+          novelBought: action.payload.novelBought,
+        };
       })
       .addCase(getTransactions.rejected, (state, action) => {
         state.transactionLoading = false;
