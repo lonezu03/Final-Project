@@ -29,11 +29,12 @@ public class TransactionController {
 
 	TransactionService transactionService;
 	
-	@GetMapping("/getTransaction")
-	public ApiRespone<List<TransactionRespone>> createTransaction(@RequestParam String idUser) {
-		//TODO: process POST request
-		return ApiRespone.<List<TransactionRespone>>builder().result(transactionService.getTransactionByUser(idUser)).build();
-	}
+	 @GetMapping("/getTransaction")
+    public ApiRespone<TransactionRespone> getTransaction(@RequestParam String idUser) {
+        // TODO: process POST request
+        return ApiRespone.<TransactionRespone>builder().result(transactionService.getTransactionByUser(idUser))
+                .build();
+    }
 	
 	@PostMapping("/createTransaction")
 	public ApiRespone<Boolean> createTransaction(@RequestBody TransactionCreationRequest request) {

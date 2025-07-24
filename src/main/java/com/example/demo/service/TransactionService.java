@@ -25,6 +25,10 @@ import com.example.demo.repository.IChapterRepository;
 import com.example.demo.repository.IHistoryDepositRepository;
 import com.example.demo.repository.ITransactionRepository;
 import com.example.demo.repository.IUserRepository;
+import com.example.demo.mapper.IUserMapper;
+import com.example.demo.dto.respone.NovelBoughtRespone;
+
+
 
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
@@ -44,25 +48,46 @@ public class TransactionService {
 	IChapterRepository chapterRepository;
 	IHistoryDepositRepository historyDepositRepository;
 	IHistoryDepositMapper historyDepositMapper;
-	
-		public List<TransactionRespone> getTransactionByUser(String idUser){
-		List<TransactionRespone> transactions=transactionRepository.findByUser_IdUser(idUser).stream()
-				.map(transaction -> {
-					TransactionRespone transactionRespone= transactionMapper.toTransactionRespone(transaction);
-					ChapterBoughtRespone chapterBoughtRespone=new ChapterBoughtRespone();
-					chapterBoughtRespone.setDescriptionNovel(transaction.getChapter().getNovel().getDescriptionNovel());
-					chapterBoughtRespone.setIdChapter(transaction.getChapter().getIdChapter());
-					chapterBoughtRespone.setIdNovel(transaction.getChapter().getNovel().getIdNovel());
-					chapterBoughtRespone.setImageNovel(transaction.getChapter().getNovel().getImageNovel());
-					chapterBoughtRespone.setIndexChapter(transaction.getChapter().getIndexChapter());
-					chapterBoughtRespone.setStatusNovel(transaction.getChapter().getNovel().getStatusNovel());
-					chapterBoughtRespone.setTitleChapter(transaction.getChapter().getTitleChapter());
-					chapterBoughtRespone.setDateBuy(transaction.getDateBuy());
-					transactionRespone.setChapter(chapterBoughtRespone);
-					return transactionRespone;
-				}).toList();
-		return transactions;
-	}
+	IUserMapper userMapper;
+
+	  public TransactionRespone getTransactionByUser(String idUser) {
+        
+        User user=userRepository.findById(idUser).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        
+        TransactionRespone transactionRespone=new TransactionRespone();
+        
+        
+        transactionRespone.setUser(userMapper.toUserRespone(user));
+        
+        List<Transaction> transactions = transactionRepository.findByUser_IdUser(idUser);
+        for (Transaction transac : transactions) {
+            String idNovel=transac.getChapter().getNovel().getIdNovel();
+            
+            NovelBoughtRespone novel=transactionRespone.getNovelBought().get(idNovel);
+            if (novel==null) {
+                novel=new NovelBoughtRespone();
+                novel.setIdNovel(transac.getChapter().getNovel().getIdNovel());
+                novel.setDescriptionNovel(transac.getChapter().getNovel().getDescriptionNovel());
+                novel.setStatusNovel(transac.getChapter().getNovel().getStatusNovel());
+                novel.setNameNovel(transac.getChapter().getNovel().getNameNovel());
+                novel.setImageNovel(transac.getChapter().getNovel().getImageNovel());
+                
+                transactionRespone.getNovelBought().put(idNovel, novel);
+            }
+            
+            ChapterBoughtRespone chapterBoughtRespone = new ChapterBoughtRespone();
+            chapterBoughtRespone.setIdChapter(transac.getChapter().getIdChapter());
+            chapterBoughtRespone.setIndexChapter(transac.getChapter().getIndexChapter());
+            chapterBoughtRespone.setTitleChapter(transac.getChapter().getTitleChapter());
+            chapterBoughtRespone.setDateBuy(transac.getDateBuy());
+            
+           novel.getChapterBoughtRespone().add(chapterBoughtRespone);
+            
+           
+        }
+                           
+        return transactionRespone;
+    }
 	
 	@Transactional
 	public boolean createTransactions(String userId, TransactionCreationRequest request) {
