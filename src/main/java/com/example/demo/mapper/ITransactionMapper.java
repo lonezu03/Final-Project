@@ -12,7 +12,6 @@ public interface ITransactionMapper {
 
 	Transaction toTransaction(TransactionCreationRequest request);
 	 
-	@Mapping(source =  "dateBuy",target = "chapter.dateBuy")
 	TransactionRespone toTransactionRespone(Transaction transaction);  
 }
  
