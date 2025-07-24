@@ -58,7 +58,7 @@ public class NotifyUserScheduler {
      * - Sau khi gửi xong, cập nhật lại bản ghi là đã thông báo và lưu thời gian
      * gửi
      */
-    @Scheduled(fixedRate = 60000) // every 60 seconds
+    @Scheduled(fixedRate = 3600000) 
     public void remindUsersOfTasks() {
         List<HistoryNotify> historyNotifies = historyNotifyRepository.findByIsNotifyFalse();
         for (HistoryNotify historyNotify : historyNotifies) {

@@ -12,6 +12,5 @@ public interface ITransactionMapper {
 
 	Transaction toTransaction(TransactionCreationRequest request);
 	 
-	TransactionRespone toTransactionRespone(Transaction transaction);  
-}
+} 
  

@@ -14,6 +14,7 @@ import com.example.demo.entity.Chapter;
 import com.example.demo.entity.HistoryDeposit;
 import com.example.demo.entity.Transaction;
 import com.example.demo.entity.User;
+import com.example.demo.enums.Status;
 import com.example.demo.enums.StatusDeposit;
 import com.example.demo.enums.TypeDeposit;
 import com.example.demo.enums.TypeTransaction;
@@ -50,7 +51,19 @@ public class TransactionService {
 	IHistoryDepositMapper historyDepositMapper;
 	IUserMapper userMapper;
 
-	  public TransactionRespone getTransactionByUser(String idUser) {
+	public List<TransactionRespone> getAllTransactionByUser(StatusDeposit status){
+		List<TransactionRespone> transactionRespones=new ArrayList<>();
+		List<User> users=userRepository.findAll();
+		if (users!=null && !users.isEmpty()) {
+			for (User user : users) {
+				TransactionRespone transactionRespone= getTransactionByUser(user.getIdUser(),status);
+				transactionRespones.add(transactionRespone);
+			}
+		}
+		return transactionRespones;
+	}
+	
+	  public TransactionRespone getTransactionByUser(String idUser,StatusDeposit status) {
         
         User user=userRepository.findById(idUser).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         
@@ -59,7 +72,7 @@ public class TransactionService {
         
         transactionRespone.setUser(userMapper.toUserRespone(user));
         
-        List<Transaction> transactions = transactionRepository.findByUser_IdUser(idUser);
+        List<Transaction> transactions = transactionRepository.findByUser_IdUserAndStatusDeposit(idUser,status);
         for (Transaction transac : transactions) {
             String idNovel=transac.getChapter().getNovel().getIdNovel();
             

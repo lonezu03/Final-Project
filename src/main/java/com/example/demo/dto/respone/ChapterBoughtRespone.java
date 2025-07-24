@@ -20,11 +20,7 @@ public class ChapterBoughtRespone {
 
 	String idChapter;
 	String titleChapter;
-	String idNovel;
 	Long indexChapter;
-	String descriptionNovel;
 	LocalDateTime dateBuy;
-	String imageNovel;
-	Status statusNovel;
 
 }

@@ -22,4 +22,6 @@ public interface ITransactionRepository extends JpaRepository<Transaction, Strin
 
 	List<Transaction> findByUser_IdUserAndStatusDeposit(String idUser, StatusDeposit statusDeposit);
 
+	List<Transaction> findByStatusDeposit(StatusDeposit statusDeposit);
+
 }

@@ -8,6 +8,7 @@ import com.example.demo.dto.request.ConfirmTransactionRequest;
 import com.example.demo.dto.request.TransactionCreationRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.TransactionRespone;
+import com.example.demo.enums.StatusDeposit;
 import com.example.demo.service.TransactionService;
 
 import lombok.AccessLevel;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
 @RestController
 @RequestMapping("/transaction")
 @RequiredArgsConstructor
@@ -28,26 +28,33 @@ import org.springframework.web.bind.annotation.RequestBody;
 public class TransactionController {
 
 	TransactionService transactionService;
-	
-	 @GetMapping("/getTransaction")
-    public ApiRespone<TransactionRespone> getTransaction(@RequestParam String idUser) {
-        // TODO: process POST request
-        return ApiRespone.<TransactionRespone>builder().result(transactionService.getTransactionByUser(idUser))
-                .build();
-    }
-	
-	@PostMapping("/createTransaction")
-	public ApiRespone<Boolean> createTransaction(@RequestBody TransactionCreationRequest request) {
-		//TODO: process POST request
-		
-		return ApiRespone.<Boolean>builder().result(transactionService.createTransactions(request.getIdUser(), request)).build();
+
+	@GetMapping("/getAllTransaction")
+	public ApiRespone<List<TransactionRespone>> getAllTransaction(@RequestParam StatusDeposit statusDeposit) {
+		// TODO: process POST request
+		return ApiRespone.<List<TransactionRespone>>builder().result(transactionService.getAllTransactionByUser(statusDeposit)).build();
 	}
 	
-	
+	@GetMapping("/getTransaction")
+	public ApiRespone<TransactionRespone> getTransaction(@RequestParam String idUser,@RequestParam StatusDeposit statusDeposit) {
+		// TODO: process POST request
+		return ApiRespone.<TransactionRespone>builder().result(transactionService.getTransactionByUser(idUser,statusDeposit)).build();
+	}
+
+	@PostMapping("/createTransaction")
+	public ApiRespone<Boolean> createTransaction(@RequestBody TransactionCreationRequest request) {
+		// TODO: process POST request
+
+		return ApiRespone.<Boolean>builder().result(transactionService.createTransactions(request.getIdUser(), request))
+				.build();
+	}
+
 	@PostMapping("/confirmTransactions")
 	public ApiRespone<Boolean> confirmTransactions(@RequestBody ConfirmTransactionRequest request) {
-		//TODO: process POST request
-		
-		return ApiRespone.<Boolean>builder().result(transactionService.confirmTransactions(request.getIdUser(), request.getListIdChapter())).build();
+		// TODO: process POST request
+
+		return ApiRespone.<Boolean>builder()
+				.result(transactionService.confirmTransactions(request.getIdUser(), request.getListIdChapter()))
+				.build();
 	}
 }
