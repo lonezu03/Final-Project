@@ -1,33 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
-  getAllTransactions,
-  selectTransactions,
-  selectTransactionLoading,
-  selectTransactionError
-} from '../redux/transactionSlice';
+  getAllHistoryDeposit
+} from '../redux/userSlice';
 
 const TransactionManager = () => {
   const dispatch = useDispatch();
-  const transactions = useSelector(selectTransactions);
-  const loading = useSelector(selectTransactionLoading);
-  const error = useSelector(selectTransactionError);
+  const allHistoryDeposit = useSelector((state) => state.user.allHistoryDeposit) || [];
+  const loading = useSelector((state) => state.user.loading);
+  const error = useSelector((state) => state.user.error);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [transactionsPerPage, setTransactionsPerPage] = useState(10);
   const [statusFilter, setStatusFilter] = useState('SUCCESS');
+  const [typeFilter, setTypeFilter] = useState('ALL'); // Bộ lọc loại giao dịch
 
-  // Fetch transactions when component mounts or status filter changes
+  // Fetch history deposit when component mounts
   useEffect(() => {
-    dispatch(getAllTransactions('SUCCESS'));
+    dispatch(getAllHistoryDeposit());
   }, [dispatch]);
 
-  // Filter transactions based on search term
-  const filteredTransactions = transactions.filter(transaction => 
-    transaction.user.userNameUser?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    transaction.user.emailUser?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter history deposits based on search term, type, and remove FAILED
+  const filteredTransactions = allHistoryDeposit
+    .filter(deposit => deposit.statusDeposit !== 'FAILED')
+    .filter(deposit => {
+      if (typeFilter === 'ALL') return true;
+      return deposit.typeDeposit === typeFilter;
+    })
+    .filter(deposit => 
+      deposit.userNameUser?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      deposit.emailUser?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   // Pagination logic
   const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
@@ -80,6 +84,15 @@ const TransactionManager = () => {
         </div>
         <div className="flex items-center gap-4">
           <select
+            value={typeFilter}
+            onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="ALL">Tất cả loại giao dịch</option>
+            <option value="BUY_COIN">Nạp tiền</option>
+            <option value="BUY_CHAPTER">Mua chương</option>
+          </select>
+          <select
             value={transactionsPerPage}
             onChange={(e) => {
               setTransactionsPerPage(Number(e.target.value));
@@ -118,65 +131,62 @@ const TransactionManager = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedTransactions.map((transaction) => {
-                const deposit = transaction.user.historyDeposit && transaction.user.historyDeposit.length > 0
-                  ? transaction.user.historyDeposit[0]
-                  : null;
-                return (
-                  <tr key={transaction.user.idUser} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
-                          {transaction.user.avatarUser ? (
-                            <img
-                              src={transaction.user.avatarUser}
-                              alt={transaction.user.userNameUser}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-gray-600 font-medium">
-                              {transaction.user.userNameUser?.charAt(0)?.toUpperCase() || '?'}
-                            </span>
-                          )}
+              {paginatedTransactions.map((deposit) => (
+                <tr key={deposit.idHistoryDeposit} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                        {deposit.avatarUser ? (
+                          <img
+                            src={deposit.avatarUser}
+                            alt={deposit.userNameUser}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-gray-600 font-medium">
+                            {deposit.userNameUser?.charAt(0)?.toUpperCase() || '?'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {deposit.userNameUser}
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {transaction.user.userNameUser}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {transaction.user.emailUser}
-                          </div>
+                        <div className="text-sm text-gray-500">
+                          {deposit.emailUser}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {deposit?.typeDeposit || 'N/A'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {deposit?.detail || 'Không có chi tiết'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {deposit?.amountDeposit?.toLocaleString('vi-VN') || '0'} VNĐ
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {deposit?.coinDeposit?.toLocaleString() || '0'} Coin
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${deposit?.statusDeposit === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {deposit?.statusDeposit || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {deposit?.dateCreate ? formatDate(deposit.dateCreate) : 'N/A'}
-                    </td>
-                  </tr>
-                );
-              })}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">
+                      {deposit.typeDeposit || 'N/A'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {deposit.detail || 'Không có chi tiết'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {deposit.amountDeposit?.toLocaleString('vi-VN') || '0'} VNĐ
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {deposit.coinDeposit?.toLocaleString() || '0'} Coin
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${deposit.statusDeposit === 'SUCCESS' ? 'bg-green-100 text-green-800' : 
+                        deposit.statusDeposit === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-red-100 text-red-800'}`}>
+                      {deposit.statusDeposit || 'N/A'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {deposit.dateCreate ? formatDate(deposit.dateCreate) : 'N/A'}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -217,30 +227,56 @@ const TransactionManager = () => {
         </div>
       )}
 
-      {/* Statistics */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Statistics chia theo loại giao dịch */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Nạp tiền */}
         <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Tổng số giao dịch</h3>
-          <p className="text-2xl font-semibold text-gray-900">{transactions.length}</p>
+          <h3 className="text-lg font-bold text-blue-600 mb-2">Nạp tiền </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm text-gray-500">Tổng số</div>
+              <div className="text-2xl font-semibold text-gray-900">
+                {allHistoryDeposit.filter(d => d.statusDeposit !== 'FAILED' && d.typeDeposit === 'BUY_COIN').length}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Thành công</div>
+              <div className="text-2xl font-semibold text-green-600">
+                {allHistoryDeposit.filter(d => d.statusDeposit === 'SUCCESS' && d.typeDeposit === 'BUY_COIN').length}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Đang xử lý</div>
+              <div className="text-2xl font-semibold text-yellow-600">
+                {allHistoryDeposit.filter(d => d.statusDeposit === 'PENDING' && d.typeDeposit === 'BUY_COIN').length}
+              </div>
+            </div>
+          </div>
         </div>
+        {/* Mua chương */}
         <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Giao dịch thành công</h3>
-          <p className="text-2xl font-semibold text-green-600">
-            {transactions.filter(t => Array.isArray(t.user.historyDeposit) && t.user.historyDeposit.length > 0 && t.user.historyDeposit[0]?.statusDeposit === 'SUCCESS').length}
-          </p>
+          <h3 className="text-lg font-bold text-purple-600 mb-2">Mua chương </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm text-gray-500">Tổng số</div>
+              <div className="text-2xl font-semibold text-gray-900">
+                {allHistoryDeposit.filter(d => d.statusDeposit !== 'FAILED' && d.typeDeposit === 'BUY_CHAPTER').length}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Thành công</div>
+              <div className="text-2xl font-semibold text-green-600">
+                {allHistoryDeposit.filter(d => d.statusDeposit === 'SUCCESS' && d.typeDeposit === 'BUY_CHAPTER').length}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Đang xử lý</div>
+              <div className="text-2xl font-semibold text-yellow-600">
+                {allHistoryDeposit.filter(d => d.statusDeposit === 'PENDING' && d.typeDeposit === 'BUY_CHAPTER').length}
+              </div>
+            </div>
+          </div>
         </div>
-        {/* <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Đang xử lý</h3>
-          <p className="text-2xl font-semibold text-yellow-600">
-            {transactions.filter(t => t.user.historyDeposit[0]?.statusDeposit === 'PENDING').length}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Giao dịch thất bại</h3>
-          <p className="text-2xl font-semibold text-red-600">
-            {transactions.filter(t => t.user.historyDeposit[0]?.statusDeposit === 'FAILED').length}
-          </p>
-        </div> */}
       </div>
     </div>
   );

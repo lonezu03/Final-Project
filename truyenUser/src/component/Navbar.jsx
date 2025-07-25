@@ -1,18 +1,19 @@
 // Navbar.js
 import React, { useState, useEffect } from "react";
+import { Search, UserCircle2, Settings, BookOpen, LogOut, Filter as FilterIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, UserCircle2, Settings, BookOpen, LogOut,Filter as FilterIcon } from "lucide-react";
 import AuthModal from './AuthModal';
 import SettingsSidebar from './SettingsSidebar';
+import FilterSidebar from './FilterSidebar'; // Đường dẫn đến component FilterSidebar
 import { auth as firebaseAuthInstance } from '../firebase-config'; // Đổi tên để rõ ràng hơn
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
-import FilterSidebar from './FilterSidebar'; // Đường dẫn đến component FilterSidebar
+import { useTheme } from '../context/ThemeContext';
 
 // *** THÊM IMPORT CHO REDUX ***
-import { useDispatch, useSelector } // Thêm useSelector nếu cần lấy state từ Redux (ví dụ: để đồng bộ currentUser)
-from "react-redux";
-import { searchNovels, clearSearchedNovels } from "../redux/novelSlice"; // Đường dẫn đến novelSlice
-import { logoutUser, loadUserFromStorage, selectCurrentUser } from "../redux/userSlice"; // Import action logout và selector
+import { useDispatch, useSelector } from "react-redux";
+import { searchNovels, clearSearchedNovels } from "../redux/novelSlice";
+import { logoutUser, loadUserFromStorage, selectCurrentUser } from "../redux/userSlice";
+
 
 // Hàm helper để tạo slug (giữ nguyên)
 const createSlug = (text) => {
@@ -53,6 +54,7 @@ const menuItems = [
 ];
 
 const Navbar = () => {
+  const { isDarkMode } = useTheme();
   const [activeMenu, setActiveMenu] = useState(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -142,10 +144,14 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
   };
 
   return (
-    <div className="bg-blue-900 text-white">
+    <div className={`transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-gray-900 text-white border-b border-gray-700' 
+        : 'bg-blue-900 text-white'
+    }`}>
       <div className="container mx-auto flex items-center justify-between py-4 px-6 relative">
         {/* Logo */}
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
           <BookOpen className="text-2xl font-bold mr-2" size={28} />
           <span className="text-2xl font-bold">TRUYỆN CHỮ</span>
         </Link>
@@ -159,14 +165,28 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
               onMouseEnter={() => setActiveMenu(index)}
               onMouseLeave={() => setActiveMenu(null)}
             >
-              <button className="hover:text-gray-300">{menu.label}</button>
+              <button className={`transition-colors duration-200 ${
+                isDarkMode 
+                  ? 'hover:text-blue-400' 
+                  : 'hover:text-gray-300'
+              }`}>
+                {menu.label}
+              </button>
               {activeMenu === index && (
-                <div className="absolute top-full left-0 bg-blue-900 shadow-lg py-4 px-6 w-max z-20 grid grid-cols-2 gap-x-8 gap-y-3">
+                <div className={`absolute top-full left-0 shadow-lg py-4 px-6 w-max z-20 grid grid-cols-2 gap-x-8 gap-y-3 rounded-md transition-colors duration-300 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border border-gray-700' 
+                    : 'bg-blue-900'
+                }`}>
                   {menu.subItems.map((subItem, subIndex) => (
                     <Link
                       key={subIndex}
                       to={`${menu.basePath}/${createSlug(subItem)}`}
-                      className="whitespace-nowrap hover:underline text-white"
+                      className={`whitespace-nowrap transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'text-gray-300 hover:text-blue-400 hover:underline' 
+                          : 'text-white hover:underline'
+                      }`}
                       onClick={() => setActiveMenu(null)}
                     >
                       {subItem}

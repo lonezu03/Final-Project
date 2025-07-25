@@ -17,6 +17,7 @@ import AuthorManager from "@/pages/admin/authorManager";
 import CategoryManagement from "@/pages/admin/CategoryManagement";
 import NovelManagement from "@/pages/admin/NovelManagement";
 import TransactionManager from "@/pages/TransactionManager";
+import  CommentManagement  from "../pages/admin/CommentManagement"; // Thêm import cho CommentManagement
 import PageNotFound from "@/pages/PageNotFound";
 import {
   Dashboard
@@ -106,6 +107,10 @@ const router = createBrowserRouter([
       { 
         path: "transactions", // Khớp với path: "transactions" trong navbarLinks
         element: <TransactionManager /> 
+      },
+      { 
+        path: "comments", // Khớp với path: "comments" trong navbarLinks
+        element: < CommentManagement/>
       },
       // Thêm các route khác của bạn ở đây nếu có
     ],

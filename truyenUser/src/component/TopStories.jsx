@@ -163,58 +163,71 @@ const TopStories = () => {
 
   return (
     <div className="container mx-auto p-4 sm:p-6">
-      <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sectionsData.map((section, idx) => (
-          <div key={idx} className="flex flex-col">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">{section.title}</h2>
-            {section.topStory && (
-              <div className="flex mb-4 items-start">
-                <div className="w-16 h-24 overflow-hidden rounded mr-3 flex-shrink-0">
-                  <Link to={`/novel/${section.topStory.id}`}>
-                    <img
-                      src={section.topStory.image}
-                      alt={section.topStory.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </Link>
-                </div>
-                <div className="flex-grow min-w-0">
-                  <h3 className="font-bold text-base sm:text-lg leading-tight mb-1">
-                    <Link to={`/novel/${section.topStory.id}`} className="hover:text-blue-600 line-clamp-2" title={section.topStory.name}>
-                      {section.topStory.name}
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {sectionsData.map((section, idx) => (
+            <div key={idx} className="flex flex-col bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <h2 className="text-xl font-bold mb-5 text-gray-800 border-b-2 border-gradient-to-r from-blue-500 to-purple-500 pb-2 relative">
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {section.title}
+                </span>
+                <div className="absolute bottom-0 left-0 w-12 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+              </h2>
+              
+              {section.topStory && (
+                <div className="flex mb-6 items-start group hover:bg-gray-50 rounded-lg p-3 transition-all duration-300">
+                  <div className="w-20 h-28 overflow-hidden rounded-lg mr-4 flex-shrink-0 shadow-md group-hover:shadow-lg transition-all duration-300">
+                    <Link to={`/novel/${section.topStory.id}`}>
+                      <img
+                        src={section.topStory.image}
+                        alt={section.topStory.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
                     </Link>
-                  </h3>
-                  <p className="text-gray-600 text-xs sm:text-sm flex items-center mb-0.5 truncate">
-                    <User size={14} className="mr-1.5 text-gray-500 flex-shrink-0" />
-                    {section.topStory.author}
-                  </p>
-                  <p className="text-gray-600 text-xs sm:text-sm flex items-center truncate">
-                    <Book size={14} className="mr-1.5 text-gray-500 flex-shrink-0" />
-                    {section.topStory.genre}
-                  </p>
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <h3 className="font-bold text-base sm:text-lg leading-tight mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                      <Link to={`/novel/${section.topStory.id}`} className="line-clamp-2 hover:underline" title={section.topStory.name}>
+                        {section.topStory.name}
+                      </Link>
+                    </h3>
+                    <p className="text-gray-600 text-xs sm:text-sm flex items-center mb-2 truncate">
+                      <User size={16} className="mr-2 text-blue-500 flex-shrink-0" />
+                      <span className="font-medium">{section.topStory.author}</span>
+                    </p>
+                    <p className="text-gray-600 text-xs sm:text-sm flex items-center truncate">
+                      <Book size={16} className="mr-2 text-purple-500 flex-shrink-0" />
+                      <span className="bg-gray-100 px-2 py-1 rounded-full text-xs font-medium">{section.topStory.genre}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-            <ul className="space-y-1.5 text-sm text-gray-700 flex-grow">
-              {section.list.map((item, itemIdx) => (
-                <li key={item.id || itemIdx} className="flex items-center">
-                  <span
-                    className={`w-5 h-5 flex items-center justify-center rounded-full text-xs font-semibold mr-2 flex-shrink-0
-                      ${itemIdx === 0 ? "bg-yellow-400 text-white" :
-                      itemIdx === 1 ? "bg-blue-400 text-white" :
-                      itemIdx === 2 ? "bg-orange-400 text-white" :
-                      "bg-gray-200 text-gray-600"}`}
-                  >
-                    {itemIdx + 2} 
-                  </span>
-                  <Link to={`/novel/${item.id}`} className="truncate hover:text-blue-600 hover:underline" title={item.name}>
-                    {item.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+              )}
+              
+              <ul className="space-y-2 text-sm text-gray-700 flex-grow">
+                {section.list.map((item, itemIdx) => (
+                  <li key={item.id || itemIdx} className="flex items-center hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 group">
+                    <span
+                      className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mr-3 flex-shrink-0 transition-all duration-200
+                        ${itemIdx === 0 ? "bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-md" :
+                        itemIdx === 1 ? "bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md" :
+                        itemIdx === 2 ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md" :
+                        "bg-gray-200 text-gray-600 group-hover:bg-gray-300"}`}
+                    >
+                      {itemIdx + 2} 
+                    </span>
+                    <Link 
+                      to={`/novel/${item.id}`} 
+                      className="truncate hover:text-blue-600 hover:underline transition-all duration-200 font-medium group-hover:translate-x-1" 
+                      title={item.name}
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

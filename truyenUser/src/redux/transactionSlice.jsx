@@ -8,14 +8,18 @@ export const createTransaction = createAsyncThunk(
   'transaction/create',
   async (transactionData, { rejectWithValue }) => {
     try {
+      console.log('Sending transaction data:', transactionData);
       const response = await apiClient.post('/transaction/createTransaction', transactionData);
+      console.log('Transaction response:', response.data);
+      
       if (response.data && response.data.code === 1000 && response.data.result === true) {
         // Trả về dữ liệu gốc để component có thể dùng cho bước confirm
         return { success: true, request: transactionData };
       }
       return rejectWithValue(response.data?.message || 'Không thể tạo giao dịch.');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Lỗi khi tạo giao dịch.');
+      console.error('Create transaction error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tạo giao dịch.');
     }
   }
 );
@@ -24,14 +28,18 @@ export const confirmTransactions = createAsyncThunk(
   'transaction/confirm',
   async (confirmationData, { rejectWithValue }) => {
     try {
+      console.log('Sending confirmation data:', confirmationData);
       const response = await apiClient.post('/transaction/confirmTransactions', confirmationData);
+      console.log('Confirmation response:', response.data);
+      
       if (response.data && response.data.code === 1000 && response.data.result === true) {
         // Trả về danh sách chương đã xác nhận để cập nhật state
         return { success: true, confirmedChapters: confirmationData.listIdChapter };
       }
       return rejectWithValue(response.data?.message || 'Không thể xác nhận giao dịch.');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Lỗi khi xác nhận giao dịch.');
+      console.error('Confirm transaction error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi xác nhận giao dịch.');
     }
   }
 );

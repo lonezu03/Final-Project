@@ -13,6 +13,7 @@ import PaginationControls from '../PaginationChapter'; // Đường dẫn compon
 import ChapterListDisplay from '../ChapterListDisplay'; // Đường dẫn component
 import ReviewDialog from '../ReviewDialog'; // Import component dialog
 import NovelReviews from '../NovelReviews'; 
+  import CartWidget from '../CartWidget'; // Import CartWidget 
 
 const DetailPage = () => {
   const { novelId } = useParams();
@@ -341,18 +342,22 @@ const DetailPage = () => {
           </div>
 
           <div className="w-full md:w-64 lg:w-80 md:flex-shrink-0">
+            {/* CartWidget - Hiển thị giỏ hàng truyện */}
+            <CartWidget novelTitle={storyDetails.title} />
+            
             {storyDetails.ads.map(ad => (
               <div key={ad.id} className="bg-[#2d3038] p-1 rounded-lg shadow-lg mb-6">
                 <a href="#" aria-label={`Quảng cáo ${ad.id}`}><img src={ad.image} alt={`Quảng cáo ${ad.id}`} className="w-full h-auto rounded-md object-contain"/></a>
-                {showReviewDialog && (
-        <ReviewDialog 
-          novelId={novelId} 
-          novelTitle={novelDetailData.nameNovel} 
-          onClose={() => setShowReviewDialog(false)} 
-        />
-      )}
               </div>
             ))}
+            
+            {showReviewDialog && (
+              <ReviewDialog 
+                novelId={novelId} 
+                novelTitle={novelDetailData.nameNovel} 
+                onClose={() => setShowReviewDialog(false)} 
+              />
+            )}
           </div>
           
         </div>

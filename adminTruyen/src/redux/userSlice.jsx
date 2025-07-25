@@ -9,6 +9,21 @@ const userApiBase = rooturl + '/user';
 // ====================================================================
 
 /**
+ * Lấy lịch sử nạp tiền của tất cả user
+ */
+export const getAllHistoryDeposit = createAsyncThunk(
+  'user/getAllHistoryDeposit',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/user/getAllHistoryDeposit');
+      return response.data.result;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
+
+/**
  * Đăng nhập bằng Email và Mật khẩu.
  */
 export const loginUserWithPassword = createAsyncThunk(
@@ -104,6 +119,7 @@ const initialState = {
   isRefreshing: !!localStorage.getItem('authToken'), // Loading riêng cho việc refresh phiên
   error: null,
   allUsers: [], // Danh sách tất cả người dùng
+  allHistoryDeposit: [], // Danh sách lịch sử nạp tiền
   grantRoleLoading: false, // Loading riêng cho việc cấp quyền
   grantRoleError: null,
   grantRoleSuccess: null,
@@ -144,11 +160,9 @@ const userSlice = createSlice({
       .addCase(loginUserWithPassword.fulfilled, (state, action) => {
         state.loading = false;
         state.isRefreshing = false; // Đăng nhập thành công, phiên đã hợp lệ
-        
         // Payload là { user: {...}, token: "..." }
         state.currentUser = action.payload.user;
         state.token = action.payload.token;
-        
         // Lưu vào localStorage
         localStorage.setItem('currentUser', JSON.stringify(action.payload.user));
         localStorage.setItem('authToken', action.payload.token);
@@ -166,13 +180,10 @@ const userSlice = createSlice({
       })
       .addCase(refreshUserSession.fulfilled, (state, action) => {
         state.isRefreshing = false;
-        
         const userData = action.payload.user || action.payload;
         const newToken = action.payload.token;
-
         state.currentUser = userData;
         localStorage.setItem('currentUser', JSON.stringify(userData));
-
         if (newToken) {
             state.token = newToken;
             localStorage.setItem('authToken', newToken);
@@ -191,6 +202,19 @@ const userSlice = createSlice({
         state.loading = false;
         state.error = action.payload; // Gán lỗi để hiển thị trên UI
       })
+      // ---- Xử lý cho LẤY LỊCH SỬ NẠP TIỀN ----
+      .addCase(getAllHistoryDeposit.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getAllHistoryDeposit.fulfilled, (state, action) => {
+        state.loading = false;
+        state.allHistoryDeposit = action.payload; // Lưu lịch sử nạp tiền vào state
+      })
+      .addCase(getAllHistoryDeposit.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload; // Gán lỗi để hiển thị trên UI
+      })
       // ---- Xử lý cho CẤP QUYỀN MANAGER ----
       .addCase(grantManagerRole.pending, (state) => {
         state.grantRoleLoading = true;
@@ -200,15 +224,12 @@ const userSlice = createSlice({
       .addCase(grantManagerRole.fulfilled, (state, action) => {
         state.grantRoleLoading = false;
         state.grantRoleSuccess = 'Cấp quyền manager thành công!';
-        
         const { updatedUser, idUser } = action.payload;
-        
         // Cập nhật user trong danh sách allUsers
         const userIndex = state.allUsers.findIndex(user => user.idUser === idUser);
         if (userIndex !== -1) {
           state.allUsers[userIndex] = updatedUser;
         }
-        
         // Nếu user được cấp quyền là current user, cập nhật thông tin và token
         if (state.currentUser && state.currentUser.idUser === idUser) {
           state.currentUser = updatedUser;

@@ -67,29 +67,26 @@ const ChapterManagement = ({ novel }) => {
         return;
     }
     // 1. Tạo object 'request' chứa dữ liệu JSON
+    const coinPriceValue = parseInt(e.target.coinPrice.value, 10) || 0;
     const requestData = {
       titleChapter: e.target.titleChapter.value,
-      // viewChapter: parseInt(e.target.viewChapter.value, 10) || 0,
-      novel:  novel.idNovel , // Backend có thể cần object novel lồng nhau
+      novel:  novel.idNovel,
+      coinPrice: coinPriceValue
     };
 
     if (isEditing) {
       // Nếu đang sửa, thêm idChapter vào object request
       requestData.idChapter = currentChapter.idChapter;
-      
-      // 2. Dispatch action 'updateChapter' với payload đúng cấu trúc
       dispatch(updateChapter({ 
         request: requestData, 
         textFile: file 
       }));
     } else {
-      // 3. Dispatch action 'createChapter' với payload đúng cấu trúc
       dispatch(createChapter({ 
         request: requestData, 
         textFile: file 
       }));
     }
-    
     cancelForm(); // Đóng và reset form sau khi hoàn tất
   };
 
@@ -161,7 +158,18 @@ const ChapterManagement = ({ novel }) => {
                   />
                 </div>
                 <div className="mb-4">
-                  
+                  <label htmlFor="coinPrice" className="block text-sm font-medium text-gray-700 mb-1">Giá coin</label>
+                  <input
+                    id="coinPrice"
+                    name="coinPrice"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={isEditing ? currentChapter?.coinPrice || 0 : 0}
+                    placeholder="Nhập giá coin cho chương này"
+                    className="border border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
                 </div>
                 <div className="mb-6">
                   <label htmlFor="chapterFile" className="block text-sm font-medium text-gray-700 mb-1">

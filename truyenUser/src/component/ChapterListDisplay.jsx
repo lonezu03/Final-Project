@@ -3,7 +3,7 @@ import React, { useState,useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
-import { Loader2 ,Download } from 'lucide-react'; // Icon loading
+import { Loader2 ,Download, ShoppingCart, Plus } from 'lucide-react'; // Thêm icon giỏ hàng
 import { refreshUser } from '../redux/userSlice';
 import { getChapterContentById } from '../redux/chapterSlice'; 
 
@@ -11,7 +11,78 @@ import { getChapterContentById } from '../redux/chapterSlice';
 import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
 import { logoutUser, loginUserWithPassword } from '../redux/userSlice'; // Giả sử bạn có thông tin để login lại
 
-// Component Dialog xác nhận cuối cùng
+// Utility functions cho giỏ hàng
+const getCartFromStorage = () => {
+  const cart = sessionStorage.getItem('chapterCart');
+  return cart ? JSON.parse(cart) : [];
+};
+
+const saveCartToStorage = (cart) => {
+  sessionStorage.setItem('chapterCart', JSON.stringify(cart));
+};
+
+const addToCart = (chapter, novelId) => {
+  const cart = getCartFromStorage();
+  const exists = cart.find(item => item.chapterId === chapter.idChapter);
+  if (!exists) {
+    cart.push({
+      chapterId: chapter.idChapter,
+      chapterTitle: chapter.titleChapter,
+      coinPrice: chapter.coinPrice || 0,
+      novelId: novelId
+    });
+    saveCartToStorage(cart);
+    return true;
+  }
+  return false;
+};
+
+const removeFromCart = (chapterId) => {
+  const cart = getCartFromStorage();
+  const newCart = cart.filter(item => item.chapterId !== chapterId);
+  saveCartToStorage(newCart);
+  return newCart;
+};
+
+// Component Dialog xác nhận cuối cùng cho giỏ hàng
+const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading }) => {
+    if (!cartItems || cartItems.length === 0) return null;
+    const totalCost = cartItems.reduce((sum, item) => sum + item.coinPrice, 0);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800">
+                <h3 className="text-xl font-semibold mb-4 flex items-center">
+                    <ShoppingCart className="mr-2" size={20} />
+                    Xác Nhận Mua Giỏ Hàng
+                </h3>
+                <p className="mb-2">Bạn sắp dùng xu để mua {cartItems.length} chương:</p>
+                <div className="max-h-32 overflow-y-auto bg-gray-100 p-2 rounded border mb-4">
+                    <ul className="text-sm">
+                        {cartItems.map(item => (
+                            <li key={item.chapterId} className="flex justify-between items-center py-1 border-b border-gray-200 last:border-b-0">
+                                <span className="truncate flex-1 mr-2">{item.chapterTitle}</span>
+                                <span className="font-medium text-orange-600">{item.coinPrice} xu</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <p className="mb-6 text-lg">Tổng cộng: <span className="font-bold text-orange-500">{totalCost} xu</span></p>
+                <div className="flex justify-end space-x-3">
+                    <button onClick={onCancel} disabled={loading} className="px-5 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+                        Hủy
+                    </button>
+                    <button onClick={onConfirm} disabled={loading} className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700">
+                        {loading && <Loader2 className="animate-spin mr-2" size={16}/>}
+                        Xác nhận mua
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Component Dialog xác nhận cuối cùng cho mua lẻ
 const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }) => {
     if (!transactionDetails) return null;
     const { chapters, totalCost } = transactionDetails;
@@ -50,62 +121,22 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
     const { currentNovel } = useSelector((state) => state.novels);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showCartDialog, setShowCartDialog] = useState(false);
+  const [cart, setCart] = useState(getCartFromStorage());
   const [downloadingChapterId, setDownloadingChapterId] = useState(null); 
   const handleDownload = async (chapter) => {
-  //   if (!chapter || !chapter.idChapter) return;
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để tải về chương.");
+      return;
+    }
 
-  //   setDownloadingChapterId(chapter.idChapter); // Bật trạng thái loading
-    
-  //   try {
-  //     // 1. Dispatch action để lấy nội dung chi tiết của chương
-  //     const chapterContentResult = await dispatch(getChapterContentById({ 
-  //         novelId: novelId, 
-  //         chapterId: chapter.idChapter 
-  //     })).unwrap();
+    // Kiểm tra nếu chapter yêu cầu đăng nhập
+    if (chapter.isLoginRequired) {
+      toast.info("Vui lòng đăng nhập để tải về chương.");
+      return;
+    }
 
-  //     const content = chapterContentResult.contentChapter;
-  //     if (!content) {
-  //       throw new Error("Nội dung chương rỗng.");
-  //     }
-
-  //     // 2. Dọn dẹp và chuẩn bị nội dung file .txt
-  //     const chapterText = content
-  //       .replace(/<br\s*\/?>/gi, "\n")
-  //       .replace(/ /g, " ")
-  //       .replace(/<[^>]*>?/gm, '');
-
-  //     const fileContent = [
-  //       `Truyện: ${currentNovel?.nameNovel || 'Không rõ tên truyện'}`,
-  //       `Chương: ${chapter.titleChapter}`,
-  //       "====================================",
-  //       "\n",
-  //       chapterText,
-  //       "\n\n",
-  //       "------------------------------------",
-  //       `Tải về từ [Tên Website Của Bạn]`
-  //     ].join('\n');
-
-  //     // 3. Tạo tên file và kích hoạt tải về
-  //     const safeFileName = `${currentNovel?.nameNovel} - ${chapter.titleChapter}.txt`.replace(/[\\/:*?"<>|]/g, '-');
-  //     const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
-  //     const url = URL.createObjectURL(blob);
-  //     const link = document.createElement('a');
-  //     link.href = url;
-  //     link.download = safeFileName;
-  //     document.body.appendChild(link);
-  //     link.click();
-  //     document.body.removeChild(link);
-  //     URL.revokeObjectURL(url);
-      
-  //     toast.success("Đã bắt đầu tải về chương!");
-
-  //   } catch (err) {
-  //     toast.error(`Lỗi khi tải chương: ${err.message || err}`);
-  //   } finally {
-  //     setDownloadingChapterId(null); // Tắt trạng thái loading
-  //   }
-  // };
-  if (!chapter || !chapter.idChapter) return;
+    if (!chapter || !chapter.idChapter) return;
 
     setDownloadingChapterId(chapter.idChapter);
     
@@ -214,18 +245,103 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
       setShowConfirmDialog(true);
     }
     if (createStatus === 'failed' && createError) {
-      toast.error(`Lỗi: ${createError}`);
+      toast.error(`Lỗi tạo giao dịch: ${createError}`);
       dispatch(resetTransactionState());
     }
   }, [createStatus, pendingTransaction, createError, dispatch]);
 
-  const handlePurchaseClick = (chapterToBuy) => {
+  // Cập nhật cart từ storage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setCart(getCartFromStorage());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const handleChapterClick = (chapter) => {
+    // Kiểm tra nếu chapter yêu cầu đăng nhập
+    if (chapter.isLoginRequired) {
+      toast.info("Vui lòng đăng nhập để đọc chương này.");
+      return;
+    }
+    
+    // Logic click bình thường cho user đã đăng nhập
+    navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
+  };
+
+  const handleAddToCart = (chapter) => {
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để thêm vào giỏ hàng.");
+      return;
+    }
+
+    // Kiểm tra nếu chapter yêu cầu đăng nhập
+    if (chapter.isLoginRequired) {
+      toast.info("Vui lòng đăng nhập để thêm vào giỏ hàng.");
+      return;
+    }
+
+    const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+    if (isPurchased) {
+      toast.info("Bạn đã sở hữu chương này.");
+      return;
+    }
+
+    const success = addToCart(chapter, novelId);
+    if (success) {
+      setCart(getCartFromStorage());
+      toast.success(`Đã thêm "${chapter.titleChapter}" vào giỏ hàng!`);
+    } else {
+      toast.info("Chương này đã có trong giỏ hàng.");
+    }
+  };
+
+  const handlePurchaseCart = () => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để mua chương.");
       navigate('/login');
       return;
     }
-     if ((currentUser.coin || 0) < CHAPTER_PRICE) {
+
+    if (cart.length === 0) {
+      toast.info("Giỏ hàng trống.");
+      return;
+    }
+
+    const totalCost = cart.reduce((sum, item) => sum + item.coinPrice, 0);
+    if ((currentUser.coin || 0) < totalCost) {
+      toast.error("Số xu không đủ. Vui lòng nạp thêm!");
+      navigate('/deposit');
+      return;
+    }
+
+    const transactionData = {
+      idUser: currentUser.idUser,
+      idChapters: cart.map(item => item.chapterId),
+      amountCoin: totalCost,
+      typeTransaction: 'BUY',
+      dateEndRent: null,
+    };
+    
+    console.log('Tạo giao dịch với data:', transactionData);
+    dispatch(createTransaction(transactionData));
+  };
+
+  const handlePurchaseClick = (chapterToBuy) => {
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để mua chương.");
+      return;
+    }
+
+    // Kiểm tra nếu chapter yêu cầu đăng nhập
+    if (chapterToBuy.isLoginRequired) {
+      toast.info("Vui lòng đăng nhập để mua chương.");
+      return;
+    }
+
+    const coinPrice = chapterToBuy.coinPrice || 0;
+    if ((currentUser.coin || 0) < coinPrice) {
       toast.error("Số xu không đủ. Vui lòng nạp thêm!");
       navigate('/deposit');
       return;
@@ -234,11 +350,12 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
     const transactionData = {
       idUser: currentUser.idUser,
       idChapters: [chapterToBuy.idChapter],
-      amountCoin: CHAPTER_PRICE,
+      amountCoin: coinPrice,
       typeTransaction: 'BUY',
       dateEndRent: null,
     };
     
+    console.log('Tạo giao dịch đơn lẻ với data:', transactionData);
     dispatch(createTransaction(transactionData));
   };
 
@@ -250,35 +367,77 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
       listIdChapter: pendingTransaction.idChapters,
     };
     
+    console.log('Xác nhận giao dịch với data:', confirmationData);
+    
     try {
       // BƯỚC 1: Chờ xác nhận giao dịch thành công
       const result = await dispatch(confirmTransactions(confirmationData)).unwrap();
-      toast.success(result.message || "Mua chương thành công! Đang cập nhật dữ liệu...");
+      toast.success("Mua chương thành công! Đang cập nhật dữ liệu...");
 
       // BƯỚC 2: Chờ refresh dữ liệu người dùng thành công
       await dispatch(refreshUser()).unwrap();
+      
+      // BƯỚC 3: Xóa các chương đã mua khỏi giỏ hàng
+      const purchasedChapterIds = pendingTransaction.idChapters;
+      purchasedChapterIds.forEach(chapterId => {
+        removeFromCart(chapterId);
+      });
+      setCart(getCartFromStorage());
+      
       toast.success("Đã lưu chương!");
 
-      // BƯỚC 3: Sau khi mọi thứ đã xong, mới điều hướng
-      const purchasedChapterId = pendingTransaction.idChapters[0];
-      navigate(`/novel/${novelId}/chapter/${purchasedChapterId}`);
+      // BƯỚC 4: Sau khi mọi thứ đã xong, mới điều hướng (nếu chỉ mua 1 chương)
+      if (pendingTransaction.idChapters.length === 1) {
+        const purchasedChapterId = pendingTransaction.idChapters[0];
+        navigate(`/novel/${novelId}/chapter/${purchasedChapterId}`);
+      }
 
     } catch (error) {
+      console.error('Lỗi xác nhận giao dịch:', error);
       toast.error(`Giao dịch thất bại: ${error.message || error}`);
     } finally {
       // Luôn đóng dialog và reset state dù thành công hay thất bại
       setShowConfirmDialog(false);
+      setShowCartDialog(false);
       dispatch(resetTransactionState());
     }
   };
   
   const handleCancelConfirm = () => {
     setShowConfirmDialog(false);
+    setShowCartDialog(false);
     dispatch(resetTransactionState());
   };
 
   return (
     <>
+      {/* Header với thông tin giỏ hàng */}
+      {cart.length > 0 && (
+        <div className="mb-4 p-3 bg-blue-900 rounded-lg border border-blue-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-blue-200">
+              <ShoppingCart className="mr-2" size={18} />
+              <span className="text-sm">Giỏ hàng: {cart.length} chương</span>
+              <span className="ml-2 text-orange-300 font-medium">
+                ({cart.reduce((sum, item) => sum + item.coinPrice, 0)} xu)
+              </span>
+            </div>
+            <button
+              onClick={handlePurchaseCart}
+              disabled={createStatus === 'loading' || confirmStatus === 'loading'}
+              className="px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+            >
+              {createStatus === 'loading' ? (
+                <Loader2 className="animate-spin mr-1" size={14} />
+              ) : (
+                <ShoppingCart className="mr-1" size={14} />
+              )}
+              Mua tất cả
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Màn hình loading che phủ khi đang TẠO giao dịch */}
       {(createStatus === 'loading') && (
         <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-[9998]">
@@ -294,24 +453,43 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
           const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
           // Kiểm tra xem có đang tải chương này không
           const isDownloading = downloadingChapterId === chapter.idChapter;
-          const coinPrice= chapter.coinPrice || 0; // Mặc định là 3 xu nếu không có giá cụ thể
+          const coinPrice = chapter.coinPrice || 0; // Lấy giá từ API
+          const isInCart = cart.some(item => item.chapterId === chapter.idChapter);
+          // Kiểm tra xem chapter có yêu cầu đăng nhập không
+          const requiresLogin = chapter.isLoginRequired || false;
 
           return (
-            <li key={chapter.idChapter} className="flex items-center justify-between border-b border-gray-700 py-1.5">
+            <li key={chapter.idChapter || `temp_${index}`} className="flex items-center justify-between border-b border-gray-700 py-1.5">
               <div className="flex items-center flex-grow min-w-0">
                 <span className="w-20 md:w-24 flex-shrink-0 text-left mr-3 pl-2 text-gray-400">{chapterNumberDisplay}</span>
                 {isPurchased ? (
                   <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className="flex-1 text-gray-200 hover:text-sky-400 truncate" title={chapterTitle}>
                     {chapterTitle}
                   </Link>
+                ) : requiresLogin ? (
+                  <button 
+                    onClick={() => handleChapterClick(chapter)}
+                    className="flex-1 text-gray-300 hover:text-yellow-400 truncate text-left cursor-pointer" 
+                    title={`${chapterTitle} - Vui lòng đăng nhập để đọc`}
+                  >
+                    {chapterTitle} 🔒
+                  </button>
                 ) : (
                   <span className="flex-1 text-gray-300 truncate" title={chapterTitle}>{chapterTitle}</span>
                 )}
               </div>
 
-              {/* NÚT HÀNH ĐỘNG: MUA hoặc TẢI VỀ */}
-              <div className="ml-3 flex-shrink-0">
-                {isPurchased ? (
+              {/* NÚT HÀNH ĐỘNG: MUA, THÊM VÀO GIỎ, hoặc TẢI VỀ */}
+              <div className="ml-3 flex-shrink-0 flex items-center space-x-2">
+                {requiresLogin ? (
+                  <button
+                    onClick={() => handleChapterClick(chapter)}
+                    className="px-3 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+                    title="Đăng nhập để đọc"
+                  >
+                    Đăng nhập
+                  </button>
+                ) : isPurchased ? (
                   <button
                     onClick={() => handleDownload(chapter)}
                     disabled={isDownloading}
@@ -321,14 +499,31 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
                     {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   </button>
                 ) : (
-                  <button
-                    onClick={() => handlePurchaseClick(chapter)}
-                    disabled={createStatus === 'loading' || confirmStatus === 'loading'}
-                    className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors disabled:opacity-50"
-                    title={`Mua chương ${chapterTitle}`}
-                  >
-                    {coinPrice} xu
-                  </button>
+                  <>
+                    {/* Nút thêm vào giỏ hàng */}
+                    <button
+                      onClick={() => handleAddToCart(chapter)}
+                      disabled={isInCart || createStatus === 'loading' || confirmStatus === 'loading'}
+                      className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 flex items-center ${
+                        isInCart 
+                          ? 'bg-blue-600 text-white cursor-not-allowed' 
+                          : 'bg-blue-500 text-white hover:bg-blue-600'
+                      }`}
+                      title={isInCart ? "Đã có trong giỏ" : "Thêm vào giỏ hàng"}
+                    >
+                      {isInCart ? <ShoppingCart size={14} /> : <Plus size={14} />}
+                    </button>
+
+                    {/* Nút mua ngay */}
+                    <button
+                      onClick={() => handlePurchaseClick(chapter)}
+                      disabled={createStatus === 'loading' || confirmStatus === 'loading'}
+                      className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors disabled:opacity-50"
+                      title={`Mua ngay chương ${chapterTitle}`}
+                    >
+                      {coinPrice} xu
+                    </button>
+                  </>
                 )}
               </div>
             </li>
@@ -337,15 +532,36 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
       </ul>
 
       {showConfirmDialog && pendingTransaction && (
-        <FinalConfirmDialog
-          transactionDetails={{
-              chapters: pendingTransaction.idChapters.map(id => ({ id, title: chapters.find(c => c.idChapter === id)?.titleChapter || `Chương ID: ${id}` })),
-              totalCost: pendingTransaction.amountCoin,
-          }}
-          onConfirm={handleConfirmPurchase}
-          onCancel={handleCancelConfirm}
-          loading={confirmStatus === 'loading'}
-        />
+        <>
+          {pendingTransaction.idChapters.length > 1 ? (
+            <CartConfirmDialog
+              cartItems={pendingTransaction.idChapters.map(id => {
+                const chapter = chapters.find(c => c.idChapter === id);
+                return {
+                  chapterId: id,
+                  chapterTitle: chapter?.titleChapter || `Chương ID: ${id}`,
+                  coinPrice: chapter?.coinPrice || 0
+                };
+              })}
+              onConfirm={handleConfirmPurchase}
+              onCancel={handleCancelConfirm}
+              loading={confirmStatus === 'loading'}
+            />
+          ) : (
+            <FinalConfirmDialog
+              transactionDetails={{
+                  chapters: pendingTransaction.idChapters.map(id => ({ 
+                    id, 
+                    title: chapters.find(c => c.idChapter === id)?.titleChapter || `Chương ID: ${id}` 
+                  })),
+                  totalCost: pendingTransaction.amountCoin,
+              }}
+              onConfirm={handleConfirmPurchase}
+              onCancel={handleCancelConfirm}
+              loading={confirmStatus === 'loading'}
+            />
+          )}
+        </>
       )}
     </>
   );

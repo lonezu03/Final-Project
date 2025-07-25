@@ -1,5 +1,6 @@
 // src/redux/rootReducer.js
 import { combineReducers } from 'redux';
+
 import novelReducer from './novelSlice';
 import authorReducer from './authorSlice';
 import categoryReducer from './categorySlice';
@@ -7,6 +8,8 @@ import chapterReducer from './chapterSlice';
 import userReducer from './userSlice';
 import statisticReducer from './statisticSlice';
 import transactionReducer from './transactionSlice';
+import commentsReducer from './commentSlice';
+
 
 const rootReducer = combineReducers({
   novels: novelReducer,
@@ -16,7 +19,7 @@ const rootReducer = combineReducers({
   user: userReducer,
   statistics: statisticReducer,
   transaction: transactionReducer,
-
+  comments: commentsReducer,
 });
 
 export default rootReducer;

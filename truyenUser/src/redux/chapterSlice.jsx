@@ -21,10 +21,24 @@ export const getAllChapters = createAsyncThunk(
 
       if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
         const chapters = response.data.result;
-        // Backend PHẢI trả về idChapter và indexChapter
-        if (chapters.length > 0 && (chapters[0].idChapter === undefined || chapters[0].indexChapter === undefined)) {
+        
+        // Nếu không có token, API chỉ trả về titleChapter
+        if (!token && chapters.length > 0 && chapters[0].idChapter === undefined) {
+          // Tạo dữ liệu giả cho chapters khi chưa đăng nhập
+          return chapters.map((chapter, index) => ({
+            ...chapter,
+            idChapter: `temp_${index}`, // ID tạm thời
+            indexChapter: index,
+            coinPrice: 0,
+            isLoginRequired: true // Flag để biết cần đăng nhập
+          }));
+        }
+        
+        // Khi có token, backend PHẢI trả về idChapter và indexChapter
+        if (token && chapters.length > 0 && (chapters[0].idChapter === undefined || chapters[0].indexChapter === undefined)) {
             return rejectWithValue('Dữ liệu chương từ API không có idChapter hoặc indexChapter.');
         }
+        
         return chapters.sort((a, b) => (Number(a.indexChapter) || 0) - (Number(b.indexChapter) || 0));
       }
       return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương.');
@@ -56,8 +70,18 @@ export const getNovelChaptersList = createAsyncThunk(
       if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
         const chaptersFromApi = response.data.result;
 
+        // Nếu không có token, API chỉ trả về titleChapter
+        if (!token && chaptersFromApi.length > 0 && chaptersFromApi[0].idChapter === undefined) {
+          // Tạo dữ liệu giả cho dropdown khi chưa đăng nhập
+          return chaptersFromApi.map((chapter, index) => ({
+            idChapter: `temp_${index}`, // ID tạm thời
+            chapterNumber: index + 1,
+            titleChapter: chapter.titleChapter || "Chưa có tiêu đề",
+            isLoginRequired: true // Flag để biết cần đăng nhập
+          }));
+        }
 
-        if (chaptersFromApi.length > 0 && (chaptersFromApi[0].idChapter === undefined || chaptersFromApi[0].indexChapter === undefined)) {
+        if (token && chaptersFromApi.length > 0 && (chaptersFromApi[0].idChapter === undefined || chaptersFromApi[0].indexChapter === undefined)) {
             console.error("API /chapter/getAll VẪN KHÔNG TRẢ VỀ idChapter hoặc indexChapter đầy đủ!", chaptersFromApi[0]);
             return rejectWithValue('Dữ liệu chương từ API không có idChapter hoặc indexChapter.');
         }

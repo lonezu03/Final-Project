@@ -10,6 +10,7 @@ import { setUserFromStorage,loadUserFromStorage,loadAndRefreshUser } from './red
 import NotificationWebSocket from './redux/NotificationWebSocket'; // Import NotificationWebSocket
 import 'react-toastify/dist/ReactToastify.css'; // Đảm bảo bạn import CSS của react-toastify
 import { ToastContainer } from 'react-toastify';
+import { ThemeProvider } from './context/ThemeContext'; // Import ThemeProvider
 
 // Import các component trang
 import ReadingPage from './component/page/readingPage';
@@ -24,6 +25,8 @@ import SearchResultsPage from './component/SearchResultsPage';
 import UserProfilePage from './component/page/UserProfilePage'; // Đổi tên route để khớp với đây
 import LibraryPage from './component/page/LibraryPage'; // Thêm trang Thư viện
 import PaymentCallbackPage from './component/PaymentCallbackPage'; // Import component mới
+import SupportPage from './component/page/SupportPage'; // Trang hỗ trợ khách hàng
+import AboutUs from './component/page/AboutUs'; // Trang giới thiệu về công ty
 
 // AppContent bây giờ chỉ chịu trách nhiệm fetch dữ liệu không thay đổi thường xuyên
 const AppContent = () => {
@@ -99,6 +102,8 @@ const AppContent = () => {
         <Route path="/search-results" element={<SearchResultsPage />} />
         <Route path="/user/profile" element={<UserProfilePage />} />
         <Route path="/user/my-bookshelf" element={<LibraryPage />} />
+        <Route path="/user/support" element={<SupportPage />} />
+        <Route path="/about-us" element={<AboutUs />} />
         <Route path="/payment/callback-success" element={<PaymentCallbackPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
@@ -125,15 +130,17 @@ function App() {
 
   return (
     <Provider store={store}>
-      <AppContent />
-      <ToastContainer
-        position="top-right"
-        autoClose={3000} // Giảm thời gian toast
-        hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick={true}
-        rtl={false}
-      />
+      <ThemeProvider>
+        <AppContent />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000} // Giảm thời gian toast
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick={true}
+          rtl={false}
+        />
+      </ThemeProvider>
     </Provider>
   );
 }

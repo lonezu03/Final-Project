@@ -63,4 +63,14 @@ export const navbarLinks = [
             },
         ],
     },
+    {
+        title: "Bình luận",
+        links: [
+            {
+                label: "Quản lý bình luận",
+                icon: MessageSquare,
+                path: "comments",
+            },
+        ],
+    },
 ];
