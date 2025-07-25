@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class TtsJobAsyncService {
 	@NonFinal
 	@Value("${server.base-url}")
 	private String serverBaseUrl;
+	private static final Logger logger = LoggerFactory.getLogger(TtsJobAsyncService.class);
 
 	/**
 	 * <!--
@@ -112,18 +115,24 @@ public class TtsJobAsyncService {
 	    final int MAX_CHUNK_LENGTH = 1000;
 	    final int MAX_SENTENCE_LENGTH = 40;
 
+	    logger.info("[TTS] Bắt đầu xử lý text cho chương {}", idChapter);
+
 	    List<String> textChunks = textService.ultimateTextSplitter(longText, MAX_CHUNK_LENGTH, MAX_SENTENCE_LENGTH);
 	    if (textChunks.isEmpty()) {
+	        logger.warn("[TTS] Text rỗng hoặc không hợp lệ cho chương {}", idChapter);
 	        throw new IllegalArgumentException("Text is empty or invalid.");
 	    }
 
-	    // Tạo Job chính và set luôn status PROCESSING trước khi save
+	    logger.info("[TTS] Đã chia text thành {} đoạn", textChunks.size());
+
+	    // Tạo Job chính
 	    TtsJob parentJob = new TtsJob();
 	    parentJob.setId(UUID.randomUUID().toString());
-	    parentJob.setStatus("PROCESSING"); // Set ngay từ đầu
+	    parentJob.setStatus("PROCESSING");
 	    parentJob.setCreatedAt(new Date());
 	    parentJob.setIdChapter(idChapter);
-	    ttsJobRepository.save(parentJob); // ✅ Save 1 lần duy nhất
+	    ttsJobRepository.save(parentJob);
+	    logger.info("[TTS] Đã tạo job chính với ID {}", parentJob.getId());
 
 	    // Tạo và lưu các Job con
 	    List<TtsSubJob> subJobs = new ArrayList<>();
@@ -136,9 +145,12 @@ public class TtsJobAsyncService {
 	        subJobs.add(subJob);
 	    }
 	    ttsSubJobRepository.saveAll(subJobs);
+	    logger.info("[TTS] Đã tạo và lưu {} sub-job cho job chính {}", subJobs.size(), parentJob.getId());
 
-	    // Bắt đầu xử lý các job con
+	    // Gửi đi xử lý
 	    textService.processSubJobs(subJobs, serverBaseUrl);
+	    logger.info("[TTS] Đã bắt đầu gửi các sub-job đi xử lý");
 	}
+
 }
 

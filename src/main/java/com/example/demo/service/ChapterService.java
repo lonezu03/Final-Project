@@ -107,8 +107,15 @@ public class ChapterService {
 								TtsJob latestJob = ttsJobs.stream().max(Comparator.comparing(TtsJob::getCreatedAt))
 										.orElse(null);
 
-								if (latestJob != null) {
-									chapterRespone.setUrlAudio(latestJob.getFinalAudioUrl());
+								if (latestJob != null ) {
+									if (latestJob.getFinalAudioUrl()!= null && !latestJob.getFinalAudioUrl().isEmpty()) {
+										chapterRespone.setUrlAudio(latestJob.getFinalAudioUrl());
+
+									}
+//									if (latestJob.getAudioBlob()!= null ) {
+//										chapterRespone.setAudioBlob(latestJob.getAudioBlob());
+//
+//									}
 								}
 							}
 
@@ -184,11 +191,15 @@ public class ChapterService {
 		}
 
 		Chapter chapter = chapterMapper.toChapter(request);
+		
+		
 		Category category = categoryRepository.findByNameCategory("Truyện Convert");
 		Category category2 = categoryRepository.findByNameCategory("Truyện Dịch");
 
 		Novel novel = novelRepository.findById(request.getNovel()).get();
 
+		
+		chapter.setNovel(novel);
 		if (chapter.getNovel().getCategories()!=null && !chapter.getNovel().getCategories().isEmpty() ) {
 			if (chapter.getNovel().getCategories().contains(category) && chapter.getCoinPrice()!=null) {
 					throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
@@ -300,7 +311,7 @@ public class ChapterService {
 
 			List<Chapter> chapters = chapterRepository.findByTitleChapter(request.getTitleChapter()).get();
 			boolean isDuplicate = chapters.stream()
-					.filter(chapter -> chapter.getNovel().getIdNovel().equals(request.getNovel())).findAny()
+					.filter(chapter -> chapter.getNovel().getIdNovel().equals(request.getNovel()) && !chapter.getIdChapter().equals(request.getIdChapter())).findAny()
 					.isPresent();
 
 			if (isDuplicate) {

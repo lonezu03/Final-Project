@@ -30,6 +30,8 @@ public class ChapterRespone {
 	
 	String urlAudio;
 	
+	byte[] audioBlob;
+	
 	Integer coinPrice;
 
 }

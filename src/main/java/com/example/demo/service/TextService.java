@@ -33,8 +33,9 @@ public class TextService {
     private static final Logger logger = LoggerFactory.getLogger(TextService.class);
     private final ITtsSubJobRepository ttsSubJobRepository;
 
-//    private static final String API_KEY = "Ox5oXSQpCVEATs6QYrTnLzrbodnM9qGN"; // Nên đưa vào application.properties
-    private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj";
+//    private static final String API_KEY = "Ox5oXSQpCVEATs6QYrTnLzrbodnM9qGN"; //email dh5211
+//    private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj";// eduongcoder
+    private static final String API_KEY ="DrbUov7PPQqKMtgWKkF77WEk8nrdKsVC"; //Email duongtuongdruong
     private static final String API_URL = "https://api.fpt.ai/hmi/tts/v5";
 
     /**
@@ -48,19 +49,23 @@ public class TextService {
             CompletableFuture.runAsync(() -> {
                 try {
                     String callbackUrl = serverBaseUrl + "/api/tts/sub-callback?subJobId=" + subJob.getId();
+                    logger.info("[TTS] Sub-job {}: gửi lên FPT.AI với callback {}", subJob.getId(), callbackUrl);
+
                     sendToFptAi(subJob.getTextChunk(), callbackUrl);
 
                     subJob.setStatus("PROCESSING");
                     ttsSubJobRepository.save(subJob);
+                    logger.info("[TTS] Sub-job {}: đã gửi thành công, cập nhật trạng thái PROCESSING", subJob.getId());
+
                 } catch (Exception e) {
-                    logger.error("Failed to send sub-job {} to FPT.AI", subJob.getId(), e);
+                    logger.error("[TTS] Sub-job {}: gửi thất bại, lỗi {}", subJob.getId(), e.getMessage(), e);
                     subJob.setStatus("FAILED");
                     ttsSubJobRepository.save(subJob);
-                    // Cân nhắc cập nhật job cha là FAILED
                 }
             });
         });
     }
+
 
     /**
      * Gửi một đoạn text tới FPT.AI kèm callback URL.
@@ -70,9 +75,12 @@ public class TextService {
      * @throws RuntimeException nếu gửi request thất bại (timeout, lỗi mạng...)
      */
     private void sendToFptAi(String text, String callbackUrl) {
-        String cleanText = text.replaceAll("\\s+", " ").trim();
+        logger.debug("Raw text before cleaning: {}", text); // 🧾 Log trước khi làm sạch
 
-        final int timeoutMillis = 30000; 
+        String cleanText = text.replaceAll("\\s+", " ").trim();
+        logger.debug("Cleaned text: {}", cleanText); // 🧽 Log sau khi làm sạch
+
+        final int timeoutMillis = 30000;
         RequestConfig config = RequestConfig.custom()
             .setConnectTimeout(timeoutMillis)
             .setConnectionRequestTimeout(timeoutMillis)
@@ -88,19 +96,29 @@ public class TextService {
             StringEntity entity = new StringEntity(cleanText, "UTF-8");
             request.setEntity(entity);
 
-            logger.info("Sending request to FPT.AI with a {}ms timeout...", timeoutMillis);
+            // 🟡 Log toàn bộ request gửi đi
+            logger.info("Sending request to FPT.AI with {}ms timeout", timeoutMillis);
+            logger.info("Request headers:");
+            Arrays.stream(request.getAllHeaders()).forEach(header ->
+                logger.info("  {}: {}", header.getName(), header.getValue())
+            );
             logger.info("Callback URL: {}", callbackUrl);
+            logger.info("Text to synthesize (length={}): {}", cleanText.length(), cleanText);
 
             try (CloseableHttpResponse response = httpClient.execute(request)) {
                 String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-                logger.info("FPT.AI initial response: {}", responseBody);
+                int statusCode = response.getStatusLine().getStatusCode();
+                logger.info("FPT.AI response status: {}", statusCode);
+                logger.info("FPT.AI response body: {}", responseBody);
             }
 
         } catch (Exception e) {
-            logger.error("Error sending request to FPT.AI (possible timeout)", e);
+            logger.error("❌ Error sending request to FPT.AI (possibly timeout)", e);
             throw new RuntimeException("Error sending request to FPT.AI: " + e.getMessage(), e);
         }
     }
+
+
 
     /**
      * Chia văn bản gốc thành các đoạn nhỏ (chunk) với độ dài phù hợp để gửi đi xử lý.
@@ -111,73 +129,89 @@ public class TextService {
      * @return Danh sách các đoạn văn bản đã chia nhỏ
      */
     public List<String> ultimateTextSplitter(String originalText, int maxChunkLength, int maxCharsWithoutBreak) {
+        logger.info("Bắt đầu chia văn bản với độ dài tối đa mỗi chunk: {} và số ký tự không dấu ngắt tối đa: {}", maxChunkLength, maxCharsWithoutBreak);
+
         if (originalText == null || originalText.isBlank()) {
+            logger.warn("Văn bản đầu vào rỗng hoặc null.");
             return new ArrayList<>();
         }
 
         String cleanedText = sanitizeText(originalText);
+        logger.debug("Văn bản sau khi làm sạch: {}", cleanedText);
+
         String safeText = addCommasToLongStrings(cleanedText, maxCharsWithoutBreak);
-        return splitIntoChunks(safeText, maxChunkLength);
+        logger.debug("Văn bản sau khi thêm dấu phẩy an toàn: {}", safeText);
+
+        List<String> chunks = splitIntoChunks(safeText, maxChunkLength);
+        logger.info("Hoàn tất việc chia văn bản. Số chunk thu được: {}", chunks.size());
+
+        return chunks;
     }
 
     /**
      * Làm sạch văn bản bằng cách loại bỏ khoảng trắng thừa.
-     *
-     * @param text Văn bản thô
-     * @return Văn bản đã làm sạch
      */
     private String sanitizeText(String text) {
+        logger.info("Tiến hành làm sạch văn bản...");
         return text.replaceAll("\\s+", " ").trim();
     }
 
     /**
      * Chèn dấu phẩy vào văn bản nếu có đoạn quá dài không có dấu ngắt.
-     *
-     * @param text Văn bản cần xử lý
-     * @param maxLength Số ký tự tối đa giữa các dấu ngắt
-     * @return Văn bản đã được thêm dấu phẩy
      */
-    private String addCommasToLongStrings(String text, int maxLength) {
-    	StringBuilder result = new StringBuilder();
-    	int lastBreak = -1; // vị trí dấu ngắt cuối cùng (.,!? hoặc ,)
+    private String addCommasToLongStrings(String text, int maxCharsWithoutBreak) {
+        logger.debug("Adding commas to long strings. maxCharsWithoutBreak={}", maxCharsWithoutBreak);
 
-    	for (int i = 0; i < text.length(); i++) {
-    		char currentChar = text.charAt(i);
-    		result.append(currentChar);
+        StringBuilder result = new StringBuilder();
+        int countSinceLastBreak = 0;
 
-    		// Nếu là dấu ngắt, reset vị trí
-    		if (currentChar == '.' || currentChar == '?' || currentChar == '!' || currentChar == ',') {
-    			lastBreak = result.length() - 1;
-    		}
+        int i = 0;
+        while (i < text.length()) {
+            char currentChar = text.charAt(i);
+            result.append(currentChar);
+            countSinceLastBreak++;
+            i++;
 
-    		// Nếu đã vượt quá maxLength từ lần ngắt trước
-    		if (lastBreak != -1 && (result.length() - lastBreak) >= maxLength) {
-    			int insertPos = result.lastIndexOf(" ", result.length() - 1);
-    			if (insertPos > lastBreak) {
-    				result.insert(insertPos, ',');
-    				lastBreak = insertPos;
-    			} else {
-    				// Nếu không có khoảng trắng, chèn luôn tại vị trí hiện tại
-    				result.insert(result.length() - 1, ',');
-    				lastBreak = result.length() - 2;
-    			}
-    		}
-    	}
+            // Reset đếm nếu gặp dấu ngắt
+            if (currentChar == '.' || currentChar == ',' || currentChar == '?' || currentChar == '!') {
+                logger.debug("Punctuation found at index {}: '{}', resetting countSinceLastBreak to 0", i - 1, currentChar);
+                countSinceLastBreak = 0;
+            }
 
-    	return result.toString();
+            // Nếu đã vượt quá giới hạn
+            if (countSinceLastBreak >= maxCharsWithoutBreak) {
+                // Tìm khoảng trắng gần nhất sau đó
+                int spaceIndex = text.indexOf(' ', i);
+                logger.debug("Exceeded maxCharsWithoutBreak at index {}. Next space at index {}", i, spaceIndex);
+
+                if (spaceIndex != -1) {
+                    // Thêm phần từ i đến spaceIndex
+                    result.append(text, i, spaceIndex + 1); // bao gồm khoảng trắng
+                    result.append(','); // chèn dấu phẩy sau khoảng trắng
+                    logger.debug("Inserted comma after space at index {}", spaceIndex);
+                    i = spaceIndex + 1;
+                    countSinceLastBreak = 0;
+                }
+            }
+        }
+
+        String finalResult = result.toString();
+        logger.debug("Final result after inserting commas: {}", finalResult);
+        return finalResult;
     }
+
+
 
 
     /**
      * Chia văn bản thành các đoạn nhỏ (chunk) có độ dài tối đa.
-     *
-     * @param text Văn bản đã xử lý
-     * @param maxChunkLength Độ dài tối đa mỗi chunk
-     * @return Danh sách các đoạn đã cắt
      */
     private List<String> splitIntoChunks(String text, int maxChunkLength) {
+        logger.info("Tiến hành chia văn bản thành các đoạn nhỏ với độ dài tối đa: {}", maxChunkLength);
+
         List<String> chunks = new ArrayList<>();
         int offset = 0;
+
         while (offset < text.length()) {
             int end = Math.min(offset + maxChunkLength, text.length());
 
@@ -188,9 +222,13 @@ public class TextService {
                 }
             }
 
-            chunks.add(text.substring(offset, end).trim());
+            String chunk = text.substring(offset, end).trim();
+            logger.info("Tạo chunk: [{}]", chunk);
+            chunks.add(chunk);
+
             offset = end;
         }
+
         return chunks;
     }
 }

@@ -2,7 +2,14 @@ package com.example.demo.controller;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Comparator;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +27,8 @@ import com.example.demo.dto.request.ChapterGetByIdNovelRequest;
 import com.example.demo.dto.request.ChapterUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
 import com.example.demo.dto.respone.ChapterRespone;
+import com.example.demo.entity.TtsJob;
+import com.example.demo.repository.ITtsJobRepository;
 import com.example.demo.service.ChapterService;
 import com.nimbusds.jose.JOSEException;
 
@@ -39,6 +48,9 @@ import lombok.extern.slf4j.Slf4j;
 public class ChapterController { 
 
 	ChapterService chapterService;
+	ITtsJobRepository ttsJobRepository;
+	
+    private final Logger logger = LoggerFactory.getLogger(ChapterController.class);
 
 /** 
  * API lấy danh sách tất cả chương của một truyện cụ thể theo ID truyện.
@@ -53,6 +65,27 @@ public class ChapterController {
 	public ApiRespone<List<ChapterRespone>> getAll(@RequestBody ChapterGetByIdNovelRequest request) throws JOSEException, ParseException {
 		return ApiRespone.<List<ChapterRespone>>builder().result(chapterService.getAllChapter(request)).build();
 	}
+	
+	@GetMapping(value = "/audio/{chapterId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	public ResponseEntity<byte[]> getAudio(@PathVariable String chapterId) {
+	    
+	    List<TtsJob> ttsJobs = ttsJobRepository.findByIdChapter(chapterId);
+		if (!ttsJobs.isEmpty() && ttsJobs != null) {
+			// Lấy job mới nhất theo ngày tạo
+			TtsJob latestJob = ttsJobs.stream().max(Comparator.comparing(TtsJob::getCreatedAt))
+					.orElse(null);
+
+			if (latestJob != null) {
+				 byte[] audio = latestJob.getAudioBlob();
+				 return ResponseEntity.ok()
+					        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=audio.mp3")
+					        .contentType(MediaType.valueOf("audio/mpeg"))
+					        .body(audio);
+			}
+		}
+	    return null;
+	}
+
 /**
  * API lấy chi tiết nội dung của một chương theo ID chương.
  *

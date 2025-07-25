@@ -43,9 +43,60 @@ public class AudioAssemblyService {
  *
  * @param parentJobId ID của job cha (TtsJob) cần kiểm tra và xử lý
  */
+//    @Async
+//    public void triggerAssemblyIfReady(String parentJobId) {
+//        // Sử dụng synchronized để tránh trường hợp nhiều callback đến cùng lúc và cố gắng ghép file
+//        synchronized (parentJobId.intern()) {
+//            TtsJob parentJob = ttsJobRepository.findById(parentJobId).orElse(null);
+//            if (parentJob == null || !"PROCESSING".equals(parentJob.getStatus())) {
+//                logger.info("Assembly check for job {} ignored, status is not PROCESSING.", parentJobId);
+//                return;
+//            }
+//
+//            List<TtsSubJob> subJobs = ttsSubJobRepository.findByParentJob(parentJob);
+//            boolean allCompleted = subJobs.stream().allMatch(sj -> "COMPLETED".equals(sj.getStatus()));
+//
+//            if (allCompleted) {
+//                logger.info("All sub-jobs for parent {} are complete. Starting assembly.", parentJobId);
+//                parentJob.setStatus("ASSEMBLING");
+//                ttsJobRepository.save(parentJob);
+//
+//                try {
+//                    subJobs.sort(Comparator.comparing(TtsSubJob::getJobOrder));
+//                    ByteArrayOutputStream finalAudioStream = new ByteArrayOutputStream();
+//
+//                    for (TtsSubJob subJob : subJobs) {
+//                        byte[] audioChunk = downloadFileToMemory(subJob.getTempAudioUrl());
+//                        if (audioChunk != null) {
+//                            // CẢNH BÁO: Cần thư viện chuyên dụng để ghép MP3 đúng cách.
+//                            // Đây là cách nối thô, có thể gây lỗi.
+//                            finalAudioStream.write(audioChunk);
+//                        } else {
+//                            throw new IOException("Failed to download chunk " + subJob.getId());
+//                        }
+//                    }
+//
+//                    String publicId = "tts_final/" + parentJob.getId();
+//                    String finalUrl = cloudinaryService.uploadAudio(finalAudioStream.toByteArray(), publicId);
+//
+//                    byte[] finalAudio = finalAudioStream.toByteArray();
+//
+//                    parentJob.setAudioBlob(finalAudio); // Lưu vào DB                    
+//                    parentJob.setStatus("COMPLETED");
+//                    parentJob.setFinalAudioUrl(finalUrl);
+//
+//                } catch (Exception e) {
+//                    logger.error("Failed to assemble audio for job: {}", parentJob.getId(), e);
+//                    parentJob.setStatus("FAILED");
+//                    parentJob.setErrorMessage("Audio assembly failed.");
+//                }
+//                ttsJobRepository.save(parentJob);
+//            }
+//        }
+//    }
+    
     @Async
     public void triggerAssemblyIfReady(String parentJobId) {
-        // Sử dụng synchronized để tránh trường hợp nhiều callback đến cùng lúc và cố gắng ghép file
         synchronized (parentJobId.intern()) {
             TtsJob parentJob = ttsJobRepository.findById(parentJobId).orElse(null);
             if (parentJob == null || !"PROCESSING".equals(parentJob.getStatus())) {
@@ -61,36 +112,38 @@ public class AudioAssemblyService {
                 parentJob.setStatus("ASSEMBLING");
                 ttsJobRepository.save(parentJob);
 
-                try {
+                try (ByteArrayOutputStream finalAudioStream = new ByteArrayOutputStream()) {
                     subJobs.sort(Comparator.comparing(TtsSubJob::getJobOrder));
-                    ByteArrayOutputStream finalAudioStream = new ByteArrayOutputStream();
 
                     for (TtsSubJob subJob : subJobs) {
                         byte[] audioChunk = downloadFileToMemory(subJob.getTempAudioUrl());
                         if (audioChunk != null) {
-                            // CẢNH BÁO: Cần thư viện chuyên dụng để ghép MP3 đúng cách.
-                            // Đây là cách nối thô, có thể gây lỗi.
                             finalAudioStream.write(audioChunk);
                         } else {
                             throw new IOException("Failed to download chunk " + subJob.getId());
                         }
                     }
 
+                    byte[] finalAudio = finalAudioStream.toByteArray();
                     String publicId = "tts_final/" + parentJob.getId();
-                    String finalUrl = cloudinaryService.uploadAudio(finalAudioStream.toByteArray(), publicId);
+                    String finalUrl = cloudinaryService.uploadAudio(finalAudio, publicId);
 
-                    parentJob.setStatus("COMPLETED");
+                    parentJob.setAudioBlob(finalAudio);  // Lưu vào DB (BLOB)
+                    logger.info(parentJob.getAudioBlob().toString());
                     parentJob.setFinalAudioUrl(finalUrl);
+                    parentJob.setStatus("COMPLETED");
 
                 } catch (Exception e) {
                     logger.error("Failed to assemble audio for job: {}", parentJob.getId(), e);
                     parentJob.setStatus("FAILED");
                     parentJob.setErrorMessage("Audio assembly failed.");
                 }
+
                 ttsJobRepository.save(parentJob);
             }
         }
     }
+
 /**
  * Tải nội dung file từ một URL về bộ nhớ dưới dạng mảng byte.
  * Được sử dụng để tải các đoạn âm thanh tạm từ các sub-job.

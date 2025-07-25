@@ -78,10 +78,10 @@ public class NotifyUserScheduler {
     @Transactional
     @Scheduled(fixedRate = 60000)
     public void updateNovel() {
-    	logger.info("Start updateNovel scheduled task");
+//    	logger.info("Start updateNovel scheduled task");
 
         List<Novel> novels = novelRepository.findAll();
-        logger.info("Fetched {} novels from the database", novels.size());
+//        logger.info("Fetched {} novels from the database", novels.size());
 
         Category category = categoryRepository.findByNameCategory("Truyện Convert");
         Category category2 = categoryRepository.findByNameCategory("Truyện Dịch");
@@ -114,10 +114,10 @@ public class NotifyUserScheduler {
             novelRepository.saveAll(novelsToUpdate);
             logger.info("Updated {} novels with new category", novelsToUpdate.size());
         } else {
-        	logger.info("No novels needed updating");
+//        	logger.info("No novels needed updating");
         }
 
-        logger.info("Finished updateNovel scheduled task");
+//        logger.info("Finished updateNovel scheduled task");
     }
 
     @Scheduled(fixedRate = 60000) // every 60 seconds
