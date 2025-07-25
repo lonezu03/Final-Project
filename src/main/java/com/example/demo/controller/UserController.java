@@ -32,6 +32,7 @@ import com.example.demo.dto.request.UserLoginByEmailRequest;
 import com.example.demo.dto.request.UserLoginRequest;
 import com.example.demo.dto.request.UserUpdateRequest;
 import com.example.demo.dto.respone.ApiRespone;
+import com.example.demo.dto.respone.HistoryDepositGetAllRespone;
 import com.example.demo.dto.respone.HistoryDepositRespone;
 import com.example.demo.dto.respone.HistoryReadNovelRespone;
 import com.example.demo.dto.respone.ReviewNovelRespone;
@@ -337,4 +338,9 @@ public class UserController {
 	}
 
 
+	@GetMapping("/getAllHistoryDeposit")
+	public ApiRespone<List<HistoryDepositGetAllRespone>> getAllHistoryDepotis(){
+		return ApiRespone.<List<HistoryDepositGetAllRespone>>builder().result(historyDepositService.getAllHistoryDepositB()).build();
+	}
+	
 }
