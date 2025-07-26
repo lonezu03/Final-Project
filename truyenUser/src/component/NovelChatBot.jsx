@@ -44,7 +44,11 @@ const NovelChatBot = () => {
       if (!novels || novels.length === 0) {
         const noDataMessage = {
           sender: "bot",
-          text: "Hiện tại chưa có dữ liệu truyện nào trong hệ thống. Vui lòng thử lại sau khi dữ liệu đã được tải.",
+          // text: "Hiện tại chưa có dữ liệu truyện nào trong hệ thống. Vui lòng thử lại sau khi dữ liệu đã được tải.",
+          // text: "Chết tiệt! Thứ vô dụng này lại dám trống rỗng trước mặt em sao? Ngoan, đợi một chút. Để tôi đích thân xử lý nó.",
+          // text: "Hừm? Dám để 'bảo bối' của tôi phải đợi à? Cái hệ thống này đúng là không có mắt nhìn. Yên nào, sẽ có ngay.",
+          text: "Lại dám trống rỗng? Thật chướng mắt. Em đợi đi, tôi bắt nó ra cho em.",
+
         };
         setMessages((prev) => [...prev, noDataMessage]);
         setIsLoading(false);
@@ -331,7 +335,9 @@ JSON response:`;
           </div>
         );
       } else {
-        botResponse = "😔 Rất tiếc, tôi không tìm thấy truyện nào phù hợp với yêu cầu của bạn. Bạn có thể thử tìm với từ khóa khác nhé!\n\n💡 Thử hỏi: \"Gợi ý truyện hot\", \"Truyện romance hay nhất\", \"Truyện hoàn thành nhiều chương\"...";
+        // botResponse = "😔 Rất tiếc, tôi không tìm thấy truyện nào phù hợp với yêu cầu của bạn. Bạn có thể thử tìm với từ khóa khác nhé!\n\n💡 Thử hỏi: \"Gợi ý truyện hot\", \"Truyện romance hay nhất\", \"Truyện hoàn thành nhiều chương\"...";
+              botResponse = "Em đang thử thách tôi đấy à, bảo bối? Những thứ em tìm không xứng đáng để xuất hiện. Đưa ra một yêu cầu khác, một yêu cầu xứng tầm với em hơn.\n\n💡 Thử hỏi: \"Gợi ý truyện hot\", \"Truyện romance hay nhất\", \"Truyện hoàn thành nhiều chương\"...";
+
       }
 
       const botMessage = { sender: "bot", text: botResponse };
