@@ -25,7 +25,7 @@ const NovelChatBot = () => {
 
   // Lấy dữ liệu novels từ Redux store
   const novels = useSelector((state) => state.novels.novels || []);
-
+  console.log("Novels data from Redux:", novels);
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
@@ -55,9 +55,9 @@ const NovelChatBot = () => {
 
       const chat = genAI.getGenerativeModel({ model: MODEL_NAME });
       
-      // Tạo context từ dữ liệu novels với thông tin chi tiết
-      const novelContext = novels
-        .filter(novel => novel && novel.title) // Lọc các novel có dữ liệu hợp lệ
+      // Tạo context từ dữ liệu novels với thông tin chi tiết - chỉ 10 truyện đầu để test
+      const limitedNovels = novels.filter(novel => novel && novel.title).slice(0, 10);
+      const novelContext = limitedNovels
         .map((novel) => {
           const rating = novel.rating ? parseFloat(novel.rating).toFixed(1) : "Chưa có đánh giá";
           const categories = novel.categories && novel.categories.length > 0
@@ -77,25 +77,23 @@ const NovelChatBot = () => {
           const totalChapters = novel.totalChapters || 0;
           const viewCount = novel.viewCount || 0;
           const description = novel.description && novel.description.trim() 
-            ? novel.description.substring(0, 200) + (novel.description.length > 200 ? "..." : "")
+            ? novel.description.substring(0, 150) + (novel.description.length > 150 ? "..." : "")
             : "Chưa có mô tả";
           
-          return `Tên truyện: ${novel.title}
-ID: ${novel.idNovel}
-Tác giả: ${authors}
-Thể loại: ${categories}
-Mô tả: ${description}
-Đánh giá: ${rating}/5 sao
-Trạng thái: ${status}
-Số chương: ${totalChapters}
-Lượt xem: ${viewCount.toLocaleString()}
-Ngày tạo: ${novel.createdAt || "Không xác định"}`;
+          return `[${novel.idNovel}] "${novel.title}"
+- Tác giả: ${authors}
+- Thể loại: ${categories}
+- Đánh giá: ${rating}/5.0 sao
+- Trạng thái: ${status}
+- Số chương: ${totalChapters}
+- Lượt xem: ${viewCount.toLocaleString()}
+- Mô tả: ${description}`;
         })
         .join("\n\n");
 
-      // Tạo danh sách keywords từ dữ liệu thực tế
+      // Tạo danh sách keywords từ dữ liệu thực tế - chỉ từ limitedNovels
       const allCategories = [...new Set(
-        novels.flatMap(novel =>
+        limitedNovels.flatMap(novel =>
           novel.categories
             ? novel.categories
                 .filter(cat => cat && cat.categoryName)
@@ -105,7 +103,7 @@ Ngày tạo: ${novel.createdAt || "Không xác định"}`;
       )].filter(cat => cat); // Lọc bỏ các giá trị falsy
 
       const allAuthors = [...new Set(
-        novels.flatMap(novel =>
+        limitedNovels.flatMap(novel =>
           novel.authors
             ? novel.authors
                 .filter(author => author && author.authorName)
@@ -114,18 +112,24 @@ Ngày tạo: ${novel.createdAt || "Không xác định"}`;
         )
       )].filter(author => author); // Lọc bỏ các giá trị falsy
 
-      const keywordsList = [
-        ...allCategories,
-        ...allAuthors,
-        "hot", "hay nhất", "đánh giá cao", "rating cao", "mới nhất", "hoàn thành", 
-        "đang cập nhật", "nhiều chương", "ít chương", "lượt xem cao", "phổ biến"
-      ].join(", ");
+      const availableTitles = limitedNovels.map(novel => `"${novel.title}"`).join(", ");
 
-      const prompt = `Bạn là một trợ lý thông minh cho website đọc truyện online. Dưới đây là danh sách TOÀN BỘ ${novels.length} truyện trong hệ thống với thông tin chi tiết:
+      const keywordsList = [
+        `TÊN TRUYỆN CÓ SẴN: ${availableTitles}`,
+        `THỂ LOẠI: ${allCategories.join(", ")}`,
+        `TÁC GIẢ: ${allAuthors.join(", ")}`,
+        "TÌM KIẾM: hot, hay nhất, đánh giá cao, rating cao, mới nhất, hoàn thành, đang cập nhật, nhiều chương, phổ biến"
+      ].join(" | ");
+
+      const prompt = `Bạn là một trợ lý thông minh cho website đọc truyện online. 
+
+⚠️ QUAN TRỌNG: BẠN CHỈ ĐƯỢC SỬ DỤNG ĐÚNG THÔNG TIN TỪ DANH SÁCH TRUYỆN DƯỚI ĐÂY. KHÔNG ĐƯỢC TỰ TẠO TÊN TRUYỆN, TÁC GIẢ HAY THÔNG TIN KHÁC.
+
+DANH SÁCH ${limitedNovels.length} TRUYỆN CÓ SẴN TRONG HỆ THỐNG:
 
 ${novelContext}
 
-KEYWORDS có thể sử dụng: ${keywordsList}
+${keywordsList}
 
 HỆ THỐNG ĐÁNH GIÁ:
 - Rating từ 1.0 đến 5.0 sao
@@ -133,21 +137,19 @@ HỆ THỐNG ĐÁNH GIÁ:
 - Truyện "hay nhất" = rating cao nhất
 - Truyện "phổ biến" = lượt xem cao nhất
 
-HƯỚNG DẪN TRẢ LỜI:
-1. LUÔN sử dụng tên chính xác của truyện (không viết "undefined")
-2. Khi gợi ý truyện, cung cấp: tên, tác giả, thể loại, rating, số chương, trạng thái
-3. Sắp xếp theo tiêu chí phù hợp:
-   - "hay nhất/hot/rating cao" → sắp theo rating giảm dần
-   - "mới nhất" → sắp theo ngày tạo mới nhất
-   - "phổ biến" → sắp theo lượt xem giảm dần
-   - "nhiều chương" → sắp theo số chương giảm dần
-   - "hoàn thành" → lọc status = "COMPLETED"
-4. Gợi ý 2-3 truyện phù hợp nhất
-5. Nếu không tìm thấy truyện phù hợp, hãy gợi ý truyện có rating cao nhất
+QUY TẮC NGHIÊM NGẶT:
+1. CHỈ sử dụng tên truyện từ danh sách trên (VÍ DỤ: nếu có "Doraemon" trong danh sách thì chỉ gợi ý "Doraemon", không tự tạo "Nobita phiêu lưu ký")
+2. CHỈ sử dụng tác giả từ danh sách trên
+3. CHỈ sử dụng thông tin rating, số chương, trạng thái từ danh sách trên
+4. Nếu không tìm thấy truyện phù hợp với yêu cầu, hãy gợi ý những truyện CÓ SẴN có rating cao nhất
+5. LUÔN kiểm tra lại tên truyện bạn gợi ý có trong danh sách hay không
 
 Người dùng hỏi: ${input}
 
-Hãy trả lời chi tiết, thân thiện và gợi ý cụ thể:`;
+Hãy trả lời dựa CHÍNH XÁC trên dữ liệu trên, không tự bịa thêm:`;
+
+      console.log("Novel count being sent to AI:", limitedNovels.length);
+      console.log("Sample novels:", limitedNovels.slice(0, 3).map(n => n.title));
 
       const result = await chat.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -162,7 +164,7 @@ Hãy trả lời chi tiết, thân thiện và gợi ý cụ thể:`;
       const foundNovels = [];
 
       // Tìm các truyện được đề cập trong câu trả lời
-      novels
+      limitedNovels
         .filter(novel => novel && novel.title) // Lọc novel hợp lệ
         .forEach((novel) => {
           if (text.toLowerCase().includes(novel.title.toLowerCase())) {
@@ -177,7 +179,7 @@ Hãy trả lời chi tiết, thân thiện và gợi ý cụ thể:`;
         let matchingNovels = [];
 
         // 1. Tìm theo thể loại
-        const validNovels = novels.filter(novel => novel && novel.title);
+        const validNovels = limitedNovels.filter(novel => novel && novel.title);
         
         allCategories.forEach((category) => {
           if (category && (inputLower.includes(category) || textLower.includes(category))) {
@@ -324,7 +326,7 @@ Hãy trả lời chi tiết, thân thiện và gợi ý cụ thể:`;
       // Tạo response với links cho tên truyện
       let replaced = false;
       let elements = [text];
-      novels
+      limitedNovels
         .filter(novel => novel && novel.title) // Lọc bỏ novel không hợp lệ
         .forEach((novel) => {
           elements = elements.flatMap((el) => {
