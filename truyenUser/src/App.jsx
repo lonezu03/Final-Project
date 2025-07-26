@@ -27,6 +27,7 @@ import LibraryPage from './component/page/LibraryPage'; // Thêm trang Thư vi�
 import PaymentCallbackPage from './component/PaymentCallbackPage'; // Import component mới
 import SupportPage from './component/page/SupportPage'; // Trang hỗ trợ khách hàng
 import AboutUs from './component/page/AboutUs'; // Trang giới thiệu về công ty
+import NovelChatBot from './component/NovelChatBot'; // Import chatbot trợ lý truyện
 
 // AppContent bây giờ chỉ chịu trách nhiệm fetch dữ liệu không thay đổi thường xuyên
 const AppContent = () => {
@@ -107,6 +108,9 @@ const AppContent = () => {
         <Route path="/payment/callback-success" element={<PaymentCallbackPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      
+      {/* Chatbot trợ lý truyện */}
+      <NovelChatBot />
     </Router>
   );
 };
