@@ -1,6 +1,7 @@
 // src/components/StorySlider.jsx (Giả sử vị trí file)
 import React, { useMemo } from "react"; // Bỏ useEffect, useDispatch
 import { useSelector } from "react-redux";
+import { useTheme } from "../context/ThemeContext"; // Import useTheme
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -11,6 +12,7 @@ import { Megaphone } from "lucide-react";
 const StorySlider = () => {
   // Chỉ lấy novels từ store, không dispatch lại
   const { novels, loading, error } = useSelector((state) => state.novels);
+  const { isDarkMode } = useTheme(); // Sử dụng theme context
 
   // Không còn:
   // const dispatch = useDispatch();
@@ -33,21 +35,39 @@ const StorySlider = () => {
 
   // Hiển thị loading/error chỉ khi novels thực sự chưa có và đang fetch từ Home
   if (loading && novels.length === 0) return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center text-gray-800">
-              <Megaphone size={24} className="mr-2 text-blue-600" />
+      <div className={`rounded-lg shadow-lg p-6 ${
+        isDarkMode 
+          ? 'bg-slate-800 text-white border border-gray-700' 
+          : 'bg-white text-gray-800 border border-gray-200'
+      }`}>
+          <h2 className={`text-lg font-semibold mb-4 flex items-center ${
+            isDarkMode ? 'text-white' : 'text-gray-800'
+          }`}>
+              <Megaphone size={24} className={`mr-2 ${
+                isDarkMode ? 'text-blue-400' : 'text-blue-600'
+              }`} />
               Truyện Mới Cập Nhật
           </h2>
-          <p className="text-center text-gray-500">Đang tải...</p>
+          <p className={`text-center ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+          }`}>Đang tải...</p>
       </div>
   );
 
   if (error && novels.length === 0) {
       console.error("Lỗi tải truyện cho slider:", error);
       return (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center text-gray-800">
-                  <Megaphone size={24} className="mr-2 text-blue-600" />
+          <div className={`rounded-lg shadow-lg p-6 ${
+            isDarkMode 
+              ? 'bg-slate-800 text-white border border-gray-700' 
+              : 'bg-white text-gray-800 border border-gray-200'
+          }`}>
+              <h2 className={`text-lg font-semibold mb-4 flex items-center ${
+                isDarkMode ? 'text-white' : 'text-gray-800'
+              }`}>
+                  <Megaphone size={24} className={`mr-2 ${
+                    isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                  }`} />
                   Truyện Mới Cập Nhật
               </h2>
               <p className="text-center text-sm text-red-500">Không thể tải dữ liệu. Lỗi: {renderError(error)}</p>
@@ -56,20 +76,40 @@ const StorySlider = () => {
   }
 
   if (!sliderStories || sliderStories.length === 0) return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-lg font-semibold mb-4 flex items-center text-gray-800">
-            <Megaphone size={24} className="mr-2 text-blue-600" />
+    <div className={`rounded-lg shadow-lg p-6 ${
+      isDarkMode 
+        ? 'bg-slate-800 text-white border border-gray-700' 
+        : 'bg-white text-gray-800 border border-gray-200'
+    }`}>
+        <h2 className={`text-lg font-semibold mb-4 flex items-center ${
+          isDarkMode ? 'text-white' : 'text-gray-800'
+        }`}>
+            <Megaphone size={24} className={`mr-2 ${
+              isDarkMode ? 'text-blue-400' : 'text-blue-600'
+            }`} />
             Truyện Mới Cập Nhật
         </h2>
-        <p className="text-sm text-gray-500 text-center">Không có truyện mới nào để hiển thị.</p>
+        <p className={`text-sm text-center ${
+          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+        }`}>Không có truyện mới nào để hiển thị.</p>
     </div>
   );
 
 
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100">
-      <h2 className="text-xl font-bold mb-6 flex items-center text-gray-800 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        <Megaphone size={28} className="mr-3 text-blue-600 animate-pulse" />
+    <div className={`rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-slate-800 to-gray-800 border-gray-700' 
+        : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+    }`}>
+      <h2 className={`text-xl font-bold mb-6 flex items-center ${
+        isDarkMode 
+          ? 'text-transparent bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text' 
+          : 'text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text'
+      }`}>
+        <Megaphone size={28} className={`mr-3 animate-pulse ${
+          isDarkMode ? 'text-blue-400' : 'text-blue-600'
+        }`} />
         Truyện Mới Cập Nhật
       </h2>
       <Swiper
@@ -124,8 +164,16 @@ const StorySlider = () => {
         ))}
         
         {/* Custom Navigation Buttons */}
-        <div className="swiper-button-prev !w-10 !h-10 !bg-white !shadow-lg !rounded-full !text-blue-600 hover:!bg-blue-50 !transition-all !duration-300 after:!text-sm after:!font-bold"></div>
-        <div className="swiper-button-next !w-10 !h-10 !bg-white !shadow-lg !rounded-full !text-blue-600 hover:!bg-blue-50 !transition-all !duration-300 after:!text-sm after:!font-bold"></div>
+        <div className={`swiper-button-prev !w-10 !h-10 !shadow-lg !rounded-full !transition-all !duration-300 after:!text-sm after:!font-bold ${
+          isDarkMode 
+            ? '!bg-slate-700 !text-blue-400 hover:!bg-slate-600' 
+            : '!bg-white !text-blue-600 hover:!bg-blue-50'
+        }`}></div>
+        <div className={`swiper-button-next !w-10 !h-10 !shadow-lg !rounded-full !transition-all !duration-300 after:!text-sm after:!font-bold ${
+          isDarkMode 
+            ? '!bg-slate-700 !text-blue-400 hover:!bg-slate-600' 
+            : '!bg-white !text-blue-600 hover:!bg-blue-50'
+        }`}></div>
       </Swiper>
       
       <style>{`

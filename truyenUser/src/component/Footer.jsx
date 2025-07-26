@@ -1,4 +1,5 @@
 import React from "react";
+import { useTheme } from "../context/ThemeContext"; // Import useTheme
 // Import các icon từ lucide-react
 import {
   Info,
@@ -18,14 +19,24 @@ import {
 } from "lucide-react";
 
 const Footer = () => {
+  const { isDarkMode } = useTheme(); // Sử dụng theme context
+  
   return (
-    <footer className="bg-gray-900 text-gray-400 text-sm">
+    <footer className={`text-sm ${
+      isDarkMode 
+        ? 'bg-slate-900 text-gray-400' 
+        : 'bg-gray-100 text-gray-600'
+    }`}>
       <div className="container mx-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
         {/* Giới thiệu */}
         <div>
-          <h3 className="text-white font-semibold mb-4 flex items-center">
-            <Info size={22} className="mr-2 text-blue-400" /> Giới Thiệu
+          <h3 className={`font-semibold mb-4 flex items-center ${
+            isDarkMode ? 'text-white' : 'text-gray-800'
+          }`}>
+            <Info size={22} className={`mr-2 ${
+              isDarkMode ? 'text-blue-400' : 'text-blue-600'
+            }`} /> Giới Thiệu
           </h3>
           <p className="mb-4">
             Đọc truyện online, truyện full, truyện hay được đóng góp bởi cộng đồng thành viên.
@@ -38,20 +49,40 @@ const Footer = () => {
 
         {/* Điều hướng */}
         <div>
-          <h3 className="text-white font-semibold mb-4 flex items-center">
-            <Compass size={22} className="mr-2 text-green-400" /> Điều Hướng
+          <h3 className={`font-semibold mb-4 flex items-center ${
+            isDarkMode ? 'text-white' : 'text-gray-800'
+          }`}>
+            <Compass size={22} className={`mr-2 ${
+              isDarkMode ? 'text-green-400' : 'text-green-600'
+            }`} /> Điều Hướng
           </h3>
           <ul className="space-y-2">
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <Search size={18} className="mr-2" /> Tìm kiếm
             </li>
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <Trophy size={18} className="mr-2" /> Bảng xếp hạng
             </li>
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <PenSquare size={18} className="mr-2" /> Đăng truyện
             </li>
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <CreditCard size={18} className="mr-2" /> Nạp vàng
             </li>
           </ul>
@@ -68,20 +99,40 @@ const Footer = () => {
 
         {/* Hỗ trợ */}
         <div>
-          <h3 className="text-white font-semibold mb-4 flex items-center">
-            <LifeBuoy size={22} className="mr-2 text-yellow-400" /> Hỗ Trợ
+          <h3 className={`font-semibold mb-4 flex items-center ${
+            isDarkMode ? 'text-white' : 'text-gray-800'
+          }`}>
+            <LifeBuoy size={22} className={`mr-2 ${
+              isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+            }`} /> Hỗ Trợ
           </h3>
           <ul className="space-y-2">
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <BookOpen size={18} className="mr-2" /> Hướng dẫn
             </li>
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <Wrench size={18} className="mr-2" /> Các lỗi thường gặp
             </li>
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <MessageSquare size={18} className="mr-2" /> Chat với chúng tôi
             </li>
-            <li className="flex items-center hover:text-white transition-colors cursor-pointer">
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`}>
               <Users size={18} className="mr-2" /> Nhóm thảo luận
             </li>
           </ul>
@@ -89,7 +140,9 @@ const Footer = () => {
       </div>
 
       {/* Đường viền + bản quyền */}
-      <div className="border-t border-gray-700 mt-8">
+      <div className={`border-t mt-8 ${
+        isDarkMode ? 'border-gray-700' : 'border-gray-300'
+      }`}>
         <div className="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0 text-center md:text-left">
             2025 © truyenhdt.com All right services
@@ -97,7 +150,11 @@ const Footer = () => {
               href="#" // Link tới trang DMCA
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-2 inline-block bg-gray-700 px-2 py-1 rounded text-xs hover:bg-gray-600 transition-colors"
+              className={`ml-2 inline-block px-2 py-1 rounded text-xs transition-colors ${
+                isDarkMode 
+                  ? 'bg-gray-700 hover:bg-gray-600' 
+                  : 'bg-gray-300 hover:bg-gray-400'
+              }`}
             >
               DMCA PROTECTED
             </a>
@@ -105,17 +162,31 @@ const Footer = () => {
 
           {/* Link nhỏ và icon mạng xã hội */}
           <div className="flex flex-col md:flex-row items-center">
-            <div className="flex space-x-2 text-gray-400 text-xs mb-3 md:mb-0 md:mr-6">
-              <a href="#" className="hover:text-white transition-colors">About</a>
+            <div className={`flex space-x-2 text-xs mb-3 md:mb-0 md:mr-6 ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              <a href="#" className={`transition-colors ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-gray-800'
+              }`}>About</a>
               <span className="select-none">-</span>
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className={`transition-colors ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-gray-800'
+              }`}>Privacy Policy</a>
               <span className="select-none">-</span>
-              <a href="#" className="hover:text-white transition-colors">TOS</a>
+              <a href="#" className={`transition-colors ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-gray-800'
+              }`}>TOS</a>
             </div>
             <div className="flex space-x-4 text-xl">
-              <a href="#" aria-label="Telegram" className="hover:text-white transition-colors"><Send size={24} /></a>
-              <a href="#" aria-label="Facebook" className="hover:text-white transition-colors"><Facebook size={24} /></a>
-              <a href="#" aria-label="Email" className="hover:text-white transition-colors"><Mail size={24} /></a>
+              <a href="#" aria-label="Telegram" className={`transition-colors ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-gray-800'
+              }`}><Send size={24} /></a>
+              <a href="#" aria-label="Facebook" className={`transition-colors ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-gray-800'
+              }`}><Facebook size={24} /></a>
+              <a href="#" aria-label="Email" className={`transition-colors ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-gray-800'
+              }`}><Mail size={24} /></a>
             </div>
           </div>
         </div>

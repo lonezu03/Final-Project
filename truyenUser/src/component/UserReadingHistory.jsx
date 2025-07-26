@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { Link } from 'react-router-dom';
 import { FaBell, FaTimes, FaSortAmountUp, FaChevronDown, FaChevronUp } from 'react-icons/fa'; // Thêm icon chevron
 import { useDispatch, useSelector } from 'react-redux';
@@ -43,6 +44,7 @@ const formatTimeAgo = (dateObject) => {
 };
 
 const UserReadingHistory = () => {
+  const { isDarkMode } = useTheme();
   const dispatch = useDispatch();
   const {
     currentUser,
@@ -154,21 +156,27 @@ const UserReadingHistory = () => {
 
   if (!currentUser) {
     return (
-      <div className="container mx-auto my-8 p-6 bg-white dark:bg-slate-800 shadow-xl rounded-lg text-center">
-        <p className="text-gray-600 dark:text-gray-300">
-          Vui lòng <Link to="/login" className="text-blue-500 hover:underline">đăng nhập</Link> để xem lịch sử đọc truyện.
+      <div className={`container mx-auto my-8 p-6 shadow-xl rounded-lg text-center ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+          Vui lòng <Link to="/login" className={isDarkMode ? 'text-blue-400 hover:underline' : 'text-blue-500 hover:underline'}>đăng nhập</Link> để xem lịch sử đọc truyện.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto my-8 p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-xl rounded-lg">
-      <div className="flex border-b border-gray-200 dark:border-slate-700 mb-6">
+    <div className={`container mx-auto my-8 p-4 sm:p-6 shadow-xl rounded-lg ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}> 
+      <div className={`flex border-b mb-6 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}> 
         {/* Tabs */}
         <button
           onClick={() => setActiveTab('dangDoc')}
-          className={`px-4 py-3 text-sm font-medium transition-colors duration-150 ${activeTab === 'dangDoc' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+          className={`px-4 py-3 text-sm font-medium transition-colors duration-150 ${activeTab === 'dangDoc'
+            ? isDarkMode
+              ? 'border-b-2 border-blue-400 text-blue-400'
+              : 'border-b-2 border-blue-500 text-blue-600'
+            : isDarkMode
+              ? 'text-gray-400 hover:text-gray-200'
+              : 'text-gray-500 hover:text-gray-700'}`}
         >
           TRUYỆN ĐANG ĐỌC
         </button>
@@ -181,66 +189,64 @@ const UserReadingHistory = () => {
       </div>
 
       {isUserHistoryLoading && <p className="text-center text-gray-500 dark:text-gray-400 py-8">Đang tải lịch sử...</p>}
+      {isUserHistoryLoading && <p className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Đang tải lịch sử...</p>}
 
       {!isUserHistoryLoading && activeTab === 'dangDoc' && mappedHistoryItems.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-8">Bạn chưa đọc truyện nào gần đây.</p>}
+      {!isUserHistoryLoading && activeTab === 'dangDoc' && mappedHistoryItems.length === 0 && <p className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Bạn chưa đọc truyện nào gần đây.</p>}
       
       {!isUserHistoryLoading && activeTab === 'danhDau' && <p className="text-center text-gray-500 dark:text-gray-400 py-8">Bạn chưa đánh dấu truyện nào.</p>}
+      {!isUserHistoryLoading && activeTab === 'danhDau' && <p className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Bạn chưa đánh dấu truyện nào.</p>}
 
       {!isUserHistoryLoading && activeTab === 'dangDoc' && mappedHistoryItems.length > 0 && (
         <div className="space-y-4">
           {mappedHistoryItems.map((item) => {
             const isExpanded = expandedNovelId === item.novelId;
             return (
-              <div key={item.uniqueKey} className="bg-gray-50 dark:bg-slate-700/50 rounded-md shadow-sm transition-all duration-300">
+              <div
+                key={item.uniqueKey}
+                className={`rounded-md shadow-sm transition-all duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}
+              >
                 {/* Dòng chính của item */}
-                <div className="flex items-center p-4">
+                <div className={`flex items-center p-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
                   <Link to={item.novelLink} className="flex-shrink-0 mr-4">
-                  <img src={item.coverImage} alt={item.title} className="w-16 h-24 object-cover rounded" />
+                    <img src={item.coverImage} alt={item.title} className={`w-16 h-24 object-cover rounded ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
                   </Link>
                   <div className="flex-grow">
-                    <Link to={item.novelLink} className="hover:underline">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1 line-clamp-1" title={item.title}>{item.title}</h3>
+                    <Link to={item.novelLink} className={isDarkMode ? 'hover:underline' : 'hover:underline'}>
+                      <h3 className={`text-lg font-semibold mb-1 line-clamp-1 ${isDarkMode ? 'text-white' : 'text-gray-800'}`} title={item.title}>{item.title}</h3>
                     </Link>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Đã đọc đến: <Link to={item.latestChapter.link} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">{item.latestChapter.name}</Link>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Đã đọc đến: <Link to={item.latestChapter.link} className={`font-medium hover:underline ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{item.latestChapter.name}</Link>
                     </p>
                   </div>
                   <div className="flex-shrink-0 ml-4 flex items-center space-x-1">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap hidden sm:block">{item.latestChapter.timeFormatted}</p>
-                    <button onClick={() => handleToggleExpand(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600" title={isExpanded ? "Thu gọn" : "Xem thêm"}>
+                    <p className={`text-xs whitespace-nowrap hidden sm:block ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{item.latestChapter.timeFormatted}</p>
+                    <button onClick={() => handleToggleExpand(item.novelId)} className={`p-2 rounded-full transition-colors ${isDarkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-200'}`} title={isExpanded ? "Thu gọn" : "Xem thêm"}>
                       {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                     </button>
-                    {/* <button onClick={() => handleRemoveItem(item.novelId)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-red-500" title="Xóa">
-                      <FaTimes />
-                    </button> */}
                   </div>
                 </div>
 
                 {/* Phần mở rộng */}
-                  {isExpanded && (
-                  <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-slate-600">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Lịch sử các chương đã đọc:</h4>
+                {isExpanded && (
+                  <div className={`px-4 pb-4 pt-2 border-t ${isDarkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}> 
+                    <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Lịch sử các chương đã đọc:</h4>
                     <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                      {item.allChaptersRead.map(chapter => {
-                        // const isDeletingThisChapter = deletingChapterId === chapter.id;
-                        return (
-                          <li key={chapter.id} className="flex justify-between items-center text-sm group">
-                            <Link to={chapter.link} className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 hover:underline truncate flex-grow" title={chapter.name}>
-                              {chapter.name}
-                            </Link>
-                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-4 whitespace-nowrap flex-shrink-0">{chapter.timeFormatted}</span>
-                            {/* THÊM NÚT XÓA CHO TỪNG CHƯƠNG */}
-                            <button 
-                              onClick={() => handleRemoveItem(chapter.id)}
-                              className="ml-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Xóa lịch sử chương này"
-                              // disabled={isDeletingThisChapter}
-                            >
-                              <FaTimes />
-                            </button>
-                          </li>
-                        );
-                      })}
+                      {item.allChaptersRead.map(chapter => (
+                        <li key={chapter.id} className={`flex justify-between items-center text-sm group ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                          <Link to={chapter.link} className={`truncate flex-grow hover:underline ${isDarkMode ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-500'}`} title={chapter.name}>
+                            {chapter.name}
+                          </Link>
+                          <span className={`text-xs ml-4 whitespace-nowrap flex-shrink-0 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{chapter.timeFormatted}</span>
+                          <button 
+                            onClick={() => handleRemoveItem(chapter.id)}
+                            className={`ml-2 p-1 transition-opacity opacity-0 group-hover:opacity-100 ${isDarkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
+                            title="Xóa lịch sử chương này"
+                          >
+                            <FaTimes />
+                          </button>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}

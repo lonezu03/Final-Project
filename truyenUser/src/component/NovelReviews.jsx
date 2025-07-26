@@ -8,15 +8,18 @@ import { deleteReview } from '../redux/userSlice';
 import { getAllReviews } from '../redux/novelSlice';
 import { toast } from 'react-toastify';
 import { useParams } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 
 // Hàm helper để render sao
-const renderStars = (rating) => {
+const renderStars = (rating, isDarkMode) => {
     const fullStars = Math.floor(rating);
     const emptyStars = 5 - fullStars;
     return (
         <div className="flex text-yellow-400">
             {[...Array(fullStars)].map((_, i) => <FaStar key={`full-${i}`} />)}
-            {[...Array(emptyStars)].map((_, i) => <FaStar key={`empty-${i}`} className="text-gray-600" />)}
+            {[...Array(emptyStars)].map((_, i) => <FaStar key={`empty-${i}`} className={`${
+                isDarkMode ? 'text-gray-600' : 'text-gray-400'
+            }`} />)}
         </div>
     );
 };
@@ -40,18 +43,28 @@ const formatDate = (dateArray) => {
     }
 };
 
-const ReviewItem = ({ review, currentUser, onDelete }) => (
-    <div className="bg-[#2d3038] p-4 rounded-lg border border-gray-700">
+const ReviewItem = ({ review, currentUser, onDelete, isDarkMode }) => (
+    <div className={`p-4 rounded-lg border transition-colors ${
+        isDarkMode 
+            ? 'bg-gradient-to-br from-slate-800 to-gray-800 border-gray-600' 
+            : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
+    }`}>
         <div className="flex items-center mb-3">
             {review.avatarUser ? (
                 <img src={review.avatarUser} alt={review.userName} className="w-10 h-10 rounded-full mr-3 object-cover" />
             ) : (
-                <FaUserCircle size={40} className="mr-3 text-gray-500" />
+                <FaUserCircle size={40} className={`mr-3 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                }`} />
             )}
             <div className="flex-grow">
-                <p className="font-semibold text-sky-400">{review.userName || 'Người dùng ẩn danh'}</p>
-                <div className="flex items-center text-xs text-gray-400">
-                    {renderStars(review.rating)}
+                <p className={`font-semibold ${
+                    isDarkMode ? 'text-sky-400' : 'text-sky-600'
+                }`}>{review.userName || 'Người dùng ẩn danh'}</p>
+                <div className={`flex items-center text-xs ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                    {renderStars(review.rating, isDarkMode)}
                     <span className="ml-2">({review.rating.toFixed(1)})</span>
                     <span className="mx-2">·</span>
                     <span>{formatDate(review.reviewTime)}</span>
@@ -61,14 +74,22 @@ const ReviewItem = ({ review, currentUser, onDelete }) => (
             {currentUser && review.id.idUser === currentUser.idUser && (
                 <button
                     onClick={() => onDelete(review.id.idUser, review.id.idNovel)}
-                    className="ml-2 p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors"
+                    className={`ml-2 p-2 rounded-full transition-colors ${
+                        isDarkMode 
+                            ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/20' 
+                            : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+                    }`}
                     title="Xóa đánh giá"
                 >
                     <FaTrash size={14} />
                 </button>
             )}
         </div>
-        <div className="space-y-3 text-sm text-gray-300 prose prose-sm prose-invert max-w-none">
+        <div className={`space-y-3 text-sm prose prose-sm max-w-none ${
+            isDarkMode 
+                ? 'prose-invert text-gray-300' 
+                : 'prose-gray text-gray-700'
+        }`}>
             {review.reviewMC && <p><strong>Nhân vật chính:</strong> {review.reviewMC}</p>}
             {review.reviewSC && <p><strong>Nhân vật phụ:</strong> {review.reviewSC}</p>}
             {review.reviewWorld && <p><strong>Bối cảnh thế giới:</strong> {review.reviewWorld}</p>}
@@ -80,6 +101,7 @@ const ReviewItem = ({ review, currentUser, onDelete }) => (
 const NovelReviews = () => {
     const dispatch = useDispatch();
     const { novelId } = useParams();
+    const { isDarkMode } = useTheme();
     
     // Lấy dữ liệu reviews từ novelSlice
     const { reviews, loadingReviews, errorReviews } = useSelector((state) => state.novels);
@@ -101,8 +123,12 @@ const NovelReviews = () => {
     if (loadingReviews) {
         return (
             <div className="text-center py-8">
-                <Loader2 className="animate-spin inline-block text-sky-400" size={32} />
-                <p className="mt-2 text-gray-400">Đang tải đánh giá...</p>
+                <Loader2 className={`animate-spin inline-block ${
+                    isDarkMode ? 'text-sky-400' : 'text-sky-500'
+                }`} size={32} />
+                <p className={`mt-2 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Đang tải đánh giá...</p>
             </div>
         );
     }
@@ -113,13 +139,21 @@ const NovelReviews = () => {
 
     return (
         <div className="mt-10">
-            <h2 className="text-xl font-semibold mb-4 border-l-4 border-sky-500 pl-3 text-gray-200">
+            <h2 className={`text-xl font-semibold mb-4 border-l-4 pl-3 ${
+                isDarkMode 
+                    ? 'border-sky-400 text-white' 
+                    : 'border-sky-500 text-gray-800'
+            }`}>
                 Đánh giá từ độc giả ({reviews.length})
             </h2>
             {userLoading && (
                 <div className="text-center py-2">
-                    <Loader2 className="animate-spin inline-block text-sky-400" size={20} />
-                    <span className="ml-2 text-gray-400">Đang xử lý...</span>
+                    <Loader2 className={`animate-spin inline-block ${
+                        isDarkMode ? 'text-sky-400' : 'text-sky-500'
+                    }`} size={20} />
+                    <span className={`ml-2 ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Đang xử lý...</span>
                 </div>
             )}
             {reviews.length > 0 ? (
@@ -130,12 +164,19 @@ const NovelReviews = () => {
                             review={review} 
                             currentUser={currentUser}
                             onDelete={handleDeleteReview}
+                            isDarkMode={isDarkMode}
                         />
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-8 bg-[#2d3038] rounded-lg">
-                    <p className="text-gray-500">Chưa có đánh giá nào cho truyện này.</p>
+                <div className={`text-center py-8 rounded-lg ${
+                    isDarkMode 
+                        ? 'bg-gradient-to-br from-slate-800 to-gray-800' 
+                        : 'bg-gradient-to-br from-white to-gray-50'
+                }`}>
+                    <p className={`${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Chưa có đánh giá nào cho truyện này.</p>
                 </div>
             )}
         </div>

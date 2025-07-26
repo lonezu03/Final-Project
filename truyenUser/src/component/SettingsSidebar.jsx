@@ -80,7 +80,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
       <div
         className={`fixed top-0 right-0 h-full w-72 sm:w-80 ${
           isDarkMode 
-            ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white border-gray-700' 
+            ? 'bg-gradient-to-br from-slate-900 via-gray-900 to-black text-white border-gray-600' 
             : 'bg-gradient-to-br from-white via-gray-50 to-gray-100 text-gray-800 border-gray-200'
         } shadow-2xl z-40 transform transition-all duration-500 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
@@ -89,7 +89,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
         {/* Header with Close Button */}
         <div className={`flex justify-between items-center p-4 border-b ${
           isDarkMode 
-            ? 'border-gray-700 bg-gradient-to-r from-gray-800 to-gray-700' 
+            ? 'border-gray-600 bg-gradient-to-r from-slate-800 to-gray-800' 
             : 'border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50'
         }`}>
           {userLoggedIn ? (
@@ -132,7 +132,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
           {userLoggedIn && (
             <div className={`mb-6 p-4 border rounded-xl shadow-sm hover:shadow-md transition-all duration-300 ${
               isDarkMode 
-                ? 'border-gray-700 bg-gradient-to-br from-gray-800 to-gray-700' 
+                ? 'border-gray-600 bg-gradient-to-br from-slate-800 to-gray-800' 
                 : 'border-gray-200 bg-gradient-to-br from-white to-gray-50'
             }`}>
               <div className="flex justify-between items-center mb-4">
@@ -168,12 +168,12 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                   onClick={() => handleNavigate('/user/my-bookshelf')}
                   className={`cursor-pointer p-2.5 rounded-lg flex items-center transition-all duration-200 group ${
                     isDarkMode 
-                      ? 'hover:bg-green-900/20 hover:text-green-400' 
+                      ? 'hover:bg-green-800/30 hover:text-green-300' 
                       : 'hover:bg-green-50 hover:text-green-600'
                   }`}
                 >
                   <Archive size={16} className={`mr-2 group-hover:scale-110 transition-transform ${
-                    isDarkMode ? 'text-green-400' : 'text-green-600'
+                    isDarkMode ? 'text-green-300' : 'text-green-600'
                   }`} />
                   <span>Tủ truyện của tôi</span>
                 </li>
@@ -181,12 +181,12 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                   onClick={() => handleNavigate('/user/reading-history')}
                   className={`cursor-pointer p-2.5 rounded-lg flex items-center transition-all duration-200 group ${
                     isDarkMode 
-                      ? 'hover:bg-purple-900/20 hover:text-purple-400' 
+                      ? 'hover:bg-purple-800/30 hover:text-purple-300' 
                       : 'hover:bg-purple-50 hover:text-purple-600'
                   }`}
                 >
                   <BookOpen size={16} className={`mr-2 group-hover:scale-110 transition-transform ${
-                    isDarkMode ? 'text-purple-400' : 'text-purple-600'
+                    isDarkMode ? 'text-purple-300' : 'text-purple-600'
                   }`} />
                   <span>Lịch sử đọc truyện</span>
                 </li>
@@ -194,12 +194,12 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                   onClick={() => handleNavigate('/user/transaction-history')}
                   className={`cursor-pointer p-2.5 rounded-lg flex items-center transition-all duration-200 group ${
                     isDarkMode 
-                      ? 'hover:bg-blue-900/20 hover:text-blue-400' 
+                      ? 'hover:bg-blue-800/30 hover:text-blue-300' 
                       : 'hover:bg-blue-50 hover:text-blue-600'
                   }`}
                 >
                   <Repeat size={16} className={`mr-2 group-hover:scale-110 transition-transform ${
-                    isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                    isDarkMode ? 'text-blue-300' : 'text-blue-600'
                   }`} />
                   <span>Lịch sử giao dịch</span>
                 </li>
@@ -207,12 +207,12 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                   onClick={() => handleNavigate('/user/profile')}
                   className={`cursor-pointer p-2.5 rounded-lg flex items-center transition-all duration-200 group ${
                     isDarkMode 
-                      ? 'hover:bg-indigo-900/20 hover:text-indigo-400' 
+                      ? 'hover:bg-indigo-800/30 hover:text-indigo-300' 
                       : 'hover:bg-indigo-50 hover:text-indigo-600'
                   }`}
                 >
                   <UserCircle2 size={16} className={`mr-2 group-hover:scale-110 transition-transform ${
-                    isDarkMode ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkMode ? 'text-indigo-300' : 'text-indigo-600'
                   }`} />
                   <span>Cài đặt cá nhân</span>
                 </li>
@@ -220,12 +220,12 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                   onClick={() => handleNavigate('/user/support')}
                   className={`cursor-pointer p-2.5 rounded-lg flex items-center transition-all duration-200 group ${
                     isDarkMode 
-                      ? 'hover:bg-orange-900/20 hover:text-orange-400' 
+                      ? 'hover:bg-orange-800/30 hover:text-orange-300' 
                       : 'hover:bg-orange-50 hover:text-orange-600'
                   }`}
                 >
                   <Gift size={16} className={`mr-2 group-hover:scale-110 transition-transform ${
-                    isDarkMode ? 'text-orange-400' : 'text-orange-600'
+                    isDarkMode ? 'text-orange-300' : 'text-orange-600'
                   }`} />
                   <span>Yêu cầu hỗ trợ</span>
                 </li>
@@ -239,7 +239,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
               onClick={() => handleNavigate('/deposit')}
               className={`w-full font-bold py-3 px-4 rounded-lg flex items-center justify-center text-base mb-6 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ${
                 isDarkMode 
-                  ? 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white' 
+                  ? 'bg-gradient-to-r from-orange-700 to-red-700 hover:from-orange-800 hover:to-red-800 text-white shadow-orange-500/20' 
                   : 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white'
               }`}
             >
@@ -250,7 +250,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
           ) : (
             <div className={`w-full font-medium py-3 px-4 rounded-lg flex items-center justify-center text-base mb-6 cursor-not-allowed ${
               isDarkMode 
-                ? 'bg-gray-700 text-gray-400' 
+                ? 'bg-slate-800 text-gray-400 border border-gray-600' 
                 : 'bg-gray-200 text-gray-500'
             }`}>
               <Wallet size={20} className="mr-2" />
@@ -266,14 +266,30 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                   {/* SỬA: Dùng onClick để navigate thay vì href cho các mục cần điều hướng bằng React Router */}
                   <button
                     onClick={() => item.href && item.href !== "#" ? handleNavigate(item.href) : undefined}
-                    className="w-full flex items-center py-3 px-3 rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 group text-left border border-transparent hover:border-blue-200"
+                    className={`w-full flex items-center py-3 px-3 rounded-lg transition-all duration-300 group text-left border border-transparent ${
+                      isDarkMode 
+                        ? 'hover:bg-gradient-to-r hover:from-slate-700 hover:to-gray-700 hover:border-gray-600' 
+                        : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200'
+                    }`}
                     // Vô hiệu hóa nếu href là "#" hoặc không có href
                     disabled={!item.href || item.href === "#"}
                   >
-                    <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center mr-3 group-hover:from-blue-100 group-hover:to-purple-100 transition-all duration-300">
-                      <item.icon size={18} className="text-gray-600 group-hover:text-blue-600" />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-all duration-300 ${
+                      isDarkMode 
+                        ? 'bg-gradient-to-br from-slate-700 to-gray-700 group-hover:from-slate-600 group-hover:to-gray-600' 
+                        : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-purple-100'
+                    }`}>
+                      <item.icon size={18} className={`transition-colors ${
+                        isDarkMode 
+                          ? 'text-gray-300 group-hover:text-blue-400' 
+                          : 'text-gray-600 group-hover:text-blue-600'
+                      }`} />
                     </div>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{item.label}</span>
+                    <span className={`text-sm font-medium transition-colors ${
+                      isDarkMode 
+                        ? 'text-gray-300 group-hover:text-white' 
+                        : 'text-gray-700 group-hover:text-gray-900'
+                    }`}>{item.label}</span>
                   </button>
                   {item.subItems && (
                     <ul className="pl-7 mt-1 space-y-0.5 text-xs">
@@ -281,7 +297,11 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                         <li key={subIndex}>
                            <button
                             onClick={() => subItem.href && subItem.href !== "#" ? handleNavigate(subItem.href) : undefined}
-                            className="w-full block py-1 px-2 rounded-md hover:bg-stone-200 transition-colors text-gray-500 hover:text-gray-700 text-left"
+                            className={`w-full block py-1 px-2 rounded-md transition-colors text-left ${
+                              isDarkMode 
+                                ? 'hover:bg-slate-700 text-gray-400 hover:text-gray-200' 
+                                : 'hover:bg-stone-200 text-gray-500 hover:text-gray-700'
+                            }`}
                             disabled={!subItem.href || subItem.href === "#"}
                           >
                             • {subItem.label}

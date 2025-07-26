@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'; // Thêm useMemo
 import { useParams, Link, useNavigate } from 'react-router-dom'; // Thêm useNavigate
 import { useDispatch, useSelector } from 'react-redux';
+import { useTheme } from '../../context/ThemeContext'; // Import useTheme
 import { getNovelById,LyberiNovels,getAllReviews  } from '../../redux/novelSlice';
 import {followNovel} from '../../redux/userSlice'
 import { getAllChapters } from '../../redux/chapterSlice'; // Action này lấy danh sách chương cho tab
@@ -19,6 +20,7 @@ const DetailPage = () => {
   const { novelId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isDarkMode } = useTheme(); // Sử dụng theme context
   const { currentNovel: novelDetailData, loading: novelLoading, error: novelError } = useSelector((state) => state.novels);
   const { chapters: chaptersFromApiForDetailPage, loading: chaptersLoading, error: chaptersError } = useSelector((state) => state.chapters);
   // chaptersFromApiForDetailPage là danh sách chương cho tab "Danh Sách"
@@ -169,9 +171,9 @@ const DetailPage = () => {
     }
   };
 
-  if (novelLoading && !novelDetailData) return <div className="flex justify-center items-center min-h-screen text-white text-xl p-10">Đang tải thông tin truyện...</div>;
-  if (novelError && !novelDetailData) return <div className="flex justify-center items-center min-h-screen text-red-500 text-xl p-10">Lỗi tải thông tin truyện: {renderErrorText(novelError)}</div>;
-  if (!novelDetailData && !novelLoading) return <div className="flex justify-center items-center min-h-screen text-white text-xl p-10">Không tìm thấy truyện.</div>;
+  if (novelLoading && !novelDetailData) return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Đang tải thông tin truyện...</div>;
+  if (novelError && !novelDetailData) return <div className={`flex justify-center items-center min-h-screen text-red-500 text-xl p-10 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>Lỗi tải thông tin truyện: {renderErrorText(novelError)}</div>;
+  if (!novelDetailData && !novelLoading) return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-800 bg-gray-50'}`}>Không tìm thấy truyện.</div>;
   if (!novelDetailData) return null;
   let authorDisplay = novelDetailData.authors?.map(auth => auth.nameAuthor || "N/A").join(', ') || "Chưa rõ tác giả";
   let categoriesDisplay = novelDetailData.categories?.map(cat => cat.nameCategory || "N/A") || ["Chưa phân loại"];
@@ -219,19 +221,48 @@ const DetailPage = () => {
   const handleSortChaptersInTab = () => console.log("Sort chapters in tab");
 
 
-  const renderStars = (rating) => { /* ... giữ nguyên ... */ };
-  const getStatusTextAndColor = (status) => { /* ... giữ nguyên ... */ };
+  const renderStars = (rating) => {
+    const fullStars = Math.floor(rating);
+    const halfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+    return (
+      <>
+      {[...Array(fullStars)].map((_, i) => <FaStar key={`full-${i}`} className="text-yellow-400" />)}
+      {halfStar && <FaStar key="half" className="text-yellow-400" />}
+      {[...Array(emptyStars)].map((_, i) => <FaStar key={`empty-${i}`} className="text-gray-300" />)}
+      </>
+    );
+  };
+
+  const getStatusTextAndColor = (status) => {
+    switch (status) {
+      case 'COMPLETED': return { text: 'Hoàn thành', color: 'text-green-400' };
+      case 'CONTINUE': return { text: 'Đang ra', color: 'text-yellow-400' };
+      case 'DROP': return { text: 'Tạm ngưng', color: 'text-red-400' };
+      default: return { text: 'Đang cập nhật', color: 'text-gray-400' };
+    }
+  };
   const novelStatus = getStatusTextAndColor(storyDetails.status);
 
 
   return (
-    <div className="bg-[#181a1d] text-gray-300 min-h-screen">
-      <div className="container mx-auto px-4 py-2 text-sm text-gray-400">
-        <Link to="/" className="hover:text-sky-400">Trang Chủ</Link> / <span className="text-gray-200">{storyDetails.title.replace(" - Truyện Chữ", "")}</span>
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-slate-900 via-gray-900 to-black text-gray-300' 
+        : 'bg-gradient-to-br from-white via-gray-50 to-white text-gray-800'
+    }`}>
+      <div className={`container mx-auto px-4 py-2 text-sm ${
+        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+      }`}>
+        <Link to="/" className={`${
+          isDarkMode ? 'hover:text-sky-400' : 'hover:text-sky-600'
+        }`}>Trang Chủ</Link> / <span className={isDarkMode ? 'text-gray-200' : 'text-gray-800'}>{storyDetails.title.replace(" - Truyện Chữ", "")}</span>
       </div>
 
       <div className="py-8 md:py-12 bg-no-repeat bg-cover bg-center relative" style={{ backgroundImage: `url('${storyDetails.heroBackground}')` }}>
-        <div className="absolute inset-0 bg-black opacity-60"></div>
+        <div className={`absolute inset-0 ${
+          isDarkMode ? 'bg-black opacity-80' : 'bg-black opacity-60'
+        }`}></div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col md:flex-row gap-6 md:gap-8">
             <div className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0 mx-auto md:mx-0">
@@ -240,7 +271,9 @@ const DetailPage = () => {
             <div className="md:w-3/4 lg:w-4/5 text-white text-center md:text-left">
               <h1 className="text-2xl md:text-3xl font-bold">{storyDetails.title}</h1>
               <p className="text-xs md:text-sm text-gray-300 mt-1">{storyDetails.shortDescription}</p>
-              <p className="text-sm text-gray-400 mt-2">Tác giả: <a href="#" className="hover:text-sky-400">{storyDetails.author}</a></p>
+              <p className="text-sm text-gray-400 mt-2">Tác giả: <a href="#" className={`${
+                isDarkMode ? 'hover:text-sky-400' : 'hover:text-sky-300'
+              }`}>{storyDetails.author}</a></p>
               <div className="flex items-center justify-center md:justify-start space-x-1 mt-2">
                 {renderStars(storyDetails.ratingValue)}
                 <span className="text-sm ml-2">({storyDetails.ratingValue.toFixed(1)}/5 {storyDetails.ratingCount > 0 ? ` từ ${storyDetails.ratingCount} lượt` : ''})</span>
@@ -253,19 +286,47 @@ const DetailPage = () => {
               </div>
               <div className="mt-3">
                 <span className="text-gray-400 text-sm">Thể Loại: </span>
-                {storyDetails.categories.map((cat, idx) => <a key={idx} href="#" className="inline-block bg-gray-700 hover:bg-gray-600 text-xs px-2 py-1 rounded mr-1 mb-1">{cat}</a>)}
+                {storyDetails.categories.map((cat, idx) => <a key={idx} href="#" className={`inline-block text-xs px-2 py-1 rounded mr-1 mb-1 transition-colors ${
+                  isDarkMode 
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white' 
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700 hover:text-gray-900'
+                }`}>{cat}</a>)}
               </div>
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
-                <button onClick={handleReadFirstChapter} className="flex items-center bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded text-sm"><FaBookOpen className="mr-2" /> Đọc từ đầu</button>
-                <button onClick={handleReadContinue} className="flex items-center bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded text-sm"><FaListUl className="mr-2" /> Đọc tiếp</button>
-                <button onClick={handleReadLatestChapter} className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded text-sm"><FaPlusSquare className="mr-2" /> Chương mới nhất</button>
+                <button onClick={handleReadFirstChapter} className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
+                  isDarkMode 
+                    ? 'bg-sky-600 hover:bg-sky-700 text-white' 
+                    : 'bg-sky-500 hover:bg-sky-600 text-white'
+                }`}><FaBookOpen className="mr-2" /> Đọc từ đầu</button>
+                <button onClick={handleReadContinue} className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
+                  isDarkMode 
+                    ? 'bg-sky-600 hover:bg-sky-700 text-white' 
+                    : 'bg-sky-500 hover:bg-sky-600 text-white'
+                }`}><FaListUl className="mr-2" /> Đọc tiếp</button>
+                <button onClick={handleReadLatestChapter} className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
+                  isDarkMode 
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}><FaPlusSquare className="mr-2" /> Chương mới nhất</button>
               </div>
               <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
-                <button onClick={() => setActiveTab('summary')} className={`flex items-center ${activeTab === 'summary' ? 'bg-slate-500' : 'bg-slate-700'} hover:bg-slate-600 text-white py-2 px-3 rounded text-xs`}><FaInfoCircle className="mr-1 md:mr-2" /> Giới thiệu</button>
-                <button onClick={() => setActiveTab('chapters')} className={`flex items-center ${activeTab === 'chapters' ? 'bg-slate-500' : 'bg-slate-700'} hover:bg-slate-600 text-white py-2 px-3 rounded text-xs`}><FaThList className="mr-1 md:mr-2" /> Danh Sách</button>
+                <button onClick={() => setActiveTab('summary')} className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
+                  activeTab === 'summary' 
+                    ? (isDarkMode ? 'bg-slate-600 text-white' : 'bg-gray-600 text-white')
+                    : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')
+                }`}><FaInfoCircle className="mr-1 md:mr-2" /> Giới thiệu</button>
+                <button onClick={() => setActiveTab('chapters')} className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
+                  activeTab === 'chapters' 
+                    ? (isDarkMode ? 'bg-slate-600 text-white' : 'bg-gray-600 text-white')
+                    : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')
+                }`}><FaThList className="mr-1 md:mr-2" /> Danh Sách</button>
                 <button 
                             onClick={handleFollowToggle}
-                            className={`flex items-center ${isFollowing ? 'bg-pink-600 hover:bg-pink-700' : 'bg-slate-700 hover:bg-slate-600'} text-white py-2 px-3 rounded text-xs transition-colors`}
+                            className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
+                              isFollowing 
+                                ? (isDarkMode ? 'bg-pink-600 hover:bg-pink-700 text-white' : 'bg-pink-500 hover:bg-pink-600 text-white')
+                                : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')
+                            }`}
                           >
                             {isFollowing ? <FaHeart className="mr-1 md:mr-2" /> : <FaRegHeart className="mr-1 md:mr-2" />}
                             {isFollowing ? 'Đã theo dõi' : 'Theo dõi'}
@@ -274,7 +335,11 @@ const DetailPage = () => {
                           {/* NÚT ĐÁNH GIÁ MỚI */}
                           <button 
                             onClick={() => setShowReviewDialog(true)}
-                            className="flex items-center bg-slate-700 hover:bg-slate-600 text-white py-2 px-3 rounded text-xs"
+                            className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
+                              isDarkMode 
+                                ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' 
+                                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                            }`}
                           >
                             <FaPenSquare className="mr-1 md:mr-2" /> Đánh giá
                           </button>              
@@ -286,13 +351,29 @@ const DetailPage = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row gap-8">
-          <div className="w-full md:flex-grow bg-[#2d3038] text-gray-200 p-6 rounded-lg shadow-lg">
+          <div className={`w-full md:flex-grow p-6 rounded-lg shadow-lg transition-colors ${
+            isDarkMode 
+              ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200 border border-gray-600' 
+              : 'bg-gradient-to-br from-white to-gray-50 text-gray-800 border border-gray-200'
+          }`}>
             {activeTab === 'summary' && (
               <div>
-                <h2 className="text-xl font-semibold mb-4 border-l-4 border-sky-500 pl-3">Tóm Tắt Nội Dung Truyện {storyDetails.title.replace(" - Truyện Chữ", "")}</h2>
-                <div className="prose prose-sm md:prose-base prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: storyDetails.fullDescription.replace(/\n\n/g, '<p><br/></p>').replace(/\n/g, '<br/>') }} />
-                <div className="mt-6 pt-4 border-t border-gray-700">
-                  <button onClick={handleReadLatestChapter} className="text-sky-400 hover:text-sky-300 font-semibold flex items-center text-sm">
+                <h2 className={`text-xl font-semibold mb-4 border-l-4 pl-3 ${
+                  isDarkMode ? 'border-sky-400 text-white' : 'border-sky-500 text-gray-800'
+                }`}>Tóm Tắt Nội Dung Truyện {storyDetails.title.replace(" - Truyện Chữ", "")}</h2>
+                <div className={`prose prose-sm md:prose-base max-w-none ${
+                  isDarkMode 
+                    ? 'prose-invert text-gray-300' 
+                    : 'prose-gray text-gray-700'
+                }`} dangerouslySetInnerHTML={{ __html: storyDetails.fullDescription.replace(/\n\n/g, '<p><br/></p>').replace(/\n/g, '<br/>') }} />
+                <div className={`mt-6 pt-4 border-t ${
+                  isDarkMode ? 'border-gray-600' : 'border-gray-200'
+                }`}>
+                  <button onClick={handleReadLatestChapter} className={`font-semibold flex items-center text-sm transition-colors ${
+                    isDarkMode 
+                      ? 'text-sky-400 hover:text-sky-300' 
+                      : 'text-sky-500 hover:text-sky-600'
+                  }`}>
                     Xem Thêm Chương Mới Nhất <FaAngleRight className="ml-1" />
                   </button>
                 </div>
@@ -301,7 +382,9 @@ const DetailPage = () => {
             {activeTab === 'chapters' && (
               <div>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-y-3">
-                  <h2 className="text-xl font-semibold border-l-4 border-sky-500 pl-3">Danh Sách Chương ({storyDetails.chapters})</h2>
+                  <h2 className={`text-xl font-semibold border-l-4 pl-3 ${
+                    isDarkMode ? 'border-sky-400 text-white' : 'border-sky-500 text-gray-800'
+                  }`}>Danh Sách Chương ({storyDetails.chapters})</h2>
                   <div className="flex items-center space-x-3">
                     <GoToChapterInput onGoToChapter={handleGoToChapterInTab} />
                     <PaginationControls
@@ -313,7 +396,9 @@ const DetailPage = () => {
                     />
                   </div>
                 </div>
-                {chaptersLoading && !currentChaptersForTabDisplay.length && <p className="text-center py-4">Đang tải danh sách chương...</p>}
+                {chaptersLoading && !currentChaptersForTabDisplay.length && <p className={`text-center py-4 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Đang tải danh sách chương...</p>}
                 {chaptersError && !currentChaptersForTabDisplay.length && <p className="text-red-500 text-center py-4">Lỗi tải chương. Phiên đăng nhập của bạn có thể đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.</p>}
                 {!chaptersLoading && !chaptersError && currentChaptersForTabDisplay.length > 0 && (
                   <ChapterListDisplay
@@ -322,11 +407,15 @@ const DetailPage = () => {
                   />
                 )}
                 {!chaptersLoading && !chaptersError && sortedChaptersForDetailPage.length === 0 && (
-                  <p className="text-center py-4">Truyện này chưa có chương nào.</p>
+                  <p className={`text-center py-4 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>Truyện này chưa có chương nào.</p>
                 )}
                 {/* Pagination dưới danh sách chương nếu cần */}
                 {totalChapterListPages > 1 && currentChaptersForTabDisplay.length > 0 && (
-                     <div className="flex flex-col sm:flex-row justify-center sm:items-center mt-6 pt-4 border-t border-gray-700 gap-y-3">
+                     <div className={`flex flex-col sm:flex-row justify-center sm:items-center mt-6 pt-4 border-t gap-y-3 ${
+                       isDarkMode ? 'border-gray-600' : 'border-gray-200'
+                     }`}>
                         <PaginationControls
                             currentPage={currentChapterListPage}
                             totalPages={totalChapterListPages}
@@ -346,7 +435,9 @@ const DetailPage = () => {
             <CartWidget novelTitle={storyDetails.title} />
             
             {storyDetails.ads.map(ad => (
-              <div key={ad.id} className="bg-[#2d3038] p-1 rounded-lg shadow-lg mb-6">
+              <div key={ad.id} className={`p-1 rounded-lg shadow-lg mb-6 ${
+                isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-white border border-gray-200'
+              }`}>
                 <a href="#" aria-label={`Quảng cáo ${ad.id}`}><img src={ad.image} alt={`Quảng cáo ${ad.id}`} className="w-full h-auto rounded-md object-contain"/></a>
               </div>
             ))}

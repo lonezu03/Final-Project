@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 /* src/index.css hoặc file CSS toàn cục khác */
 .no-select-parent,
 .no-select-parent * { /* Áp dụng cho chính nó và tất cả các phần tử con */
@@ -8,4 +9,26 @@
   -moz-user-select: none !important;    /* Firefox */
   -ms-user-select: none !important;     /* IE 10+ */
   user-select: none !important;         /* Standard syntax */
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }

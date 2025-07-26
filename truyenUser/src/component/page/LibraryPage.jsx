@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, BookX, BookHeart, ShoppingCart, Calendar, Coins, Trash2, ChevronDown } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -25,6 +26,7 @@ const LibraryCardWrapper = ({ novel, onUnfollow }) => (
 );
 
 const LibraryPage = () => {
+  const { isDarkMode } = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -202,7 +204,7 @@ const LibraryPage = () => {
 
   if (novelsLoading || (activeTab === 'purchased' && transactionLoading)) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
+      <div className={`flex justify-center items-center min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
         <Loader2 className="animate-spin mr-3" size={32} />
         {activeTab === 'purchased' ? 'Đang tải giao dịch...' : 'Đang tải thư viện...'}
       </div>
@@ -214,9 +216,9 @@ const LibraryPage = () => {
   const renderFollowedTab = () => {
     if (novelsError && !isEmptyFollowListError) {
       return (
-        <div className="text-center py-20 bg-gray-800 rounded-lg">
-          <BookX size={64} className="mx-auto text-gray-600" />
-          <h2 className="mt-4 text-xl font-semibold text-gray-300">Có lỗi xảy ra</h2>
+        <div className={`text-center py-20 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <BookX size={64} className={`mx-auto ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+          <h2 className={`mt-4 text-xl font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Có lỗi xảy ra</h2>
           <p className="mt-2 text-red-500">{novelsError}</p>
         </div>
       );
@@ -236,13 +238,13 @@ const LibraryPage = () => {
     }
 
     return (
-      <div className="text-center py-20 bg-gray-800 rounded-lg">
-        <BookX size={64} className="mx-auto text-gray-600" />
-        <h2 className="mt-4 text-xl font-semibold text-gray-300">Tủ truyện trống</h2>
-        <p className="mt-2 text-gray-500">Bạn chưa theo dõi truyện nào cả.</p>
+      <div className={`text-center py-20 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}> 
+        <BookX size={64} className={`mx-auto ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+        <h2 className={`mt-4 text-xl font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Tủ truyện trống</h2>
+        <p className={`mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Bạn chưa theo dõi truyện nào cả.</p>
         <Link
           to="/"
-          className="mt-6 inline-block bg-sky-600 text-white font-bold py-2 px-5 rounded-md hover:bg-sky-700 transition-colors"
+          className={`mt-6 inline-block font-bold py-2 px-5 rounded-md transition-colors ${isDarkMode ? 'bg-sky-700 text-white hover:bg-sky-600' : 'bg-sky-600 text-white hover:bg-sky-700'}`}
         >
           Khám phá truyện mới
         </Link>
@@ -253,13 +255,13 @@ const LibraryPage = () => {
   const renderPurchasedTab = () => {
     if (transactionError) {
       return (
-        <div className="text-center py-20 bg-gray-800 rounded-lg">
-          <BookX size={64} className="mx-auto text-red-600" />
-          <h2 className="mt-4 text-xl font-semibold text-gray-300">Có lỗi xảy ra</h2>
+        <div className={`text-center py-20 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <BookX size={64} className={`mx-auto text-red-600`} />
+          <h2 className={`mt-4 text-xl font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Có lỗi xảy ra</h2>
           <p className="mt-2 text-red-500">{transactionError}</p>
           <button
             onClick={() => dispatch(getTransactions({ idUser: currentUser.idUser }))}
-            className="mt-4 bg-sky-600 text-white font-bold py-2 px-5 rounded-md hover:bg-sky-700 transition-colors"
+            className={`mt-4 font-bold py-2 px-5 rounded-md transition-colors ${isDarkMode ? 'bg-sky-700 text-white hover:bg-sky-600' : 'bg-sky-600 text-white hover:bg-sky-700'}`}
           >
             Thử lại
           </button>
@@ -272,7 +274,7 @@ const LibraryPage = () => {
         <>
           <div className="space-y-8">
             {paginatedPurchasedItems.map((novelGroup) => (
-              <div key={novelGroup.novelId} className="bg-gray-800 rounded-lg p-6">
+              <div key={novelGroup.novelId} className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-6`}>
                 <div className="flex items-center mb-6">
                   <img
                     src={novelGroup.coverImage || 'https://via.placeholder.com/48x64.png?text=N'}
@@ -281,12 +283,12 @@ const LibraryPage = () => {
                   />
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-semibold text-gray-200 hover:text-sky-400 transition-colors mb-1">
+                      <h2 className={`text-2xl font-semibold mb-1 transition-colors ${isDarkMode ? 'text-gray-200 hover:text-sky-400' : 'text-gray-800 hover:text-sky-600'}`}>
                         <Link to={`/novel/${novelGroup.novelId}`}>{novelGroup.novelTitle}</Link>
                       </h2>
                       <button
                         onClick={() => toggleNovelChapters(novelGroup.novelId)}
-                        className="p-2 text-gray-400 hover:text-white"
+                        className={`p-2 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'}`}
                       >
                         <ChevronDown
                           size={20}
@@ -294,14 +296,14 @@ const LibraryPage = () => {
                         />
                       </button>
                     </div>
-                    <div className="flex items-center text-sm text-gray-400">
+                    <div className={`flex items-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           novelGroup.statusNovel === 'COMPLETED'
-                            ? 'bg-green-100 text-green-800'
+                            ? (isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800')
                             : novelGroup.statusNovel === 'CONTINUE'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
+                            ? (isDarkMode ? 'bg-yellow-900 text-yellow-300' : 'bg-yellow-100 text-yellow-800')
+                            : (isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-800')
                         }`}
                       >
                         {novelGroup.statusNovel === 'COMPLETED'
@@ -323,15 +325,15 @@ const LibraryPage = () => {
                     {novelGroup.chapters.map((chapter) => (
                       <div
                         key={chapter.idChapter}
-                        className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors group"
+                        className={`${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded-lg p-4 transition-colors group`}
                       >
                         <Link to={`/novel/${novelGroup.novelId}/chapter/${chapter.idChapter}`} className="block">
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-gray-300 group-hover:text-white font-medium truncate mr-2">
+                            <h3 className={`font-medium truncate mr-2 transition-colors ${isDarkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'}`}>
                               Chương {chapter.indexChapter}: {chapter.titleChapter || 'Chưa có tiêu đề'}
                             </h3>
                           </div>
-                          <div className="flex items-center text-xs text-gray-500">
+                          <div className={`flex items-center text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}> 
                             <Calendar size={12} className="mr-1" />
                             <span>Mua: {formatDate(chapter.dateBuy)}</span>
                           </div>
@@ -349,13 +351,13 @@ const LibraryPage = () => {
     }
 
     return (
-      <div className="text-center py-20 bg-gray-800 rounded-lg">
-        <ShoppingCart size={64} className="mx-auto text-gray-600" />
-        <h2 className="mt-4 text-xl font-semibold text-gray-300">Chưa mua chương nào</h2>
-        <p className="mt-2 text-gray-500">Các chương bạn mua sẽ xuất hiện ở đây.</p>
+      <div className={`text-center py-20 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}> 
+        <ShoppingCart size={64} className={`mx-auto ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+        <h2 className={`mt-4 text-xl font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Chưa mua chương nào</h2>
+        <p className={`mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Các chương bạn mua sẽ xuất hiện ở đây.</p>
         <Link
           to="/"
-          className="mt-6 inline-block bg-sky-600 text-white font-bold py-2 px-5 rounded-md hover:bg-sky-700 transition-colors"
+          className={`mt-6 inline-block font-bold py-2 px-5 rounded-md transition-colors ${isDarkMode ? 'bg-sky-700 text-white hover:bg-sky-600' : 'bg-sky-600 text-white hover:bg-sky-700'}`}
         >
           Khám phá truyện mới
         </Link>
@@ -366,18 +368,24 @@ const LibraryPage = () => {
   const purchasedChapterCount = transactions?.purchasedChapters?.length || 0;
 
   return (
-    <div className="min-h-screen bg-gray-900 dark text-white p-4 sm:p-8 flex flex-col">
+    <div className={`min-h-screen flex flex-col p-4 sm:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
       <div className="max-w-7xl mx-auto flex-grow w-full">
-        <h1 className="text-3xl font-bold text-sky-400 mb-6">Thư viện của tôi</h1>
+        <h1 className={`text-3xl font-bold mb-6 ${isDarkMode ? 'text-sky-400' : 'text-sky-600'}`}>Thư viện của tôi</h1>
 
-        <div className="flex border-b border-gray-700 mb-8">
+        <div className={`flex border-b mb-8 ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`}> 
           <button
             onClick={() => {
               setActiveTab('followed');
               setFollowedPage(1);
             }}
             className={`flex items-center px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-              activeTab === 'followed' ? 'border-b-2 border-sky-400 text-white' : 'text-gray-400 hover:text-white'
+              activeTab === 'followed'
+                ? isDarkMode
+                  ? 'border-b-2 border-sky-400 text-white'
+                  : 'border-b-2 border-sky-600 text-sky-600'
+                : isDarkMode
+                  ? 'text-gray-400 hover:text-white'
+                  : 'text-gray-400 hover:text-sky-600'
             }`}
           >
             <BookHeart size={16} className="mr-2" />
@@ -389,7 +397,13 @@ const LibraryPage = () => {
               setPurchasedPage(1);
             }}
             className={`flex items-center px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-              activeTab === 'purchased' ? 'border-b-2 border-sky-400 text-white' : 'text-gray-400 hover:text-white'
+              activeTab === 'purchased'
+                ? isDarkMode
+                  ? 'border-b-2 border-sky-400 text-white'
+                  : 'border-b-2 border-sky-600 text-sky-600'
+                : isDarkMode
+                  ? 'text-gray-400 hover:text-white'
+                  : 'text-gray-400 hover:text-sky-600'
             }`}
           >
             <ShoppingCart size={16} className="mr-2" />

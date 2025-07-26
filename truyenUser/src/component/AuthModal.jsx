@@ -15,12 +15,14 @@ import {
   sendOTP as sendOTPAPI,
   clearUserError
 } from "../redux/userSlice";
-import ForgotPasswordView from './ForgotPasswordView'; 
+import ForgotPasswordView from './ForgotPasswordView';
+import { useTheme } from '../context/ThemeContext'; 
 
-const logoUrl = "/logo-tc.png";
+const logoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThhqK6mONYbcEN8rDOd2rPIKFmhSBKbWkAAw&s";
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const dispatch = useDispatch();
+  const { isDarkMode } = useTheme();
   const [view, setView] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -244,19 +246,39 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
       return (
         <form onSubmit={handleEmailPasswordLogin}>
           <div className="mb-4">
-            <label htmlFor="email-login" className="block text-sm font-medium text-stone-600 mb-1">Email</label>
-            <input id="email-login" type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50" />
+            <label htmlFor="email-login" className={`block text-sm font-medium mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-stone-600'
+            }`}>Email</label>
+            <input 
+              id="email-login" 
+              type="email" 
+              placeholder="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              disabled={currentLoadingState} 
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors placeholder-opacity-70 disabled:opacity-50 ${
+                isDarkMode 
+                  ? 'bg-slate-700 border-gray-600 text-gray-200 focus:ring-amber-400 focus:border-amber-400 placeholder-gray-400' 
+                  : 'bg-white border-stone-300 text-stone-800 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50'
+              }`} 
+            />
           </div>
           <div className="mb-5">
             <div className="flex justify-between items-baseline">
-              <label htmlFor="password-login" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
+              <label htmlFor="password-login" className={`block text-sm font-medium mb-1 ${
+                isDarkMode ? 'text-gray-300' : 'text-stone-600'
+              }`}>Mật khẩu</label>
                 <button 
                   type="button"
                   onClick={(e) => { e.preventDefault(); switchToForgotPassword(); }}
-                  className="text-xs text-amber-600 hover:text-amber-700 hover:underline"
+                  className={`text-xs hover:underline transition-colors ${
+                    isDarkMode ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'
+                  }`}
                 >
                   Quên mật khẩu?
-                </button>            </div>
+                </button>            
+            </div>
             <div className="relative">
               <input
                 id="password-login"
@@ -266,28 +288,68 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={currentLoadingState}
-                className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+                className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors placeholder-opacity-70 disabled:opacity-50 ${
+                  isDarkMode 
+                    ? 'bg-slate-700 border-gray-600 text-gray-200 focus:ring-amber-400 focus:border-amber-400 placeholder-gray-400' 
+                    : 'bg-white border-stone-300 text-stone-800 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50'
+                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                className={`absolute inset-y-0 right-0 flex items-center px-3 transition-colors ${
+                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-stone-500 hover:text-stone-700'
+                }`}
                 aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
-          <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
+          <button 
+            type="submit" 
+            disabled={currentLoadingState} 
+            className={`w-full font-semibold py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed ${
+              isDarkMode 
+                ? 'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-400' 
+                : 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500'
+            }`}
+          >
             {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>
-          <p className="text-sm text-center text-stone-600 mt-5">Chưa có tài khoản?{' '}
-            <button type="button" onClick={switchToRegister} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Đăng ký ngay</button>
+          <p className={`text-sm text-center mt-5 ${
+            isDarkMode ? 'text-gray-300' : 'text-stone-600'
+          }`}>Chưa có tài khoản?{' '}
+            <button 
+              type="button" 
+              onClick={switchToRegister} 
+              disabled={currentLoadingState} 
+              className={`font-semibold hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed transition-colors ${
+                isDarkMode ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'
+              }`}
+            >Đăng ký ngay</button>
           </p>
           <div className="my-5 flex items-center">
-            <div className="flex-grow border-t border-stone-300"></div><span className="flex-shrink mx-2 text-xs text-stone-400">HOẶC</span><div className="flex-grow border-t border-stone-300"></div>
+            <div className={`flex-grow border-t ${
+              isDarkMode ? 'border-gray-600' : 'border-stone-300'
+            }`}></div>
+            <span className={`flex-shrink mx-2 text-xs ${
+              isDarkMode ? 'text-gray-400' : 'text-stone-400'
+            }`}>HOẶC</span>
+            <div className={`flex-grow border-t ${
+              isDarkMode ? 'border-gray-600' : 'border-stone-300'
+            }`}></div>
           </div>
-          <button type="button" onClick={handleGoogleLogin} disabled={currentLoadingState} className="w-full flex items-center justify-center py-2.5 px-4 border border-stone-300 rounded-lg hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 transition-colors duration-150 text-stone-700 bg-white shadow-sm disabled:opacity-70 disabled:cursor-not-allowed">
+          <button 
+            type="button" 
+            onClick={handleGoogleLogin} 
+            disabled={currentLoadingState} 
+            className={`w-full flex items-center justify-center py-2.5 px-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed ${
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-gray-200 hover:bg-slate-600 focus:ring-gray-500' 
+                : 'border-stone-300 bg-white text-stone-700 hover:bg-stone-50 focus:ring-stone-400'
+            }`}
+          >
             <FcGoogle className="mr-2.5" size={22} />
             {isLoading ? 'Đang xử lý Google...' : 'Đăng nhập bằng Google'}
           </button>
@@ -297,11 +359,28 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
       return (
         <form onSubmit={handleRequestOtp}>
           <div className="mb-4">
-            <label htmlFor="email-register" className="block text-sm font-medium text-stone-600 mb-1">Email</label>
-            <input id="email-register" type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={currentLoadingState} className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50" />
+            <label htmlFor="email-register" className={`block text-sm font-medium mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-stone-600'
+            }`}>Email</label>
+            <input 
+              id="email-register" 
+              type="email" 
+              placeholder="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              disabled={currentLoadingState} 
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors placeholder-opacity-70 disabled:opacity-50 ${
+                isDarkMode 
+                  ? 'bg-slate-700 border-gray-600 text-gray-200 focus:ring-amber-400 focus:border-amber-400 placeholder-gray-400' 
+                  : 'bg-white border-stone-300 text-stone-800 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50'
+              }`} 
+            />
           </div>
           <div className="mb-4">
-            <label htmlFor="password-register" className="block text-sm font-medium text-stone-600 mb-1">Mật khẩu</label>
+            <label htmlFor="password-register" className={`block text-sm font-medium mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-stone-600'
+            }`}>Mật khẩu</label>
             <div className="relative">
               <input
                 id="password-register"
@@ -311,12 +390,18 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={currentLoadingState}
-                className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+                className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors placeholder-opacity-70 disabled:opacity-50 ${
+                  isDarkMode 
+                    ? 'bg-slate-700 border-gray-600 text-gray-200 focus:ring-amber-400 focus:border-amber-400 placeholder-gray-400' 
+                    : 'bg-white border-stone-300 text-stone-800 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50'
+                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                className={`absolute inset-y-0 right-0 flex items-center px-3 transition-colors ${
+                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-stone-500 hover:text-stone-700'
+                }`}
                 aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -324,7 +409,9 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             </div>
           </div>
           <div className="mb-5">
-            <label htmlFor="confirm-password-register" className="block text-sm font-medium text-stone-600 mb-1">Nhập lại mật khẩu</label>
+            <label htmlFor="confirm-password-register" className={`block text-sm font-medium mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-stone-600'
+            }`}>Nhập lại mật khẩu</label>
             <div className="relative">
               <input
                 id="confirm-password-register"
@@ -334,49 +421,107 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={currentLoadingState}
-                className="w-full px-3 py-2 pr-10 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+                className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors placeholder-opacity-70 disabled:opacity-50 ${
+                  isDarkMode 
+                    ? 'bg-slate-700 border-gray-600 text-gray-200 focus:ring-amber-400 focus:border-amber-400 placeholder-gray-400' 
+                    : 'bg-white border-stone-300 text-stone-800 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50'
+                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-stone-500 hover:text-stone-700"
+                className={`absolute inset-y-0 right-0 flex items-center px-3 transition-colors ${
+                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-stone-500 hover:text-stone-700'
+                }`}
                 aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
               >
                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
-          <button type="submit" disabled={currentLoadingState} className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed">
+          <button 
+            type="submit" 
+            disabled={currentLoadingState} 
+            className={`w-full font-semibold py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed ${
+              isDarkMode 
+                ? 'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-400' 
+                : 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500'
+            }`}
+          >
             {isOtpSending ? 'Đang gửi OTP...' : 'Tiếp tục'}
           </button>
-          <p className="text-sm text-center text-stone-600 mt-5">Đã có tài khoản?{' '}
-            <button type="button" onClick={switchToLogin} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Đăng nhập</button>
+          <p className={`text-sm text-center mt-5 ${
+            isDarkMode ? 'text-gray-300' : 'text-stone-600'
+          }`}>Đã có tài khoản?{' '}
+            <button 
+              type="button" 
+              onClick={switchToLogin} 
+              disabled={currentLoadingState} 
+              className={`font-semibold hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed transition-colors ${
+                isDarkMode ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'
+              }`}
+            >Đăng nhập</button>
           </p>
         </form>
       );
     } else if (view === 'otp') {
       return (
         <form onSubmit={handleVerifyOtpAndRegister}>
-          <p className="text-sm text-stone-600 mb-3 text-center">
+          <p className={`text-sm mb-3 text-center ${
+            isDarkMode ? 'text-gray-300' : 'text-stone-600'
+          }`}>
             Một mã OTP đã được gửi đến email <span className="font-semibold">{email}</span>. Vui lòng nhập mã OTP để hoàn tất đăng ký.
           </p>
           <div className="mb-4">
-            <label htmlFor="otp-input" className="block text-sm font-medium text-stone-600 mb-1">Mã OTP</label>
+            <label htmlFor="otp-input" className={`block text-sm font-medium mb-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-stone-600'
+            }`}>Mã OTP</label>
             <input
-              id="otp-input" type="text" placeholder="Nhập mã OTP" value={otpInput}
-              onChange={(e) => setOtpInput(e.target.value)} required disabled={currentLoadingState}
-              className="w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50"
+              id="otp-input" 
+              type="text" 
+              placeholder="Nhập mã OTP" 
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value)} 
+              required 
+              disabled={currentLoadingState}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors placeholder-opacity-70 disabled:opacity-50 ${
+                isDarkMode 
+                  ? 'bg-slate-700 border-gray-600 text-gray-200 focus:ring-amber-400 focus:border-amber-400 placeholder-gray-400' 
+                  : 'bg-white border-stone-300 text-stone-800 focus:ring-amber-500 focus:border-amber-500 placeholder-stone-400 disabled:bg-stone-50'
+              }`}
             />
           </div>
-          <button type="submit" disabled={currentLoadingState}
-            className="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
+          <button 
+            type="submit" 
+            disabled={currentLoadingState}
+            className={`w-full font-semibold py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150 disabled:opacity-70 disabled:cursor-not-allowed ${
+              isDarkMode 
+                ? 'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-400' 
+                : 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500'
+            }`}
           >
             {isLoading ? 'Đang đăng ký...' : 'Xác nhận và Đăng ký'}
           </button>
-          <p className="text-sm text-center text-stone-600 mt-5">
-            <button type="button" onClick={() => { if (!currentLoadingState) setView('register') }} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Quay lại</button>
+          <p className={`text-sm text-center mt-5 ${
+            isDarkMode ? 'text-gray-300' : 'text-stone-600'
+          }`}>
+            <button 
+              type="button" 
+              onClick={() => { if (!currentLoadingState) setView('register') }} 
+              disabled={currentLoadingState} 
+              className={`font-semibold hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed transition-colors ${
+                isDarkMode ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'
+              }`}
+            >Quay lại</button>
             {' | '}
-            <button type="button" onClick={switchToLogin} disabled={currentLoadingState} className="font-semibold text-amber-600 hover:text-amber-700 hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed">Về trang Đăng nhập</button>
+            <button 
+              type="button" 
+              onClick={switchToLogin} 
+              disabled={currentLoadingState} 
+              className={`font-semibold hover:underline focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed transition-colors ${
+                isDarkMode ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'
+              }`}
+            >Về trang Đăng nhập</button>
           </p>
         </form>
       );
@@ -385,22 +530,38 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 transition-opacity duration-300">
-      <div className="bg-stone-100 rounded-lg w-full max-w-sm shadow-xl p-6 sm:p-8 relative text-stone-700">
+      <div className={`rounded-lg w-full max-w-sm shadow-xl p-6 sm:p-8 relative transition-colors ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200 border border-gray-600' 
+          : 'bg-stone-100 text-stone-700 border border-stone-200'
+      }`}>
         <div className="flex justify-between items-center mb-6">
           <img src={logoUrl} alt="Logo" className="h-8 w-auto opacity-80" />
-          <h2 className="text-xl font-semibold text-stone-800 absolute left-1/2 -translate-x-1/2">
+          <h2 className={`text-xl font-semibold absolute left-1/2 -translate-x-1/2 ${
+            isDarkMode ? 'text-white' : 'text-stone-800'
+          }`}>
             {view === 'login' && 'Đăng nhập'}
             {view === 'register' && 'Đăng ký'}
             {view === 'otp' && 'Xác thực OTP'}
-              {view === 'forgotPassword' && 'Quên Mật Khẩu'}
-
+            {view === 'forgotPassword' && 'Quên Mật Khẩu'}
           </h2>
-          <button onClick={handleCloseModal} className="text-stone-500 hover:text-stone-700" aria-label="Đóng" disabled={currentLoadingState}>
+          <button 
+            onClick={handleCloseModal} 
+            className={`transition-colors ${
+              isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-stone-500 hover:text-stone-700'
+            }`} 
+            aria-label="Đóng" 
+            disabled={currentLoadingState}
+          >
             <X size={24} />
           </button>
         </div>
         {localError && (
-          <p className="text-red-600 text-sm text-center mb-3 bg-red-100 p-2 rounded-md">{localError}</p>
+          <p className={`text-sm text-center mb-3 p-2 rounded-md ${
+            isDarkMode 
+              ? 'text-red-300 bg-red-900/20 border border-red-700' 
+              : 'text-red-600 bg-red-100 border border-red-200'
+          }`}>{localError}</p>
         )}
         {renderContent()}
       </div>

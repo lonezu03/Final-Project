@@ -23,6 +23,7 @@ import {
     Loader2 as LucideSpinner,
     MoreVertical as LucideMoreVertical,
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const formatCommentDate = (dateArray) => {
   if (!dateArray || dateArray.length < 6) return '';
@@ -68,7 +69,8 @@ const CommentItem = ({
   openDropdownId,
   onToggleDropdown,
   assignDropdownRef,
-  level = 0
+  level = 0,
+  isDarkMode
 }) => {
   // Backend cần trả về comment.user.idUser để so sánh chính xác
   // Nếu API comment của bạn trả về object user lồng nhau: comment.user.idUser và comment.user.userNameUser
@@ -83,9 +85,9 @@ const CommentItem = ({
   const isCurrentlyReplyingToThisItem = globalReplyingToCommentId === comment.idComment;
 
   return (
-    <div className={` ${level > 0 ? `ml-${level === 1 ? 4 : 8} sm:ml-${level === 1 ? 6 : 10} mt-3 pt-3 border-t border-gray-700/50` : ''}`}>
+    <div className={`${level > 0 ? `ml-${level === 1 ? 4 : 8} sm:ml-${level === 1 ? 6 : 10} mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700/50' : 'border-gray-300/50'}` : ''}`}>
       <div className="flex items-start space-x-2 sm:space-x-3">
-        <div className={`flex-shrink-0 rounded-full bg-gray-600 flex items-center justify-center text-gray-400 font-semibold ${level > 0 ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm'}`}>
+        <div className={`flex-shrink-0 rounded-full ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'} flex items-center justify-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} font-semibold ${level > 0 ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm'}`}>
           {comment.urlImage ? (
             <img src={comment.urlImage} alt={comment.userName || 'Avatar'} className="w-full h-full rounded-full object-cover" />
           ) : (
@@ -101,17 +103,17 @@ const CommentItem = ({
               <div className="relative" ref={(el) => assignDropdownRef(el, comment.idComment)}>
                 <button
                   onClick={() => onToggleDropdown(comment.idComment)}
-                  className="p-0.5 text-gray-400 hover:text-gray-200 rounded-full focus:outline-none"
+                  className={`p-0.5 ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} rounded-full focus:outline-none`}
                   aria-label="Tùy chọn"
                 >
                   <LucideMoreVertical size={level > 0 ? 14 : 16} />
                 </button>
                 {openDropdownId === comment.idComment && (
-                  <div className="absolute right-0 mt-1 w-32 bg-gray-700 border border-gray-600 rounded-md shadow-lg z-20 py-1">
-                    <button onClick={() => onStartEdit(comment)} className="w-full text-left px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-600 flex items-center">
+                  <div className={`absolute right-0 mt-1 w-32 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border rounded-md shadow-lg z-20 py-1`}>
+                    <button onClick={() => onStartEdit(comment)} className={`w-full text-left px-3 py-1.5 text-xs ${isDarkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'} flex items-center`}>
                       <LucideEdit size={14} className="mr-2" /> Sửa
                     </button>
-                    <button onClick={() => onDelete(comment.idComment)} className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-600 hover:text-white flex items-center">
+                    <button onClick={() => onDelete(comment.idComment)} className={`w-full text-left px-3 py-1.5 text-xs text-red-400 ${isDarkMode ? 'hover:bg-red-600 hover:text-white' : 'hover:bg-red-100 hover:text-red-600'} flex items-center`}>
                       <LucideTrash size={14} className="mr-2" /> Xóa
                     </button>
                   </div>
@@ -123,23 +125,23 @@ const CommentItem = ({
           {isCurrentlyEditingThisItem ? (
             <form onSubmit={onGlobalUpdateComment} className="mt-1">
               <textarea
-                className="w-full p-2 text-sm bg-gray-600 text-gray-100 border border-gray-500 rounded-md focus:ring-1 focus:ring-sky-500"
+                className={`w-full p-2 text-sm ${isDarkMode ? 'bg-gray-600 text-gray-100 border-gray-500' : 'bg-gray-50 text-gray-900 border-gray-300'} border rounded-md focus:ring-1 focus:ring-sky-500`}
                 rows="2" value={globalEditedContent} onChange={onGlobalEditedContentChange} required disabled={isGlobalUpdatingComment} autoFocus
               />
               <div className="mt-1 flex items-center space-x-2">
                 <button type="submit" disabled={isGlobalUpdatingComment || !globalEditedContent?.trim()} className="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-md disabled:opacity-60 flex items-center">
                   {isGlobalUpdatingComment && <LucideSpinner size={12} className="animate-spin mr-1" />} Lưu
                 </button>
-                <button type="button" onClick={onGlobalCancelEdit} disabled={isGlobalUpdatingComment} className="px-2.5 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold rounded-md">
+                <button type="button" onClick={onGlobalCancelEdit} disabled={isGlobalUpdatingComment} className={`px-2.5 py-1 ${isDarkMode ? 'bg-gray-500 hover:bg-gray-600' : 'bg-gray-400 hover:bg-gray-500'} text-white text-xs font-semibold rounded-md`}>
                   Hủy
                 </button>
               </div>
             </form>
           ) : (
-            <p className={`text-gray-200 whitespace-pre-wrap mt-0.5 ${level > 0 ? 'text-xs' : 'text-sm'}`}>{comment.contentComment}</p>
+            <p className={`${isDarkMode ? 'text-gray-200' : 'text-gray-800'} whitespace-pre-wrap mt-0.5 ${level > 0 ? 'text-xs' : 'text-sm'}`}>{comment.contentComment}</p>
           )}
 
-          <div className="flex items-center space-x-3 sm:space-x-4 mt-2 text-xs text-gray-400">
+          <div className={`flex items-center space-x-3 sm:space-x-4 mt-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             <button onClick={() => onLike(comment)} className="hover:text-sky-400 flex items-center disabled:opacity-50" disabled={!currentUser} title="Thích">
               <LucideThumbsUp size={14} className="mr-1" /> {comment.likeComment || 0}
             </button>
@@ -147,17 +149,17 @@ const CommentItem = ({
               <LucideThumbsDown size={14} className="mr-1" /> {comment.dislikeComment || 0}
             </button>
             {level < 2 && currentUser && !isCurrentlyEditingThisItem && (
-              <button onClick={() => onStartReply(comment.idComment)} className="hover:text-gray-200 flex items-center" title="Trả lời">
+              <button onClick={() => onStartReply(comment.idComment)} className={`${isDarkMode ? 'hover:text-gray-200' : 'hover:text-gray-700'} flex items-center`} title="Trả lời">
                 <LucideReply size={14} className="mr-1" /> Trả lời
               </button>
             )}
-            {comment.timeComment && <span className="text-gray-500 text-xs">{formatCommentDate(comment.timeComment)}</span>}
+            {comment.timeComment && <span className={`${isDarkMode ? 'text-gray-500' : 'text-gray-400'} text-xs`}>{formatCommentDate(comment.timeComment)}</span>}
           </div>
 
           {isCurrentlyReplyingToThisItem && (
             <form onSubmit={(e) => onGlobalSubmitReply(e, comment.idComment)} className="mt-3 ml-0 md:ml-7">
               <textarea
-                className="w-full p-2 text-sm bg-gray-600 text-gray-100 border border-gray-500 rounded-md focus:ring-1 focus:ring-sky-500"
+                className={`w-full p-2 text-sm ${isDarkMode ? 'bg-gray-600 text-gray-100 border-gray-500' : 'bg-gray-50 text-gray-900 border-gray-300'} border rounded-md focus:ring-1 focus:ring-sky-500`}
                 rows="2"
                 placeholder={`Trả lời ${comment.userName}...`}
                 value={globalReplyContent}
@@ -170,7 +172,7 @@ const CommentItem = ({
                 <button type="submit" disabled={isGlobalSubmittingReply || !globalReplyContent.trim()} className="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-md disabled:opacity-60 flex items-center">
                   {isGlobalSubmittingReply && <LucideSpinner size={12} className="animate-spin mr-1" />} Gửi
                 </button>
-                <button type="button" onClick={onGlobalCancelReply} disabled={isGlobalSubmittingReply} className="px-2.5 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold rounded-md">
+                <button type="button" onClick={onGlobalCancelReply} disabled={isGlobalSubmittingReply} className={`px-2.5 py-1 ${isDarkMode ? 'bg-gray-500 hover:bg-gray-600' : 'bg-gray-400 hover:bg-gray-500'} text-white text-xs font-semibold rounded-md`}>
                   Hủy
                 </button>
               </div>
@@ -208,6 +210,7 @@ const CommentItem = ({
                   onToggleDropdown={onToggleDropdown}
                   assignDropdownRef={assignDropdownRef}
                   level={level + 1}
+                  isDarkMode={isDarkMode}
                 />
               ))}
             </div>
@@ -221,6 +224,7 @@ const CommentItem = ({
 
 const ChapterComments = ({ chapterId, novelId }) => {
   const dispatch = useDispatch();
+  const { isDarkMode } = useTheme();
   
   const { comments, pagination, loading, error, actionStatus } = useSelector((state) => state.comments);
   const currentUser = useSelector((state) => state.user.currentUser);
@@ -522,7 +526,7 @@ const ChapterComments = ({ chapterId, novelId }) => {
   const toggleDropdown = (commentId) => {
     setOpenDropdownId(openDropdownId === commentId ? null : commentId);
   };
-const CommentPagination = ({ currentPage, totalPages, onPageChange }) => {
+const CommentPagination = ({ currentPage, totalPages, onPageChange, isDarkMode }) => {
     if (totalPages <= 1) return null;
     
     const handlePageClick = (page) => {
@@ -536,30 +540,30 @@ const CommentPagination = ({ currentPage, totalPages, onPageChange }) => {
 
     return (
         <div className="flex justify-center items-center space-x-2 mt-6">
-            <button disabled={currentPage === 0} onClick={() => handlePageClick(currentPage - 1)} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Trước</button>
+            <button disabled={currentPage === 0} onClick={() => handlePageClick(currentPage - 1)} className={`px-3 py-1 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'} rounded disabled:opacity-50 transition-colors`}>Trước</button>
             {pages.map(pageNumber => (
                 <button 
                     key={pageNumber} 
                     onClick={() => handlePageClick(pageNumber)}
-                    className={`px-3 py-1 rounded ${currentPage === pageNumber ? 'bg-sky-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    className={`px-3 py-1 rounded transition-colors ${currentPage === pageNumber ? 'bg-sky-600 text-white' : isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                 >
                     {pageNumber + 1}
                 </button>
             ))}
-            <button disabled={currentPage >= totalPages - 1} onClick={() => handlePageClick(currentPage + 1)} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Sau</button>
+            <button disabled={currentPage >= totalPages - 1} onClick={() => handlePageClick(currentPage + 1)} className={`px-3 py-1 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'} rounded disabled:opacity-50 transition-colors`}>Sau</button>
         </div>
     );
 };
   return (
-    <div className="mt-8 bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
-      <h3 className="text-xl font-semibold text-sky-400 mb-4 border-b border-gray-700 pb-2">
+    <div className={`mt-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-4 sm:p-6 rounded-lg shadow-md`}>
+      <h3 className={`text-xl font-semibold text-sky-400 mb-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} pb-2`}>
         Bình luận ({comments?.reduce((acc, comment) => acc + 1 + (comment.replyComments?.length || 0), 0) || 0})
       </h3>
 
       {currentUser ? (
         <form onSubmit={handleSubmitComment} className="mb-6">
           <textarea
-            className="w-full p-3 bg-gray-700 text-gray-200 border border-gray-600 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder-gray-500 resize-none"
+            className={`w-full p-3 ${isDarkMode ? 'bg-gray-700 text-gray-200 border-gray-600 placeholder-gray-500' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder-gray-400'} border rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-none`}
             rows="3"
             placeholder="Viết bình luận của bạn..."
             value={newComment}
@@ -578,16 +582,16 @@ const CommentPagination = ({ currentPage, totalPages, onPageChange }) => {
           </button>
         </form>
       ) : (
-         <p className="mb-6 text-gray-400 text-sm">Vui lòng <Link to="/login" className="text-sky-400 hover:underline">đăng nhập</Link> để bình luận.</p>
+         <p className={`mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>Vui lòng <Link to="/login" className="text-sky-400 hover:underline">đăng nhập</Link> để bình luận.</p>
       )}
 
       {loading && (!comments || comments.length === 0) && (
-         <div className="text-center text-gray-400 py-4">
+         <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} py-4`}>
           <LucideSpinner size={24} className="animate-spin inline mr-2" /> Đang tải bình luận...
         </div>
       )}
       {!loading && comments && comments.length === 0 && !error && (
-         <p className="text-gray-500 text-center py-4">Chưa có bình luận nào cho chương này.</p>
+         <p className={`${isDarkMode ? 'text-gray-500' : 'text-gray-400'} text-center py-4`}>Chưa có bình luận nào cho chương này.</p>
       )}
       {error && typeof error === 'string' && (!comments || comments.length === 0) && (
           <p className="text-red-500 text-center py-4">{error}</p>
@@ -626,6 +630,7 @@ const CommentPagination = ({ currentPage, totalPages, onPageChange }) => {
             onToggleDropdown={toggleDropdown}
             assignDropdownRef={assignDropdownRef}
             level={0}
+            isDarkMode={isDarkMode}
           />
         ))}
       </div>
@@ -633,6 +638,7 @@ const CommentPagination = ({ currentPage, totalPages, onPageChange }) => {
         currentPage={pagination.currentPage}
         totalPages={pagination.totalPages}
         onPageChange={handlePageChange}
+        isDarkMode={isDarkMode}
       />
     </div>
   );

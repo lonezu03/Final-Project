@@ -1,5 +1,6 @@
 // src/components/UserTransactionHistory/UserTransactionHistory.jsx
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { FaCalendarAlt, FaFilter, FaCheckCircle, FaTimesCircle, FaHourglassHalf } from 'react-icons/fa';
@@ -70,6 +71,7 @@ const getStatusStyles = (status) => {
 
 // --- Component Chính ---
 const UserTransactionHistory = () => {
+  const { isDarkMode } = useTheme();
 
   const { currentUser, loading } = useSelector((state) => state.user);
   const [filterType, setFilterType] = useState('all');
@@ -125,7 +127,7 @@ const UserTransactionHistory = () => {
 
   if (loading && !currentUser) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
+      <div className={`flex justify-center items-center min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
         <Loader2 className="animate-spin mr-3" size={32} />
       </div>
     );
@@ -133,75 +135,69 @@ const UserTransactionHistory = () => {
   
   if (!currentUser) {
     return (
-        <div className="text-center py-20 bg-gray-800 rounded-lg">
-            <p>Vui lòng <Link to="/login" className="text-sky-400 hover:underline">đăng nhập</Link> để xem lịch sử.</p>
-        </div>
-    )
+      <div className={`text-center py-20 rounded-lg ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
+        <p>Vui lòng <Link to="/login" className={isDarkMode ? 'text-sky-400 hover:underline' : 'text-sky-600 hover:underline'}>đăng nhập</Link> để xem lịch sử.</p>
+      </div>
+    );
   }
 return (
-    // --- SỬA: Thay đổi background và layout chính ---
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
+    <div className={`min-h-screen p-4 sm:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-800 mb-3 sm:mb-0">
-              Lịch sử giao dịch
-            </h1>
+        <div className={`rounded-lg shadow-md p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}> 
+          <div className={`flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}> 
+            <h1 className={`text-2xl font-bold mb-3 sm:mb-0 ${isDarkMode ? 'text-sky-400' : 'text-gray-800'}`}>Lịch sử giao dịch</h1>
             <div className="flex items-center space-x-2">
-              <FaFilter className="text-gray-500" />
+              <FaFilter className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                className={`text-sm rounded-lg block w-full p-2 transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-200 focus:ring-blue-700 focus:border-blue-700' : 'bg-white border-gray-300 text-gray-700 focus:ring-blue-500 focus:border-blue-500'}`}
               >
                 <option value="all">Tất cả</option>
                 <option value="nap">Nạp Linh Thạch</option>
                 <option value="tieu">Tiêu thụ Linh Thạch</option>
-                <option value="rut">Rút tiền</option>
               </select>
             </div>
           </div>
 
-          <p className="text-sm text-gray-600 mb-6">
-            {filteredTransactions.length} giao dịch được tìm thấy.
-          </p>
+          <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{filteredTransactions.length} giao dịch được tìm thấy.</p>
 
           {currentTransactions.length === 0 && !loading ? (
-            <div className="text-center py-16 text-gray-500">
-              <BookX size={56} className="mx-auto text-gray-400" />
+            <div className={`text-center py-16 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <BookX size={56} className={`mx-auto ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
               <p className="mt-4 text-lg">Không có giao dịch nào.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full">
+              <table className={`min-w-full ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}> 
                 <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Thời gian</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Loại</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Mô tả</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Số tiền</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                    <th className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Thời gian</th>
+                    <th className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loại</th>
+                    <th className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden md:table-cell ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Mô tả</th>
+                    <th className={`px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Số tiền</th>
+                    <th className={`px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Trạng thái</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className={isDarkMode ? 'bg-gray-800 divide-y divide-gray-700' : 'bg-white divide-y divide-gray-200'}>
                   {currentTransactions.map((txn) => {
                     const info = getTransactionInfo(txn);
                     const statusStyle = getStatusStyles(txn.statusDeposit);
-                    const amountColor = info.isPositive ? 'text-green-600' : 'text-red-600';
+                    const amountColor = info.isPositive ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-red-400' : 'text-red-600');
 
                     return (
-                      <tr key={txn.idHistoryDeposit} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center">
+                      <tr key={txn.idHistoryDeposit} className={isDarkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-50'}>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           <FaCalendarAlt className="mr-2" />
                           {formatDate(txn.jsDate)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{info.typeText}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell max-w-sm truncate" title={txn.detail}>{txn.detail}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{info.typeText}</td>
+                        <td className={`px-6 py-4 text-sm hidden md:table-cell max-w-sm truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} title={txn.detail}>{txn.detail}</td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${amountColor}`}>
                           {(info.isPositive ? '+' : '-') + formatCurrency(info.amount, info.currency)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyle.bgClass}`}>
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}> 
                             {statusStyle.icon}
                             {statusStyle.text}
                           </span>
@@ -213,7 +209,7 @@ return (
               </table>
             </div>
           )}
-          
+
           {totalPages > 1 && (
             <div className="mt-6">
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />

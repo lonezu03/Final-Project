@@ -1,6 +1,7 @@
 // src/components/TopStories.jsx
 import React, { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useTheme } from "../context/ThemeContext"; // Import useTheme
 import { Link } from "react-router-dom";
 import { User, Book } from "lucide-react";
 
@@ -10,6 +11,7 @@ import { getAllCategories } from "../redux/categorySlice"; // Điều chỉnh đ
 
 const TopStories = () => {
   const dispatch = useDispatch();
+  const { isDarkMode } = useTheme(); // Sử dụng theme context
 
   // Lấy dữ liệu từ store
   const { novels, loading: novelsLoading, error: novelsError } = useSelector((state) => state.novels);
@@ -114,7 +116,9 @@ const TopStories = () => {
   if (novelsLoading && (!novels || novels.length === 0)) {
     return (
       <div className="container mx-auto p-4 sm:p-6">
-          <p className="text-center text-gray-500 py-5">Đang tải danh sách truyện...</p>
+          <p className={`text-center py-5 ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+          }`}>Đang tải danh sách truyện...</p>
       </div>
     );
   }
@@ -122,7 +126,9 @@ const TopStories = () => {
   if (categoriesLoading && (!categories || categories.length === 0)) {
      return (
       <div className="container mx-auto p-4 sm:p-6">
-          <p className="text-center text-gray-500 py-5">Đang tải thể loại...</p>
+          <p className={`text-center py-5 ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+          }`}>Đang tải thể loại...</p>
       </div>
     );
   }
@@ -150,32 +156,58 @@ const TopStories = () => {
         // Trường hợp này là đang đợi categories, có thể hiển thị loading khác
         return (
             <div className="container mx-auto p-4 sm:p-6">
-                <p className="text-center text-gray-500 py-5">Đang chờ dữ liệu thể loại...</p>
+                <p className={`text-center py-5 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>Đang chờ dữ liệu thể loại...</p>
             </div>
         );
     }
     return (
     <div className="container mx-auto p-4 sm:p-6">
-        <p className="text-center text-gray-500 py-5">Không có dữ liệu truyện nổi bật để hiển thị.</p>
+        <p className={`text-center py-5 ${
+          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+        }`}>Không có dữ liệu truyện nổi bật để hiển thị.</p>
     </div>
   );
 }
 
   return (
     <div className="container mx-auto p-4 sm:p-6">
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100">
+      <div className={`rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-800 to-gray-800 border-gray-700' 
+          : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+      }`}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {sectionsData.map((section, idx) => (
-            <div key={idx} className="flex flex-col bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <h2 className="text-xl font-bold mb-5 text-gray-800 border-b-2 border-gradient-to-r from-blue-500 to-purple-500 pb-2 relative">
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <div key={idx} className={`flex flex-col rounded-lg p-5 shadow-md hover:shadow-lg transition-all duration-300 border ${
+              isDarkMode 
+                ? 'bg-slate-700 border-gray-600 hover:bg-slate-600' 
+                : 'bg-white border-gray-100 hover:bg-gray-50'
+            }`}>
+              <h2 className={`text-xl font-bold mb-5 border-b-2 pb-2 relative ${
+                isDarkMode ? 'text-white' : 'text-gray-800'
+              }`}>
+                <span className={`bg-gradient-to-r bg-clip-text text-transparent ${
+                  isDarkMode 
+                    ? 'from-blue-400 to-purple-400' 
+                    : 'from-blue-600 to-purple-600'
+                }`}>
                   {section.title}
                 </span>
-                <div className="absolute bottom-0 left-0 w-12 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                <div className={`absolute bottom-0 left-0 w-12 h-0.5 rounded-full ${
+                  isDarkMode 
+                    ? 'bg-gradient-to-r from-blue-400 to-purple-400' 
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                }`}></div>
               </h2>
               
               {section.topStory && (
-                <div className="flex mb-6 items-start group hover:bg-gray-50 rounded-lg p-3 transition-all duration-300">
+                <div className={`flex mb-6 items-start group rounded-lg p-3 transition-all duration-300 ${
+                  isDarkMode 
+                    ? 'hover:bg-slate-600' 
+                    : 'hover:bg-gray-50'
+                }`}>
                   <div className="w-20 h-28 overflow-hidden rounded-lg mr-4 flex-shrink-0 shadow-md group-hover:shadow-lg transition-all duration-300">
                     <Link to={`/novel/${section.topStory.id}`}>
                       <img
@@ -186,32 +218,56 @@ const TopStories = () => {
                     </Link>
                   </div>
                   <div className="flex-grow min-w-0">
-                    <h3 className="font-bold text-base sm:text-lg leading-tight mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                    <h3 className={`font-bold text-base sm:text-lg leading-tight mb-2 transition-colors duration-200 ${
+                      isDarkMode 
+                        ? 'text-white group-hover:text-blue-400' 
+                        : 'text-gray-900 group-hover:text-blue-600'
+                    }`}>
                       <Link to={`/novel/${section.topStory.id}`} className="line-clamp-2 hover:underline" title={section.topStory.name}>
                         {section.topStory.name}
                       </Link>
                     </h3>
-                    <p className="text-gray-600 text-xs sm:text-sm flex items-center mb-2 truncate">
-                      <User size={16} className="mr-2 text-blue-500 flex-shrink-0" />
+                    <p className={`text-xs sm:text-sm flex items-center mb-2 truncate ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
+                      <User size={16} className={`mr-2 flex-shrink-0 ${
+                        isDarkMode ? 'text-blue-400' : 'text-blue-500'
+                      }`} />
                       <span className="font-medium">{section.topStory.author}</span>
                     </p>
-                    <p className="text-gray-600 text-xs sm:text-sm flex items-center truncate">
-                      <Book size={16} className="mr-2 text-purple-500 flex-shrink-0" />
-                      <span className="bg-gray-100 px-2 py-1 rounded-full text-xs font-medium">{section.topStory.genre}</span>
+                    <p className={`text-xs sm:text-sm flex items-center truncate ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
+                      <Book size={16} className={`mr-2 flex-shrink-0 ${
+                        isDarkMode ? 'text-purple-400' : 'text-purple-500'
+                      }`} />
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        isDarkMode 
+                          ? 'bg-gray-600 text-gray-200' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>{section.topStory.genre}</span>
                     </p>
                   </div>
                 </div>
               )}
               
-              <ul className="space-y-2 text-sm text-gray-700 flex-grow">
+              <ul className={`space-y-2 text-sm flex-grow ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 {section.list.map((item, itemIdx) => (
-                  <li key={item.id || itemIdx} className="flex items-center hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 group">
+                  <li key={item.id || itemIdx} className={`flex items-center rounded-lg p-2 transition-all duration-200 group ${
+                    isDarkMode 
+                      ? 'hover:bg-slate-600' 
+                      : 'hover:bg-gray-50'
+                  }`}>
                     <span
                       className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mr-3 flex-shrink-0 transition-all duration-200
                         ${itemIdx === 0 ? "bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-md" :
                         itemIdx === 1 ? "bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md" :
                         itemIdx === 2 ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md" :
-                        "bg-gray-200 text-gray-600 group-hover:bg-gray-300"}`}
+                        (isDarkMode 
+                          ? "bg-gray-600 text-gray-300 group-hover:bg-gray-500" 
+                          : "bg-gray-200 text-gray-600 group-hover:bg-gray-300")}`}
                     >
                       {itemIdx + 2} 
                     </span>

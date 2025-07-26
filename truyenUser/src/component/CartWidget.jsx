@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { ShoppingCart, X, Loader2, Trash2 } from 'lucide-react';
 import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
 import { refreshUser } from '../redux/userSlice';
+import { useTheme } from '../context/ThemeContext';
 
 // Utility functions cho giỏ hàng (giống ChapterListDisplay)
 const getCartFromStorage = () => {
@@ -31,6 +32,7 @@ const clearCart = () => {
 const CartWidget = ({ novelTitle }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isDarkMode } = useTheme();
   
   const { currentUser } = useSelector((state) => state.user);
   const { createStatus, confirmStatus, pendingTransaction, createError } = useSelector((state) => state.transaction);
@@ -152,12 +154,20 @@ const CartWidget = ({ novelTitle }) => {
 
   if (totalItems === 0) {
     return (
-      <div className="bg-[#2d3038] p-4 rounded-lg shadow-lg mb-6">
-        <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center">
+      <div className={`p-4 rounded-lg shadow-lg mb-6 transition-colors ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-800 to-gray-800 border border-gray-600' 
+          : 'bg-gradient-to-br from-white to-gray-50 border border-gray-200'
+      }`}>
+        <h3 className={`text-lg font-semibold mb-3 flex items-center ${
+          isDarkMode ? 'text-gray-200' : 'text-gray-800'
+        }`}>
           <ShoppingCart className="mr-2" size={20} />
           Giỏ Hàng Truyện
         </h3>
-        <p className="text-gray-400 text-sm text-center py-4">
+        <p className={`text-sm text-center py-4 ${
+          isDarkMode ? 'text-gray-400' : 'text-gray-600'
+        }`}>
           Chưa có chương nào trong giỏ hàng
         </p>
       </div>
@@ -166,20 +176,32 @@ const CartWidget = ({ novelTitle }) => {
 
   return (
     <>
-      <div className="bg-[#2d3038] p-4 rounded-lg shadow-lg mb-6">
-        <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center">
+      <div className={`p-4 rounded-lg shadow-lg mb-6 transition-colors ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-800 to-gray-800 border border-gray-600' 
+          : 'bg-gradient-to-br from-white to-gray-50 border border-gray-200'
+      }`}>
+        <h3 className={`text-lg font-semibold mb-3 flex items-center ${
+          isDarkMode ? 'text-gray-200' : 'text-gray-800'
+        }`}>
           <ShoppingCart className="mr-2" size={20} />
           Giỏ Hàng ({totalItems})
         </h3>
         
         <div className="space-y-2 mb-4">
-          <div className="text-sm text-gray-300">
+          <div className={`text-sm ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          }`}>
             <span className="font-medium">Truyện:</span> {novelTitle}
           </div>
-          <div className="text-sm text-gray-300">
+          <div className={`text-sm ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          }`}>
             <span className="font-medium">Số chương:</span> {totalItems}
           </div>
-          <div className="text-sm text-orange-400 font-semibold">
+          <div className={`text-sm font-semibold ${
+            isDarkMode ? 'text-orange-400' : 'text-orange-600'
+          }`}>
             <span>Tổng tiền:</span> {totalCost} xu
           </div>
         </div>
@@ -187,14 +209,22 @@ const CartWidget = ({ novelTitle }) => {
         <div className="space-y-2">
           <button
             onClick={() => setShowCart(true)}
-            className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className={`w-full px-3 py-2 text-sm rounded transition-colors ${
+              isDarkMode 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
           >
             Xem chi tiết
           </button>
           <button
             onClick={handlePurchaseCart}
             disabled={createStatus === 'loading' || confirmStatus === 'loading'}
-            className="w-full px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+            className={`w-full px-3 py-2 text-sm rounded transition-colors disabled:opacity-50 flex items-center justify-center ${
+              isDarkMode 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-green-500 text-white hover:bg-green-600'
+            }`}
           >
             {createStatus === 'loading' ? (
               <Loader2 className="animate-spin mr-2" size={16} />
@@ -209,13 +239,26 @@ const CartWidget = ({ novelTitle }) => {
       {/* Chi tiết giỏ hàng Modal */}
       {showCart && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800 max-h-[80vh] overflow-hidden flex flex-col">
+          <div className={`rounded-lg shadow-xl p-6 w-11/12 max-w-md max-h-[80vh] overflow-hidden flex flex-col transition-colors ${
+            isDarkMode 
+              ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200' 
+              : 'bg-white text-gray-800'
+          }`}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold flex items-center">
+              <h3 className={`text-xl font-semibold flex items-center ${
+                isDarkMode ? 'text-white' : 'text-gray-800'
+              }`}>
                 <ShoppingCart className="mr-2" size={20} />
                 Chi Tiết Giỏ Hàng
               </h3>
-              <button onClick={() => setShowCart(false)} className="text-gray-500 hover:text-gray-700">
+              <button 
+                onClick={() => setShowCart(false)} 
+                className={`transition-colors ${
+                  isDarkMode 
+                    ? 'text-gray-400 hover:text-gray-200' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
                 <X size={20} />
               </button>
             </div>
@@ -223,14 +266,26 @@ const CartWidget = ({ novelTitle }) => {
             <div className="flex-1 overflow-y-auto mb-4">
               <div className="space-y-2">
                 {cart.map(item => (
-                  <div key={item.chapterId} className="flex justify-between items-center p-2 bg-gray-100 rounded">
+                  <div key={item.chapterId} className={`flex justify-between items-center p-2 rounded transition-colors ${
+                    isDarkMode 
+                      ? 'bg-slate-700 border border-gray-600' 
+                      : 'bg-gray-100 border border-gray-200'
+                  }`}>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{item.chapterTitle}</div>
-                      <div className="text-xs text-gray-500">{item.coinPrice} xu</div>
+                      <div className={`text-sm font-medium truncate ${
+                        isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                      }`}>{item.chapterTitle}</div>
+                      <div className={`text-xs ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                      }`}>{item.coinPrice} xu</div>
                     </div>
                     <button
                       onClick={() => handleRemoveFromCart(item.chapterId)}
-                      className="ml-2 text-red-500 hover:text-red-700"
+                      className={`ml-2 transition-colors ${
+                        isDarkMode 
+                          ? 'text-red-400 hover:text-red-300' 
+                          : 'text-red-500 hover:text-red-700'
+                      }`}
                       title="Xóa khỏi giỏ hàng"
                     >
                       <Trash2 size={16} />
@@ -240,23 +295,37 @@ const CartWidget = ({ novelTitle }) => {
               </div>
             </div>
 
-            <div className="border-t pt-4">
+            <div className={`border-t pt-4 ${
+              isDarkMode ? 'border-gray-600' : 'border-gray-200'
+            }`}>
               <div className="flex justify-between items-center mb-4">
-                <span className="font-semibold">Tổng cộng:</span>
-                <span className="font-bold text-orange-600">{totalCost} xu</span>
+                <span className={`font-semibold ${
+                  isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                }`}>Tổng cộng:</span>
+                <span className={`font-bold ${
+                  isDarkMode ? 'text-orange-400' : 'text-orange-600'
+                }`}>{totalCost} xu</span>
               </div>
               
               <div className="flex space-x-2">
                 <button
                   onClick={handleClearCart}
-                  className="flex-1 px-3 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                  className={`flex-1 px-3 py-2 text-sm rounded transition-colors ${
+                    isDarkMode 
+                      ? 'bg-red-600 text-white hover:bg-red-700' 
+                      : 'bg-red-500 text-white hover:bg-red-600'
+                  }`}
                 >
                   Xóa tất cả
                 </button>
                 <button
                   onClick={handlePurchaseCart}
                   disabled={createStatus === 'loading'}
-                  className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+                  className={`flex-1 px-3 py-2 text-sm rounded transition-colors disabled:opacity-50 flex items-center justify-center ${
+                    isDarkMode 
+                      ? 'bg-green-600 text-white hover:bg-green-700' 
+                      : 'bg-green-500 text-white hover:bg-green-600'
+                  }`}
                 >
                   {createStatus === 'loading' ? (
                     <Loader2 className="animate-spin" size={16} />
@@ -273,23 +342,41 @@ const CartWidget = ({ novelTitle }) => {
       {/* Dialog xác nhận mua */}
       {showConfirmDialog && pendingTransaction && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800">
-            <h3 className="text-xl font-semibold mb-4">Xác Nhận Mua Giỏ Hàng</h3>
-            <p className="mb-4">
-              Bạn sắp dùng <span className="font-bold text-orange-500">{pendingTransaction.amountCoin} xu</span> để mua {pendingTransaction.idChapters.length} chương.
+          <div className={`rounded-lg shadow-xl p-6 w-11/12 max-w-md transition-colors ${
+            isDarkMode 
+              ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200' 
+              : 'bg-white text-gray-800'
+          }`}>
+            <h3 className={`text-xl font-semibold mb-4 ${
+              isDarkMode ? 'text-white' : 'text-gray-800'
+            }`}>Xác Nhận Mua Giỏ Hàng</h3>
+            <p className={`mb-4 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              Bạn sắp dùng <span className={`font-bold ${
+                isDarkMode ? 'text-orange-400' : 'text-orange-500'
+              }`}>{pendingTransaction.amountCoin} xu</span> để mua {pendingTransaction.idChapters.length} chương.
             </p>
             <div className="flex justify-end space-x-3">
               <button 
                 onClick={handleCancelConfirm} 
                 disabled={confirmStatus === 'loading'}
-                className="px-5 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                className={`px-5 py-2 rounded-md transition-colors disabled:opacity-50 ${
+                  isDarkMode 
+                    ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' 
+                    : 'text-gray-700 bg-gray-200 hover:bg-gray-300'
+                }`}
               >
                 Hủy
               </button>
               <button 
                 onClick={handleConfirmPurchase} 
                 disabled={confirmStatus === 'loading'}
-                className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700"
+                className={`px-5 py-2 rounded-md text-white flex items-center transition-colors ${
+                  isDarkMode 
+                    ? 'bg-green-600 hover:bg-green-700 disabled:bg-green-800' 
+                    : 'bg-green-500 hover:bg-green-600 disabled:bg-green-700'
+                }`}
               >
                 {confirmStatus === 'loading' && <Loader2 className="animate-spin mr-2" size={16}/>}
                 Xác nhận
