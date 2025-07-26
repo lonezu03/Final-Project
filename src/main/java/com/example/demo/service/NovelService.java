@@ -385,7 +385,7 @@ public class NovelService {
 			novelRespone.setTotalFollower(finalTotalFollower);
 			return novelRespone;
 		});
-
+		
 		// Lấy danh sách idNovel trong trang hiện tại
 		List<String> novelIdsInPage = novelsPage.getContent().stream().map(Novel::getIdNovel)
 				.collect(Collectors.toList());
@@ -395,7 +395,8 @@ public class NovelService {
 				.collect(Collectors.toMap(NovelRatingProjection::getIdNovel, NovelRatingProjection::getAvgRating));
 		return novelsPage.map(novel -> {
 			Integer finalTotalFollower = followNovelRepository.findByNovel_IdNovel(novel.getIdNovel()).size();
-
+			Integer totalView = novel.getChapters().stream().mapToInt(Chapter::getViewChapter).sum();
+			
 			NovelRespone novelRespone = novelMapper.toNovelRespone(novel);
 
 			// Gán rating trung bình
@@ -404,6 +405,8 @@ public class NovelService {
 
 			// Gán follow và follower
 			boolean isFollow = followedNovelIds.contains(novel.getIdNovel());
+			
+			novelRespone.setTotalView(totalView);
 			novelRespone.setIsFollow(isFollow);
 			novelRespone.setTotalFollower(finalTotalFollower);
 

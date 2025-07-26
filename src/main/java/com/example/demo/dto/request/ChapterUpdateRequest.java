@@ -21,4 +21,8 @@ public class ChapterUpdateRequest {
 	Integer coinPrice;
 	
 	String novel;
+	
+	Integer cointRentPrice;
+	
+	Integer dayRentAmount;
 }

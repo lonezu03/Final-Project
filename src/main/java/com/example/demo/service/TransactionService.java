@@ -93,6 +93,7 @@ public class TransactionService {
             chapterBoughtRespone.setIndexChapter(transac.getChapter().getIndexChapter());
             chapterBoughtRespone.setTitleChapter(transac.getChapter().getTitleChapter());
             chapterBoughtRespone.setDateBuy(transac.getDateBuy());
+            chapterBoughtRespone.setDayRentAmount(transac.getDateEndRent());
             
            novel.getChapterBoughtRespone().add(chapterBoughtRespone);
             

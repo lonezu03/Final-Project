@@ -17,18 +17,19 @@ public interface IChapterMapper {
 
 	@Mapping(target = "novel", ignore = true)
 	Chapter toChapter(ChapterCreationRequest request);
-
+ 
 	@Mapping(target = "novel", ignore = true)
 	Chapter toChapterUpdate(ChapterUpdateRequest request);
 
 	@Mapping(source = "novel.idNovel", target = "novel")
 	ChapterRespone toChapterRespone(Chapter chapter);
-
+ 
 	@Mapping(target = "novel", ignore = true)
 	void updateChapter(ChapterUpdateRequest request, @MappingTarget Chapter chapter);
  
 	Chapter toChapterbyChapter(Chapter chapter);
 	
+	@Mapping(target = "dayRentAmount", ignore = true)
     ChapterBoughtRespone toChapterBoughtRespone(Chapter chapter);
 
 }

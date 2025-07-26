@@ -34,4 +34,7 @@ public class ChapterRespone {
 	
 	Integer coinPrice;
 
+	Integer cointRentPrice;
+	
+	Integer dayRentAmount;
 }

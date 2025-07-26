@@ -20,5 +20,8 @@ public class ChapterCreationRequest {
 
 	Integer coinPrice;
 	
+	Integer cointRentPrice;
+	
+	Integer dayRentAmount;
 //	Long indexChapter;
 }

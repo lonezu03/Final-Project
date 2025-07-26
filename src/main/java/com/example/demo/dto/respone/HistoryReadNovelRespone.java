@@ -23,4 +23,5 @@ public class HistoryReadNovelRespone {
 	String nameNovel;
 //	String
 	List<HistoryReadSubRespone> historyReadRespones;
+	List<String> category;
 }

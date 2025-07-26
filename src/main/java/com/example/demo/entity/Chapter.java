@@ -52,6 +52,10 @@ public class Chapter {
 	
 	Integer coinPrice;
 
+	Integer cointRentPrice;
+	
+	Integer dayRentAmount;
+	
 	@ManyToOne
 	@JoinColumn(name = "id_Novel", nullable = false)
 	Novel novel;

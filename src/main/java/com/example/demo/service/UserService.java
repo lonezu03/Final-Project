@@ -38,6 +38,7 @@ import com.example.demo.dto.respone.NovelBoughtRespone;
 import com.example.demo.dto.respone.UploadFileRespone;
 import com.example.demo.dto.respone.UserLoginRespone;
 import com.example.demo.dto.respone.UserRespone;
+import com.example.demo.entity.Category;
 import com.example.demo.entity.Chapter;
 import com.example.demo.entity.HistoryId;
 import com.example.demo.entity.HistoryRead;
@@ -521,11 +522,15 @@ public class UserService {
 	                sub.setUrlNovel(novel.getImageNovel());
 	                sub.setTitleChapter(hr.getChapter().getTitleChapter());
 //	                sub.setHearTime(null)
+	                
 	                return sub;
 	            }).collect(Collectors.toList());
 
 	            return HistoryReadNovelRespone.builder()
 	                    .nameNovel(novel.getNameNovel())
+	                    .category(novel.getCategories().stream()
+	                            .map(Category::getNameCategory)
+	                            .collect(Collectors.toList()))
 	                    .historyReadRespones(subs)
 	                    .build();
 	        }).collect(Collectors.toList());

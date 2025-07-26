@@ -1,13 +1,9 @@
 package com.example.demo.dto.respone;
 
 import java.time.LocalDateTime;
-import java.util.List;
-
-import com.example.demo.enums.Status;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -22,5 +18,6 @@ public class ChapterBoughtRespone {
 	String titleChapter;
 	Long indexChapter;
 	LocalDateTime dateBuy;
-
+	
+	LocalDateTime dayRentAmount;
 }
