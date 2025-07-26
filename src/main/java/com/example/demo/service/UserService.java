@@ -48,6 +48,7 @@ import com.example.demo.entity.Transaction;
 import com.example.demo.entity.User;
 import com.example.demo.enums.Role;
 import com.example.demo.enums.StatusDeposit;
+import com.example.demo.enums.TypeTransaction;
 import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.IHistoryDepositMapper;
@@ -198,9 +199,24 @@ public class UserService {
 			userRespone.setHistoryRead(buildHistoryGroupedByNovel(allHistories));
 			
 			List<String> chapterBought = transactionRepository
-				    .findByUser_IdUserAndStatusDeposit(user.getIdUser(),StatusDeposit.SUCCESS).stream()
-				    .map(tr -> tr.getChapter().getIdChapter())
+				    .findByUser_IdUser(user.getIdUser()).stream()
+				    .filter(t -> {
+				        boolean isSuccess = t.getStatusDeposit() == StatusDeposit.SUCCESS;
+				        
+				        if (!isSuccess) {
+				            return false;
+				        }
+				        
+				        if (t.getTypeTransaction() == TypeTransaction.BUY) {
+				            return true;
+				        } else if (t.getTypeTransaction() == TypeTransaction.RENT) {
+				            return t.getDateEndRent() != null && t.getDateEndRent().isAfter(LocalDateTime.now());
+				        }
+				        return false;
+				    })
+				    .map(t -> t.getChapter().getIdChapter())
 				    .toList();
+
 			userRespone.setChapterBought(chapterBought);
 			
 			List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
@@ -249,7 +265,20 @@ public class UserService {
 		
 		List<String> chapterBought = transactionRepository
 			    .findByUser_IdUser(user.getIdUser()).stream()
-			    .filter(t -> t.getStatusDeposit() == StatusDeposit.SUCCESS)
+			    .filter(t -> {
+			    	boolean isSuccess=t.getStatusDeposit()==StatusDeposit.SUCCESS;
+			    	
+			    	if (!isSuccess) {
+						return false;
+					}
+			    	
+			    	if (t.getTypeTransaction()==TypeTransaction.BUY) {
+						return true;
+					}else if(t.getTypeTransaction()==TypeTransaction.RENT) {
+						return t.getDateEndRent()!=null && t.getDateEndRent().isAfter(LocalDateTime.now());
+					}
+			    	return false;
+			    } )
 			    .map(t -> t.getChapter().getIdChapter()) // giả sử bạn muốn lấy idChapter
 			    .toList();
 		
@@ -322,8 +351,23 @@ public class UserService {
 		userRespone.setToken(accessToken);
 		List<String> chapterBought = transactionRepository
 			    .findByUser_IdUser(user.getIdUser()).stream()
-			    .map(tr -> tr.getChapter().getIdChapter())
+			    .filter(t -> {
+			        boolean isSuccess = t.getStatusDeposit() == StatusDeposit.SUCCESS;
+			        
+			        if (!isSuccess) {
+			            return false;
+			        }
+			        
+			        if (t.getTypeTransaction() == TypeTransaction.BUY) {
+			            return true;
+			        } else if (t.getTypeTransaction() == TypeTransaction.RENT) {
+			            return t.getDateEndRent() != null && t.getDateEndRent().isAfter(LocalDateTime.now());
+			        }
+			        return false;
+			    })
+			    .map(t -> t.getChapter().getIdChapter())
 			    .toList();
+
 		userRespone.setChapterBought(chapterBought);
 		List<HistoryDepositRespone> historyDepositRespones=historyDepositRepository.findByUser(user).stream().map(t -> historyDepositMapper.toHistoryDepositRespone(t)).collect(Collectors.toList());
 		userRespone.setHistoryDeposit(historyDepositRespones);
@@ -348,9 +392,23 @@ public class UserService {
 		
 		List<String> chapterBought = transactionRepository
 			    .findByUser_IdUser(user.getIdUser()).stream()
-			    .filter(t -> t.getStatusDeposit() == StatusDeposit.SUCCESS)
-			    .map(t -> t.getChapter().getIdChapter()) // giả sử bạn muốn lấy idChapter
+			    .filter(t -> {
+			        boolean isSuccess = t.getStatusDeposit() == StatusDeposit.SUCCESS;
+			        
+			        if (!isSuccess) {
+			            return false;
+			        }
+			        
+			        if (t.getTypeTransaction() == TypeTransaction.BUY) {
+			            return true;
+			        } else if (t.getTypeTransaction() == TypeTransaction.RENT) {
+			            return t.getDateEndRent() != null && t.getDateEndRent().isAfter(LocalDateTime.now());
+			        }
+			        return false;
+			    })
+			    .map(t -> t.getChapter().getIdChapter())
 			    .toList();
+
 		
 	
 		
