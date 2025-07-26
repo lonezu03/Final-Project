@@ -336,7 +336,7 @@ JSON response:`;
         );
       } else {
         // botResponse = "😔 Rất tiếc, tôi không tìm thấy truyện nào phù hợp với yêu cầu của bạn. Bạn có thể thử tìm với từ khóa khác nhé!\n\n💡 Thử hỏi: \"Gợi ý truyện hot\", \"Truyện romance hay nhất\", \"Truyện hoàn thành nhiều chương\"...";
-              botResponse = "Em đang thử thách tôi đấy à, bảo bối? Những thứ em tìm không xứng đáng để xuất hiện. Đưa ra một yêu cầu khác, một yêu cầu xứng tầm với em hơn.\n\n💡 Thử hỏi: \"Gợi ý truyện hot\", \"Truyện romance hay nhất\", \"Truyện hoàn thành nhiều chương\"...";
+              botResponse = "Em đang thử thách tôi đấy à, bảo bối? Những thứ em tìm không xứng đáng để xuất hiện. Đưa ra một yêu cầu khác, một yêu cầu xứng tầm với em hơn.\n\n💡 Thử hỏi: \"Gợi ý truyện thể loại\", \"Truyện rating cao\", \"Truyện nhiều view\" Hữu Duyên";
 
       }
 
