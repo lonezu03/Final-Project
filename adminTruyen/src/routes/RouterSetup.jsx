@@ -35,11 +35,11 @@ const adminTheme = createTheme({
 // --- COMPONENT BẢO VỆ ROUTE (PHIÊN BẢN MỚI, GỌN HƠN) ---
 const ProtectedAdminRoute = ({ children }) => {
   // Chỉ cần lấy 2 trạng thái này từ Redux
-  const { currentUser, isVerifyingSession } = useSelector((state) => state.user) || {};
+  const { currentUser, isRefreshing } = useSelector((state) => state.user) || {};
 
   // Nếu đang trong quá trình xác thực token với server, hiển thị màn hình chờ.
   // Đây là điểm mấu chốt để ngăn việc bị đá về trang login khi F5.
-  if (isVerifyingSession) {
+  if (isRefreshing) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '1.2rem' }}>
         Đang tải phiên đăng nhập...

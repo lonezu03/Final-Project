@@ -113,7 +113,14 @@ export const grantManagerRole = createAsyncThunk(
 // ====================================================================
 
 const initialState = {
-  currentUser: null,
+  currentUser: (() => {
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
+    }
+  })(),
   token: localStorage.getItem('authToken') || null,
   loading: false, // Loading chung cho login, register,...
   isRefreshing: !!localStorage.getItem('authToken'), // Loading riêng cho việc refresh phiên
@@ -188,6 +195,14 @@ const userSlice = createSlice({
             state.token = newToken;
             localStorage.setItem('authToken', newToken);
         }
+      })
+      .addCase(refreshUserSession.rejected, (state, action) => {
+        state.isRefreshing = false;
+        state.currentUser = null;
+        state.token = null;
+        state.error = action.payload;
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('authToken');
       })
       // ---- Xử lý cho LẤY TẤT CẢ USER ----
       .addCase(getalluser.pending, (state) => {

@@ -11,19 +11,19 @@ import { refreshUserSession } from './redux/userSlice';
 const AppInitializer = ({ children }) => {
   const dispatch = useDispatch();
 
-  // useEffect(() => {
-  //   // Lấy token trực tiếp từ localStorage để quyết định
-  //   const token = localStorage.getItem('authToken');
+  useEffect(() => {
+    // Lấy token trực tiếp từ localStorage để quyết định
+    const token = localStorage.getItem('authToken');
     
-  //   // Nếu có token, thì mới dispatch action để làm mới phiên.
-  //   // Nếu không, không làm gì cả.
-  //   if (token) {
-  //     dispatch(refreshUserSession());
-  //   }
+    // Nếu có token, thì mới dispatch action để làm mới phiên.
+    // Nếu không, không làm gì cả.
+    if (token) {
+      dispatch(refreshUserSession());
+    }
 
-  //   // Mảng dependency rỗng `[]` đảm bảo useEffect này CHỈ CHẠY 1 LẦN
-  //   // sau khi component được mount lần đầu tiên.
-  // }, [dispatch]);
+    // Mảng dependency rỗng `[]` đảm bảo useEffect này CHỈ CHẠY 1 LẦN
+    // sau khi component được mount lần đầu tiên.
+  }, [dispatch]);
 
   return children; // Render RouterSetup
 };
