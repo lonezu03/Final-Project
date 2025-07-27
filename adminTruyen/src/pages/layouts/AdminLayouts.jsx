@@ -29,9 +29,14 @@ const AdminLayouts = ({ children }) => {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-slate-100 transition-colors dark:bg-slate-950">
-        {/* Nền đen */}
-        <div className={cn(`pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity`,
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 transition-colors dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
+        {/* Background Pattern */}
+        <div className="fixed inset-0 -z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(59,130,246,0.1),rgba(255,255,255,0))] dark:bg-[radial-gradient(circle_at_50%_120%,rgba(59,130,246,0.05),rgba(0,0,0,0))]"></div>
+        </div>
+
+        {/* Overlay */}
+        <div className={cn(`pointer-events-none fixed inset-0 -z-10 bg-black/50 backdrop-blur-sm opacity-0 transition-opacity`,
           !collapsed && "max-md:pointer-events-auto max-md:z-50 max-md:opacity-30",
         )} />
 
@@ -47,8 +52,10 @@ const AdminLayouts = ({ children }) => {
 
 
           {/* 2.2: Phần nội dung */}
-          <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6">
-            <Outlet />
+          <div className="h-[calc(100vh-64px)] overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
+            <div className="animate-fade-in">
+              <Outlet />
+            </div>
           </div>
         </div>
       </div>

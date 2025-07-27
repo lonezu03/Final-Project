@@ -11,39 +11,48 @@ const AppSidebar = forwardRef(({ collapsed }, ref) => {
         <aside
             ref={ref}
             className={cn(
-                `fixed z-[100] flex h-full w-[240px] flex-col overflow-x-hidden border-r border-r-slate-300 bg-white [transition:_width_300ms_cubic-bezier(0.4,_0,_0.2,_1),_left_300ms_cubic-bezier(0.4,_0,_0.2,_1),_background-color_150ms_cubic-bezier(0.4,_0,_0.2,_1),_border_150ms_cubic-bezier(0.4,_0,_0.2,_1)] dark:border-slate-700 dark:bg-slate-900`,
+                `fixed z-[100] flex h-full w-[240px] flex-col overflow-x-hidden border-r border-r-slate-200 bg-white/80 backdrop-blur-xl shadow-lg transition-all duration-300 dark:border-slate-700 dark:bg-slate-900/80`,
                 collapsed ? "md:w-[70px] md:items-center" : "md:w-[240px]",
                 collapsed ? "max-md:-left-full" : "max-md:left-0",
             )}
         >
-            <div className="flex items-center gap-x-3 p-3">
-                <img
-                    src={"/letter-t.png"}
-                    className="block"
-                    alt={"Main-Logo"}
-                    width={35}
-                    height={35}
-                />
-                {!collapsed && <p className="text-lg font-bold whitespace-nowrap text-slate-900 transition-colors dark:text-slate-50">Web Truyện Admin</p>}
+            <div className="flex items-center gap-x-3 p-4 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
+                    <img
+                        src={"/letter-t.png"}
+                        className="h-6 w-6"
+                        alt={"Main-Logo"}
+                    />
+                </div>
+                {!collapsed && (
+                    <div className="flex flex-col">
+                        <p className="text-lg font-bold text-slate-900 transition-colors dark:text-slate-100">
+                            Web Truyện
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Admin Panel
+                        </p>
+                    </div>
+                )}
             </div>
 
-            <div className="flex w-full flex-col gap-y-4 overflow-x-hidden overflow-y-auto p-3 [scrollbar-width:_thin]">
+            <div className="flex w-full flex-col gap-y-4 overflow-x-hidden overflow-y-auto p-4 custom-scrollbar">
                 {navbarLinks.map((nav, index) => (
                     <nav
                         key={index}
                         className={cn(`sidebar-group`, collapsed && "md:items-center")}
                     >
-                        <p className={cn(`sidebar-group-title`, collapsed && "md:w-[45px]")}>{nav.title}</p>
+                        <p className={cn(`sidebar-group-title`, collapsed && "md:w-[45px] md:text-center")}>{nav.title}</p>
 
                         {nav.links.map((link, index_2) => (
                             <NavLink
                                 key={index_2}
                                 to={link.path}
                                 end // Chỉ kích hoạt `active` nếu URL khớp chính xác
-                                className={cn("sidebar-item", collapsed && "md:w-[45px]")}
+                                className={cn("sidebar-item", collapsed && "md:w-[45px] md:justify-center")}
                             >
                                 <link.icon
-                                    size={22}
+                                    size={20}
                                     className="shrink-0"
                                 />
 

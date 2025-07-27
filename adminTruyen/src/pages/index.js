@@ -16,9 +16,7 @@
 export { default as Dashboard }           from "./admin/Dashboard";
 export { default as CategoryManagement }  from "./admin/CategoryManagement";
 export { default as NovelManagement }   from "./admin/NovelManagement";
-export { default as PaymentManagement }     from "./admin/PaymentManagement";
 export { default as AnalyticsReport }     from "./admin/AnalyticsReport";
-export { default as CustomerManagement }  from "./admin/CustomerManagement";
 export { default as CommentManagement } from "./admin/CommentManagement";
 // [ADMIN Page - END]------------------------------------------
 
