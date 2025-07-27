@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { getAllAuthors } from '../redux/authorSlice';
+import { getAllCategories } from '../redux/categorySlice';
 import { Link } from "react-router-dom";
 import { Send, Bot, X, Book, Star } from "lucide-react";
 import { useTheme } from '../context/ThemeContext';
@@ -10,6 +12,7 @@ const genAI = new GoogleGenerativeAI(GEMINI_CONFIG.API_KEY);
 
 const NovelChatBot = () => {
   const { isDarkMode } = useTheme();
+  const dispatch = useDispatch();
   const [isChatting, setIsChatting] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -21,9 +24,25 @@ const NovelChatBot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef(null);
 
-  // Lấy dữ liệu novels từ Redux store
+  // Lấy dữ liệu từ Redux store
   const novels = useSelector((state) => state.novels.novels || []);
+  const authors = useSelector((state) => state.authors.authors || []);
+  const categories = useSelector((state) => state.categories.categories || []);
+  
   console.log("Novels data from Redux:", novels);
+  console.log("Authors data from Redux:", authors);
+  console.log("Categories data from Redux:", categories);
+  
+  // Fetch dữ liệu authors và categories nếu chưa có
+  useEffect(() => {
+    if (!authors || authors.length === 0) {
+      dispatch(getAllAuthors());
+    }
+    if (!categories || categories.length === 0) {
+      dispatch(getAllCategories());
+    }
+  }, [dispatch, authors, categories]);
+  
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
@@ -40,15 +59,11 @@ const NovelChatBot = () => {
     setIsLoading(true);
 
     try {
-      // Kiểm tra nếu không có dữ liệu novels
+      // Kiểm tra nếu không có dữ liệu novels, authors hoặc categories
       if (!novels || novels.length === 0) {
         const noDataMessage = {
           sender: "bot",
-          // text: "Hiện tại chưa có dữ liệu truyện nào trong hệ thống. Vui lòng thử lại sau khi dữ liệu đã được tải.",
-          // text: "Chết tiệt! Thứ vô dụng này lại dám trống rỗng trước mặt em sao? Ngoan, đợi một chút. Để tôi đích thân xử lý nó.",
-          // text: "Hừm? Dám để 'bảo bối' của tôi phải đợi à? Cái hệ thống này đúng là không có mắt nhìn. Yên nào, sẽ có ngay.",
           text: "Lại dám trống rỗng? Thật chướng mắt. Em đợi đi, tôi bắt nó ra cho em.",
-
         };
         setMessages((prev) => [...prev, noDataMessage]);
         setIsLoading(false);
@@ -59,6 +74,33 @@ const NovelChatBot = () => {
       
       // Tạo context từ dữ liệu novels với thông tin chi tiết - tối đa 100 truyện
       const limitedNovels = novels.filter(novel => novel && (novel.nameNovel || novel.title)).slice(0, 100);
+      
+      // Tạo danh sách đầy đủ tác giả và thể loại từ Redux store
+      const authorsContext = authors.length > 0 ? authors
+        .filter(author => author && author.nameAuthor)
+        .map(author => {
+          const authorNovels = limitedNovels.filter(novel => 
+            novel.authors && novel.authors.some(a => a.idAuthor === author.idAuthor)
+          );
+          return `TÁC GIẢ: ${author.nameAuthor} (ID: ${author.idAuthor})
+- Quốc tịch: ${author.nationalityAuthor || 'Chưa rõ'}
+- Giới tính: ${author.genderAuthor === 'MALE' ? 'Nam' : author.genderAuthor === 'FEMALE' ? 'Nữ' : 'Khác'}
+- Mô tả: ${author.descriptionAuthor || 'Chưa có mô tả'}
+- Số truyện: ${authorNovels.length}
+- Các truyện: ${authorNovels.map(n => n.nameNovel || n.title).join(', ') || 'Chưa có truyện'}`;
+        }).join('\n\n') : "Chưa có dữ liệu tác giả";
+
+      const categoriesContext = categories.length > 0 ? categories
+        .filter(category => category && category.nameCategory)
+        .map(category => {
+          const categoryNovels = limitedNovels.filter(novel => 
+            novel.categories && novel.categories.some(c => c.idCategory === category.idCategory)
+          );
+          return `THỂ LOẠI: ${category.nameCategory} (ID: ${category.idCategory})
+- Số truyện: ${categoryNovels.length}
+- Các truyện: ${categoryNovels.map(n => n.nameNovel || n.title).join(', ') || 'Chưa có truyện'}`;
+        }).join('\n\n') : "Chưa có dữ liệu thể loại";
+
       const novelContext = limitedNovels
         .map((novel) => {
           const title = novel.nameNovel || novel.title || "Chưa có tên";
@@ -95,25 +137,29 @@ const NovelChatBot = () => {
         .join("\n\n");
 
       // Tạo danh sách keywords từ dữ liệu thực tế
-      const allCategories = [...new Set(
-        limitedNovels.flatMap(novel =>
-          novel.categories
-            ? novel.categories
-                .filter(cat => cat && cat.categoryName)
-                .map(cat => cat.categoryName.toLowerCase())
-            : []
-        )
-      )].filter(cat => cat);
+      const allCategories = categories.length > 0 
+        ? categories.map(cat => cat.nameCategory).filter(name => name)
+        : [...new Set(
+            limitedNovels.flatMap(novel =>
+              novel.categories
+                ? novel.categories
+                    .filter(cat => cat && cat.categoryName)
+                    .map(cat => cat.categoryName.toLowerCase())
+                : []
+            )
+          )].filter(cat => cat);
 
-      const allAuthors = [...new Set(
-        limitedNovels.flatMap(novel =>
-          novel.authors
-            ? novel.authors
-                .filter(author => author && author.authorName)
-                .map(author => author.authorName.toLowerCase())
-            : []
-        )
-      )].filter(author => author);
+      const allAuthors = authors.length > 0
+        ? authors.map(author => author.nameAuthor).filter(name => name)
+        : [...new Set(
+            limitedNovels.flatMap(novel =>
+              novel.authors
+                ? novel.authors
+                    .filter(author => author && author.authorName)
+                    .map(author => author.authorName.toLowerCase())
+                : []
+            )
+          )].filter(author => author);
 
       const keywordsList = [
         `THỂ LOẠI CÓ SẴN: ${allCategories.join(", ")}`,
@@ -123,9 +169,17 @@ const NovelChatBot = () => {
 
       const prompt = `Bạn là một trợ lý thông minh cho website đọc truyện online với khả năng tìm kiếm nâng cao và hiểu biết sâu về sở thích đọc truyện.
 
-⚠️ QUAN TRỌNG: BẠN CHỈ ĐƯỢC SỬ DỤNG ĐÚNG THÔNG TIN TỪ DANH SÁCH TRUYỆN DƯỚI ĐÂY.
+⚠️ QUAN TRỌNG: BẠN CHỈ ĐƯỢC SỬ DỤNG ĐÚNG THÔNG TIN TỪ DANH SÁCH DƯỚI ĐÂY.
 
-DANH SÁCH ${limitedNovels.length} TRUYỆN CÓ SẴN TRONG HỆ THỐNG:
+=== DANH SÁCH TÁC GIẢ TRONG HỆ THỐNG (${authors.length} tác giả) ===
+
+${authorsContext}
+
+=== DANH SÁCH THỂ LOẠI TRONG HỆ THỐNG (${categories.length} thể loại) ===
+
+${categoriesContext}
+
+=== DANH SÁCH ${limitedNovels.length} TRUYỆN CÓ SẴN TRONG HỆ THỐNG ===
 
 ${novelContext}
 
@@ -207,8 +261,13 @@ Người dùng hỏi: ${input}
 
 JSON response:`;
 
-      console.log("Novel count being sent to AI:", limitedNovels.length);
+      console.log("Data being sent to AI:");
+      console.log("- Novels count:", limitedNovels.length);
+      console.log("- Authors count:", authors.length);
+      console.log("- Categories count:", categories.length);
       console.log("Sample novels:", limitedNovels.slice(0, 3).map(n => n.nameNovel || n.title));
+      console.log("Sample authors:", authors.slice(0, 3).map(a => a.nameAuthor));
+      console.log("Sample categories:", categories.slice(0, 3).map(c => c.nameCategory));
 
       const result = await chat.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -332,12 +391,21 @@ JSON response:`;
           <div>
             <p className="mb-2">🎯 Dựa trên yêu cầu của bạn, tôi tìm thấy {foundNovels.length} truyện phù hợp:</p>
             {novelCards}
+            <p className="text-xs text-gray-500 mt-3">
+              💡 Tìm kiếm từ {limitedNovels.length} truyện, {authors.length} tác giả, {categories.length} thể loại
+            </p>
           </div>
         );
       } else {
-        // botResponse = "😔 Rất tiếc, tôi không tìm thấy truyện nào phù hợp với yêu cầu của bạn. Bạn có thể thử tìm với từ khóa khác nhé!\n\n💡 Thử hỏi: \"Gợi ý truyện hot\", \"Truyện romance hay nhất\", \"Truyện hoàn thành nhiều chương\"...";
-              botResponse = "Em đang thử thách tôi đấy à, bảo bối? Những thứ em tìm không xứng đáng để xuất hiện. Đưa ra một yêu cầu khác, một yêu cầu xứng tầm với em hơn.\n\n💡 Thử hỏi: \"Gợi ý truyện thể loại\", \"Truyện rating cao\", \"Truyện nhiều view\" Hữu Duyên";
+        botResponse = `Em đang thử thách tôi đấy à, bảo bối? Những thứ em tìm không xứng đáng để xuất hiện. Đưa ra một yêu cầu khác, một yêu cầu xứng tầm với em hơn.
 
+💡 **Thử hỏi với các tác giả có sẵn:**
+${authors.slice(0, 5).map(a => `"Truyện của ${a.nameAuthor}"`).join(', ')}
+
+💡 **Thử hỏi với các thể loại có sẵn:**
+${categories.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join(', ')}
+
+💡 **Hoặc thử:** "Gợi ý truyện hot", "Truyện rating cao", "Truyện nhiều view"`;
       }
 
       const botMessage = { sender: "bot", text: botResponse };
