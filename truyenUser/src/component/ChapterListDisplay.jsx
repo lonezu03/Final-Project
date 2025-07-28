@@ -3,12 +3,13 @@ import React, { useState,useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
-import { Loader2 ,Download, ShoppingCart, Plus } from 'lucide-react'; // Thêm icon giỏ hàng
+import { Loader2 ,Download, ShoppingCart, Plus, Clock } from 'lucide-react'; // Thêm Clock icon
 import { refreshUser } from '../redux/userSlice';
 import { getChapterContentById } from '../redux/chapterSlice'; 
+import { useTheme } from '../context/ThemeContext'; // Import useTheme 
 
 // Import các action từ transactionSlice và userSlice
-import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
+import { createTransaction, confirmTransactions, resetTransactionState, getAllTransactions } from '../redux/transactionSlice';
 import { logoutUser, loginUserWithPassword } from '../redux/userSlice'; // Giả sử bạn có thông tin để login lại
 
 // Utility functions cho giỏ hàng
@@ -44,23 +45,193 @@ const removeFromCart = (chapterId) => {
   return newCart;
 };
 
+// Component Dialog thuê chương
+const RentDialog = ({ chapter, onConfirm, onCancel, loading, isDarkMode }) => {
+  const [selectedDays, setSelectedDays] = useState(chapter?.dayRentAmount || 1);
+  const [customDays, setCustomDays] = useState('');
+  const [useCustomDays, setUseCustomDays] = useState(false);
+  
+  if (!chapter) return null;
+  
+  const baseRentPrice = chapter.cointRentPrice || 1;
+  const baseDays = chapter.dayRentAmount || 1;
+  
+  // Tính giá thuê dựa trên số ngày
+  const calculateRentPrice = (days) => {
+    return Math.ceil((days / baseDays) * baseRentPrice);
+  };
+  
+  const finalDays = useCustomDays ? parseInt(customDays) || 1 : selectedDays;
+  const totalPrice = calculateRentPrice(finalDays);
+  
+  // Tính ngày hết hạn
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + finalDays);
+  const endDateString = endDate.toLocaleDateString('vi-VN');
+  
+  const handleConfirm = () => {
+    onConfirm(finalDays, totalPrice);
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
+      <div className={`rounded-lg shadow-xl p-6 w-11/12 max-w-md transition-colors ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200' 
+          : 'bg-white text-gray-800'
+      }`}>
+        <h3 className={`text-xl font-semibold mb-4 ${
+          isDarkMode ? 'text-white' : 'text-gray-800'
+        }`}>
+          🕐 Thuê Chương
+        </h3>
+        
+        <div className={`mb-4 p-3 rounded-lg ${
+          isDarkMode ? 'bg-slate-700' : 'bg-gray-100'
+        }`}>
+          <p className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+            {chapter.titleChapter}
+          </p>
+          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Gói cơ bản: {baseDays} ngày - {baseRentPrice} xu
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className={`block text-sm font-medium mb-2 ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          }`}>
+            Chọn thời gian thuê:
+          </label>
+          
+          {/* Tùy chọn có sẵn */}
+          <div className="space-y-2 mb-3">
+            {[baseDays, baseDays * 2, baseDays * 3, baseDays * 7].map(days => (
+              <label key={days} className="flex items-center">
+                <input
+                  type="radio"
+                  name="rentDays"
+                  value={days}
+                  checked={!useCustomDays && selectedDays === days}
+                  onChange={(e) => {
+                    setSelectedDays(parseInt(e.target.value));
+                    setUseCustomDays(false);
+                  }}
+                  className="mr-2"
+                />
+                <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {days} ngày - {calculateRentPrice(days)} xu
+                </span>
+              </label>
+            ))}
+            
+            {/* Tùy chọn tùy chỉnh */}
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="rentDays"
+                checked={useCustomDays}
+                onChange={() => setUseCustomDays(true)}
+                className="mr-2"
+              />
+              <span className={`text-sm mr-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Tùy chỉnh:
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={customDays}
+                onChange={(e) => {
+                  setCustomDays(e.target.value);
+                  setUseCustomDays(true);
+                }}
+                className={`w-20 px-2 py-1 text-sm rounded border ${
+                  isDarkMode 
+                    ? 'bg-slate-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300'
+                }`}
+                placeholder="Ngày"
+              />
+              <span className={`text-sm ml-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                ngày - {useCustomDays ? calculateRentPrice(parseInt(customDays) || 1) : 0} xu
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className={`mb-4 p-3 rounded-lg border-2 border-dashed ${
+          isDarkMode ? 'border-orange-500 bg-orange-900/20' : 'border-orange-400 bg-orange-50'
+        }`}>
+          <div className="flex justify-between items-center">
+            <span className={`font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>
+              Tổng cộng:
+            </span>
+            <span className={`font-bold text-lg ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+              {totalPrice} xu
+            </span>
+          </div>
+          <div className={`text-sm mt-1 ${isDarkMode ? 'text-orange-300' : 'text-orange-600'}`}>
+            Thời hạn: {finalDays} ngày (đến {endDateString})
+          </div>
+        </div>
+
+        <div className="flex space-x-3">
+          <button 
+            onClick={onCancel} 
+            disabled={loading}
+            className={`flex-1 px-4 py-2 rounded-md transition-colors disabled:opacity-50 ${
+              isDarkMode 
+                ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' 
+                : 'text-gray-700 bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            Hủy
+          </button>
+          <button 
+            onClick={handleConfirm} 
+            disabled={loading || finalDays < 1}
+            className={`flex-1 px-4 py-2 rounded-md text-white flex items-center justify-center transition-colors ${
+              isDarkMode 
+                ? 'bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800' 
+                : 'bg-orange-500 hover:bg-orange-600 disabled:bg-orange-700'
+            }`}
+          >
+            {loading && <Loader2 className="animate-spin mr-2" size={16}/>}
+            Thuê ngay
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Component Dialog xác nhận cuối cùng cho giỏ hàng
-const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading }) => {
+const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading, isDarkMode }) => {
     if (!cartItems || cartItems.length === 0) return null;
     const totalCost = cartItems.reduce((sum, item) => sum + item.coinPrice, 0);
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800">
-                <h3 className="text-xl font-semibold mb-4 flex items-center">
+            <div className={`rounded-lg shadow-xl p-6 w-11/12 max-w-md transition-colors ${
+              isDarkMode 
+                ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200' 
+                : 'bg-white text-gray-800'
+            }`}>
+                <h3 className={`text-xl font-semibold mb-4 flex items-center ${
+                  isDarkMode ? 'text-white' : 'text-gray-800'
+                }`}>
                     <ShoppingCart className="mr-2" size={20} />
                     Xác Nhận Mua Giỏ Hàng
                 </h3>
                 <p className="mb-2">Bạn sắp dùng xu để mua {cartItems.length} chương:</p>
-                <div className="max-h-32 overflow-y-auto bg-gray-100 p-2 rounded border mb-4">
+                <div className={`max-h-32 overflow-y-auto p-2 rounded border mb-4 ${
+                  isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+                }`}>
                     <ul className="text-sm">
                         {cartItems.map(item => (
-                            <li key={item.chapterId} className="flex justify-between items-center py-1 border-b border-gray-200 last:border-b-0">
+                            <li key={item.chapterId} className={`flex justify-between items-center py-1 border-b last:border-b-0 ${
+                              isDarkMode ? 'border-gray-600' : 'border-gray-200'
+                            }`}>
                                 <span className="truncate flex-1 mr-2">{item.chapterTitle}</span>
                                 <span className="font-medium text-orange-600">{item.coinPrice} xu</span>
                             </li>
@@ -69,10 +240,22 @@ const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading }) => {
                 </div>
                 <p className="mb-6 text-lg">Tổng cộng: <span className="font-bold text-orange-500">{totalCost} xu</span></p>
                 <div className="flex justify-end space-x-3">
-                    <button onClick={onCancel} disabled={loading} className="px-5 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+                    <button 
+                      onClick={onCancel} 
+                      disabled={loading} 
+                      className={`px-5 py-2 rounded-md transition-colors disabled:opacity-50 ${
+                        isDarkMode 
+                          ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' 
+                          : 'text-gray-700 bg-gray-200 hover:bg-gray-300'
+                      }`}
+                    >
                         Hủy
                     </button>
-                    <button onClick={onConfirm} disabled={loading} className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700">
+                    <button 
+                      onClick={onConfirm} 
+                      disabled={loading} 
+                      className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700"
+                    >
                         {loading && <Loader2 className="animate-spin mr-2" size={16}/>}
                         Xác nhận mua
                     </button>
@@ -83,26 +266,46 @@ const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading }) => {
 };
 
 // Component Dialog xác nhận cuối cùng cho mua lẻ
-const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }) => {
+const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, isDarkMode }) => {
     if (!transactionDetails) return null;
     const { chapters, totalCost } = transactionDetails;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-md text-gray-800">
-                <h3 className="text-xl font-semibold mb-4">Xác Nhận Thanh Toán</h3>
+            <div className={`rounded-lg shadow-xl p-6 w-11/12 max-w-md transition-colors ${
+              isDarkMode 
+                ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200' 
+                : 'bg-white text-gray-800'
+            }`}>
+                <h3 className={`text-xl font-semibold mb-4 ${
+                  isDarkMode ? 'text-white' : 'text-gray-800'
+                }`}>Xác Nhận Thanh Toán</h3>
                 <p className="mb-2">Bạn sắp dùng xu để mua {chapters.length} chương:</p>
-                <div className="max-h-24 overflow-y-auto bg-gray-100 p-2 rounded border mb-4">
+                <div className={`max-h-24 overflow-y-auto p-2 rounded border mb-4 ${
+                  isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+                }`}>
                     <ul className="text-sm list-disc list-inside">
                         {chapters.map(ch => <li key={ch.id} className="truncate">{ch.title}</li>)}
                     </ul>
                 </div>
                 <p className="mb-6 text-lg">Tổng cộng: <span className="font-bold text-orange-500">{totalCost} xu</span></p>
                 <div className="flex justify-end space-x-3">
-                    <button onClick={onCancel} disabled={loading} className="px-5 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
+                    <button 
+                      onClick={onCancel} 
+                      disabled={loading} 
+                      className={`px-5 py-2 rounded-md transition-colors disabled:opacity-50 ${
+                        isDarkMode 
+                          ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' 
+                          : 'text-gray-700 bg-gray-200 hover:bg-gray-300'
+                      }`}
+                    >
                         Hủy
                     </button>
-                    <button onClick={onConfirm} disabled={loading} className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700">
+                    <button 
+                      onClick={onConfirm} 
+                      disabled={loading} 
+                      className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700"
+                    >
                         {loading && <Loader2 className="animate-spin mr-2" size={16}/>}
                         Xác nhận
                     </button>
@@ -114,16 +317,20 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
  const ChapterListDisplay = ({ chapters, novelId, currentPage = 1, chaptersPerPage = 50 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isDarkMode } = useTheme(); // Sử dụng theme context
 
   // Lấy state mới từ Redux
   const { currentUser } = useSelector((state) => state.user);
-  const { createStatus, confirmStatus, pendingTransaction, createError } = useSelector((state) => state.transaction);
-    const { currentNovel } = useSelector((state) => state.novels);
+  const { createStatus, confirmStatus, pendingTransaction, createError, allTransactions } = useSelector((state) => state.transaction);
+  const { currentNovel } = useSelector((state) => state.novels);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showCartDialog, setShowCartDialog] = useState(false);
+  const [showRentDialog, setShowRentDialog] = useState(false); // State cho dialog thuê
+  const [chapterToRent, setChapterToRent] = useState(null); // Chapter đang muốn thuê
   const [cart, setCart] = useState(getCartFromStorage());
-  const [downloadingChapterId, setDownloadingChapterId] = useState(null); 
+  const [downloadingChapterId, setDownloadingChapterId] = useState(null);
+  const [isRentTransaction, setIsRentTransaction] = useState(false); // Flag để phân biệt transaction thuê vs mua 
   const handleDownload = async (chapter) => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để tải về chương.");
@@ -242,13 +449,61 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
   // Effect để xử lý kết quả từ `createTransaction`
   useEffect(() => {
     if (createStatus === 'succeeded' && pendingTransaction) {
-      setShowConfirmDialog(true);
+      // Chỉ hiển thị dialog xác nhận cho transaction mua, không phải thuê
+      if (!isRentTransaction) {
+        setShowConfirmDialog(true);
+      }
     }
     if (createStatus === 'failed' && createError) {
       toast.error(`Lỗi tạo giao dịch: ${createError}`);
       dispatch(resetTransactionState());
+      setIsRentTransaction(false); // Reset flag
     }
-  }, [createStatus, pendingTransaction, createError, dispatch]);
+  }, [createStatus, pendingTransaction, createError, dispatch, isRentTransaction]);
+
+  // Effect riêng để xử lý transaction thuê thành công
+  useEffect(() => {
+    if (createStatus === 'succeeded' && pendingTransaction && isRentTransaction) {
+      // Tự động confirm transaction thuê luôn
+      handleConfirmRentTransaction();
+    }
+  }, [createStatus, pendingTransaction, isRentTransaction]);
+
+  const handleConfirmRentTransaction = async () => {
+    if (!currentUser || !pendingTransaction) return;
+    
+    const confirmationData = {
+      idUser: currentUser.idUser,
+      listIdChapter: pendingTransaction.idChapters,
+    };
+    
+    console.log('Xác nhận giao dịch thuê với data:', confirmationData);
+    
+    try {
+      // Xác nhận giao dịch thuê
+      const result = await dispatch(confirmTransactions(confirmationData)).unwrap();
+      toast.success("Thuê chương thành công! Đang cập nhật dữ liệu...");
+
+      // Refresh dữ liệu người dùng
+      await dispatch(refreshUser()).unwrap();
+      
+      toast.success("Đã thuê chương thành công!");
+
+      // Điều hướng đến chương đã thuê
+      if (pendingTransaction.idChapters.length === 1) {
+        const rentedChapterId = pendingTransaction.idChapters[0];
+        navigate(`/novel/${novelId}/chapter/${rentedChapterId}`);
+      }
+
+    } catch (error) {
+      console.error('Lỗi xác nhận giao dịch thuê:', error);
+      toast.error(`Giao dịch thuê thất bại: ${error.message || error}`);
+    } finally {
+      // Reset state
+      setIsRentTransaction(false);
+      dispatch(resetTransactionState());
+    }
+  };
 
   // Cập nhật cart từ storage
   useEffect(() => {
@@ -258,6 +513,35 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Fetch all transactions để kiểm tra chapter thuê
+  useEffect(() => {
+    if (currentUser?.idUser) {
+      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }));
+    }
+  }, [currentUser, dispatch]);
+
+  // Helper function để kiểm tra chapter có được thuê không và còn hạn không
+  const getChapterRentInfo = (chapterId) => {
+    if (!allTransactions?.rentedNovels) return null;
+    
+    for (const novel of Object.values(allTransactions.rentedNovels)) {
+      const rentedChapter = novel.chapterBoughtRespone?.find(ch => ch.idChapter === chapterId);
+      if (rentedChapter && rentedChapter.rentExpiration) {
+        const expirationDate = new Date(rentedChapter.rentExpiration);
+        const now = new Date();
+        const isExpired = now > expirationDate;
+        
+        return {
+          isRented: true,
+          expirationDate,
+          isExpired,
+          daysLeft: isExpired ? 0 : Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24))
+        };
+      }
+    }
+    return null;
+  };
 
   const handleChapterClick = (chapter) => {
     // Kiểm tra nếu chapter yêu cầu đăng nhập
@@ -300,7 +584,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
   const handlePurchaseCart = () => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để mua chương.");
-      navigate('/login');
+      navigate('/');
       return;
     }
 
@@ -316,6 +600,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
       return;
     }
 
+    setIsRentTransaction(false); // Đây là transaction mua
     const transactionData = {
       idUser: currentUser.idUser,
       idChapters: cart.map(item => item.chapterId),
@@ -347,6 +632,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
       return;
     }
     
+    setIsRentTransaction(false); // Đây là transaction mua
     const transactionData = {
       idUser: currentUser.idUser,
       idChapters: [chapterToBuy.idChapter],
@@ -406,19 +692,86 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
   const handleCancelConfirm = () => {
     setShowConfirmDialog(false);
     setShowCartDialog(false);
+    setIsRentTransaction(false); // Reset flag
     dispatch(resetTransactionState());
+  };
+
+  // Hàm xử lý thuê chương
+  const handleRentClick = (chapter) => {
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để thuê chương.");
+      return;
+    }
+
+    // Kiểm tra nếu chapter yêu cầu đăng nhập
+    if (chapter.isLoginRequired) {
+      toast.info("Vui lòng đăng nhập để thuê chương.");
+      return;
+    }
+
+    const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+    if (isPurchased) {
+      toast.info("Bạn đã sở hữu chương này, không cần thuê.");
+      return;
+    }
+
+    // Kiểm tra xem chương có hỗ trợ thuê không
+    if (!chapter.cointRentPrice || !chapter.dayRentAmount) {
+      toast.info("Chương này không hỗ trợ thuê.");
+      return;
+    }
+
+    setChapterToRent(chapter);
+    setShowRentDialog(true);
+  };
+
+  const handleConfirmRent = (days, totalPrice) => {
+    if (!currentUser || !chapterToRent) return;
+
+    if ((currentUser.coin || 0) < totalPrice) {
+      toast.error("Số xu không đủ. Vui lòng nạp thêm!");
+      navigate('/deposit');
+      return;
+    }
+
+    // Tính ngày hết hạn
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + days);
+
+    setIsRentTransaction(true); // Đây là transaction thuê
+    const transactionData = {
+      idUser: currentUser.idUser,
+      idChapters: [chapterToRent.idChapter],
+      amountCoin: totalPrice,
+      typeTransaction: 'RENT',
+      dateEndRent: endDate.toISOString(),
+    };
+    
+    console.log('Tạo giao dịch thuê với data:', transactionData);
+    dispatch(createTransaction(transactionData));
+    setShowRentDialog(false);
+    setChapterToRent(null);
+  };
+
+  const handleCancelRent = () => {
+    setShowRentDialog(false);
+    setChapterToRent(null);
   };
 
   return (
     <>
       {/* Header với thông tin giỏ hàng */}
       {cart.length > 0 && (
-        <div className="mb-4 p-3 bg-blue-900 rounded-lg border border-blue-700">
+        <div className={`mb-4 p-3 rounded-lg border ${
+          isDarkMode 
+            ? 'bg-blue-900 border-blue-700' 
+            : 'bg-blue-50 border-blue-200'
+        }`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center text-blue-200">
+            <div className={`flex items-center ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
               <ShoppingCart className="mr-2" size={18} />
               <span className="text-sm">Giỏ hàng: {cart.length} chương</span>
-              <span className="ml-2 text-orange-300 font-medium">
+              <span className={`ml-2 font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-600'}`}>
                 ({cart.reduce((sum, item) => sum + item.coinPrice, 0)} xu)
               </span>
             </div>
@@ -454,29 +807,68 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
           // Kiểm tra xem có đang tải chương này không
           const isDownloading = downloadingChapterId === chapter.idChapter;
           const coinPrice = chapter.coinPrice || 0; // Lấy giá từ API
+          const coinRentPrice = chapter.cointRentPrice || 0; // Giá thuê từ API
+          const dayRentAmount = chapter.dayRentAmount || 0; // Số ngày thuê từ API
           const isInCart = cart.some(item => item.chapterId === chapter.idChapter);
           // Kiểm tra xem chapter có yêu cầu đăng nhập không
           const requiresLogin = chapter.isLoginRequired || false;
+          // Kiểm tra xem chapter có hỗ trợ thuê không
+          const canRent = coinRentPrice > 0 && dayRentAmount > 0;
+          // Kiểm tra thông tin thuê chapter
+          const rentInfo = getChapterRentInfo(chapter.idChapter);
+          const isRented = rentInfo?.isRented && !rentInfo?.isExpired;
 
           return (
-            <li key={chapter.idChapter || `temp_${index}`} className="flex items-center justify-between border-b border-gray-700 py-1.5">
+            <li key={chapter.idChapter || `temp_${index}`} className={`flex items-center justify-between border-b py-1.5 ${
+              isDarkMode ? 'border-gray-700' : 'border-gray-200'
+            }`}>
               <div className="flex items-center flex-grow min-w-0">
-                <span className="w-20 md:w-24 flex-shrink-0 text-left mr-3 pl-2 text-gray-400">{chapterNumberDisplay}</span>
-                {isPurchased ? (
-                  <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className="flex-1 text-gray-200 hover:text-sky-400 truncate" title={chapterTitle}>
-                    {chapterTitle}
-                  </Link>
-                ) : requiresLogin ? (
-                  <button 
-                    onClick={() => handleChapterClick(chapter)}
-                    className="flex-1 text-gray-300 hover:text-yellow-400 truncate text-left cursor-pointer" 
-                    title={`${chapterTitle} - Vui lòng đăng nhập để đọc`}
-                  >
-                    {chapterTitle} 🔒
-                  </button>
-                ) : (
-                  <span className="flex-1 text-gray-300 truncate" title={chapterTitle}>{chapterTitle}</span>
-                )}
+                <span className={`w-20 md:w-24 flex-shrink-0 text-left mr-3 pl-2 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>{chapterNumberDisplay}</span>
+                <div className="flex-1 min-w-0">
+                  {isPurchased ? (
+                    <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className={`hover:text-sky-400 truncate ${
+                      isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                    }`} title={chapterTitle}>
+                      {chapterTitle}
+                    </Link>
+                  ) : isRented ? (
+                    <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className={`hover:text-purple-400 truncate ${
+                      isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                    }`} title={chapterTitle}>
+                      {chapterTitle} 🕐
+                    </Link>
+                  ) : requiresLogin ? (
+                    <button 
+                      onClick={() => handleChapterClick(chapter)}
+                      className={`hover:text-yellow-400 truncate text-left cursor-pointer ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`} 
+                      title={`${chapterTitle} - Vui lòng đăng nhập để đọc`}
+                    >
+                      {chapterTitle} 🔒
+                    </button>
+                  ) : (
+                    <span className={`truncate ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`} title={chapterTitle}>{chapterTitle}</span>
+                  )}
+                  
+                  {/* Hiển thị thông tin thuê nếu có */}
+                  {rentInfo && !rentInfo.isExpired && (
+                    <div className={`text-xs mt-1 ${
+                      isDarkMode ? 'text-purple-400' : 'text-purple-600'
+                    }`}>
+                      Còn {rentInfo.daysLeft} ngày ({rentInfo.expirationDate.toLocaleDateString('vi-VN')})
+                    </div>
+                  )}
+                  {rentInfo && rentInfo.isExpired && (
+                    <div className="text-xs text-red-400 mt-1">
+                      Hết hạn thuê ({rentInfo.expirationDate.toLocaleDateString('vi-VN')})
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* NÚT HÀNH ĐỘNG: MUA, THÊM VÀO GIỎ, hoặc TẢI VỀ */}
@@ -489,11 +881,17 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
                   >
                     Đăng nhập
                   </button>
-                ) : isPurchased ? (
+                ) : isPurchased || isRented ? (
                   <button
                     onClick={() => handleDownload(chapter)}
                     disabled={isDownloading}
-                    className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+                    className={`px-3 py-1 text-xs rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center ${
+                      isRented 
+                        ? isDarkMode 
+                          ? 'bg-purple-600 text-white' 
+                          : 'bg-purple-500 text-white'
+                        : 'bg-green-600 text-white'
+                    }`}
                     title={`Tải về chương ${chapterTitle}`}
                   >
                     {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
@@ -506,19 +904,43 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
                       disabled={isInCart || createStatus === 'loading' || confirmStatus === 'loading'}
                       className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 flex items-center ${
                         isInCart 
-                          ? 'bg-blue-600 text-white cursor-not-allowed' 
-                          : 'bg-blue-500 text-white hover:bg-blue-600'
+                          ? isDarkMode
+                            ? 'bg-blue-600 text-white cursor-not-allowed'
+                            : 'bg-blue-500 text-white cursor-not-allowed'
+                          : isDarkMode
+                          ? 'bg-blue-500 text-white hover:bg-blue-600'
+                          : 'bg-blue-400 text-white hover:bg-blue-500'
                       }`}
                       title={isInCart ? "Đã có trong giỏ" : "Thêm vào giỏ hàng"}
                     >
                       {isInCart ? <ShoppingCart size={14} /> : <Plus size={14} />}
                     </button>
 
+                    {/* Nút thuê chapter nếu hỗ trợ và chưa thuê */}
+                    {canRent && !isRented && (
+                      <button 
+                        onClick={() => handleRentClick(chapter)}
+                        disabled={createStatus === 'loading' || confirmStatus === 'loading'}
+                        className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 flex items-center ${
+                          isDarkMode 
+                            ? 'bg-purple-500 text-white hover:bg-purple-600'
+                            : 'bg-purple-400 text-white hover:bg-purple-500'
+                        }`}
+                        title={`Thuê ${dayRentAmount} ngày - ${coinRentPrice} coin`}
+                      >
+                        <Clock size={14} />
+                      </button>
+                    )}
+
                     {/* Nút mua ngay */}
                     <button
                       onClick={() => handlePurchaseClick(chapter)}
                       disabled={createStatus === 'loading' || confirmStatus === 'loading'}
-                      className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors disabled:opacity-50"
+                      className={`px-3 py-1.5 text-xs rounded transition-colors disabled:opacity-50 ${
+                        isDarkMode 
+                          ? 'bg-orange-500 text-white hover:bg-orange-600'
+                          : 'bg-orange-400 text-white hover:bg-orange-500'
+                      }`}
                       title={`Mua ngay chương ${chapterTitle}`}
                     >
                       {coinPrice} xu
@@ -546,6 +968,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
               onConfirm={handleConfirmPurchase}
               onCancel={handleCancelConfirm}
               loading={confirmStatus === 'loading'}
+              isDarkMode={isDarkMode}
             />
           ) : (
             <FinalConfirmDialog
@@ -559,9 +982,21 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading }
               onConfirm={handleConfirmPurchase}
               onCancel={handleCancelConfirm}
               loading={confirmStatus === 'loading'}
+              isDarkMode={isDarkMode}
             />
           )}
         </>
+      )}
+
+      {/* Rent Dialog */}
+      {showRentDialog && chapterToRent && (
+        <RentDialog 
+          chapter={chapterToRent}
+          onConfirm={handleConfirmRent}
+          onCancel={handleCancelRent}
+          loading={createStatus === 'loading'}
+          isDarkMode={isDarkMode}
+        />
       )}
     </>
   );

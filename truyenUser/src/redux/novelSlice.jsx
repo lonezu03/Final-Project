@@ -129,12 +129,17 @@ export const searchNovels = createAsyncThunk(
         queryString = params.toString() ? `?${params.toString()}` : '';
       }
 
+      console.log("searchNovels thunk - URL:", `${publicApiBaseNovel}/search${queryString}`);
+      console.log("searchNovels thunk - searchCriteria:", searchCriteria);
 
-      const response = await apiClient.post(`${publicApiBaseNovel}/search${queryString}`, searchCriteria || {}, {
+      // SỬA: Dùng axios thay vì apiClient vì API này là public
+      const response = await axios.post(`${publicApiBaseNovel}/search${queryString}`, searchCriteria || {}, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
+
+      console.log("searchNovels thunk - response:", response.data);
 
       if (response.data && Array.isArray(response.data.content) && response.data.pageable) {
         console.log("Thunk searchNovels returning fulfilled with:", response.data);

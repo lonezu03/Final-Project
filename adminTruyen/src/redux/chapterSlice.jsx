@@ -85,7 +85,7 @@ export const updateChapter = createAsyncThunk(
       // apiClient sẽ tự động thêm token và set Content-Type là multipart/form-data
       const response = await apiClient.put(`${apiPath}/update`, formData);
       return response.data.result;
-    } catch (error) {jj
+    } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);
     }
   }

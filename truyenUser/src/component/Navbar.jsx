@@ -101,17 +101,109 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const handleSearch = () => {
     const query = searchQuery.trim();
     if (query) {
-      const searchCriteria = {
-        nameNovel: query,
-        nameOperator: "CONTAINS",
-      };
+      console.log('=== NAVBAR SEARCH DEBUG ===');
+      console.log('Original query:', query);
+      
+      const searchCriteria = {};
+      let remainingQuery = query;
+      
+      // Tách các phần author: và category: ra khỏi query
+      const parts = query.split(/\s+/);
+      const authorNames = [];
+      const categoryNames = [];
+      const otherParts = [];
+      
+      let isAuthor = false;
+      let isCategory = false;
+      
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        
+        if (part.toLowerCase().startsWith('author:')) {
+          isAuthor = true;
+          isCategory = false;
+          const authorPart = part.substring(7); // Bỏ "author:"
+          if (authorPart) {
+            authorNames.push(authorPart);
+          }
+        } else if (part.toLowerCase().startsWith('category:')) {
+          isCategory = true;
+          isAuthor = false;
+          const categoryPart = part.substring(9); // Bỏ "category:"
+          if (categoryPart) {
+            categoryNames.push(categoryPart);
+          }
+        } else if (isAuthor) {
+          // Tiếp tục thu thập tên tác giả
+          if (part.toLowerCase().startsWith('category:')) {
+            isCategory = true;
+            isAuthor = false;
+            const categoryPart = part.substring(9);
+            if (categoryPart) {
+              categoryNames.push(categoryPart);
+            }
+          } else {
+            authorNames.push(part);
+          }
+        } else if (isCategory) {
+          // Tiếp tục thu thập tên thể loại
+          if (part.toLowerCase().startsWith('author:')) {
+            isAuthor = true;
+            isCategory = false;
+            const authorPart = part.substring(7);
+            if (authorPart) {
+              authorNames.push(authorPart);
+            }
+          } else {
+            categoryNames.push(part);
+          }
+        } else {
+          // Phần bình thường (tên truyện)
+          otherParts.push(part);
+        }
+      }
+      
+      // Ghép lại tên tác giả và thể loại
+      if (authorNames.length > 0) {
+        searchCriteria.authorNames = [authorNames.join(' ')];
+      }
+      
+      if (categoryNames.length > 0) {
+        searchCriteria.categoryNames = [categoryNames.join(' ')];
+      }
+      
+      // Phần còn lại là tên truyện
+      if (otherParts.length > 0) {
+        searchCriteria.nameNovel = otherParts.join(' ');
+        searchCriteria.nameOperator = "CONTAINS";
+      }
+      
+      console.log('Parsed parts:', { authorNames, categoryNames, otherParts });
+      console.log('Final searchCriteria:', searchCriteria);
+
       const paginationAndSortParams = {
         page: 0,
         size: 20,
       };
+      
       dispatch(clearSearchedNovels());
       dispatch(searchNovels({ searchCriteria, paginationAndSortParams }));
-      navigate(`/search-results?q=${encodeURIComponent(query)}`);
+      
+      // Tạo URL với các tham số đầy đủ
+      const urlParams = new URLSearchParams();
+      if (searchCriteria.nameNovel) urlParams.append('q', searchCriteria.nameNovel);
+      if (searchCriteria.authorNames) {
+        urlParams.append('authors', searchCriteria.authorNames.join(','));
+      }
+      if (searchCriteria.categoryNames) {
+        urlParams.append('categories', searchCriteria.categoryNames.join(','));
+      }
+      
+      const finalUrl = `/search-results?${urlParams.toString()}`;
+      console.log('Navigate to URL:', finalUrl);
+      console.log('=== END NAVBAR SEARCH DEBUG ===');
+      
+      navigate(finalUrl);
       setSearchQuery("");
       setIsSearchActive(false);
     }
@@ -208,7 +300,7 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="px-3 sm:px-4 py-2 w-full bg-blue-800 text-white rounded-md placeholder-gray-300 text-sm"
-                placeholder="Tìm kiếm..."
+                placeholder="Tên truyện, author:tác giả, category:thể loại"
               />
             )}
             

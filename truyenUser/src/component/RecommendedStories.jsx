@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { searchNovels, getAllNovels, getNovelById } from '../redux/novelSlice';
 import { getAllHistoryByUser } from '../redux/userSlice';
+import NovelCard from './NovelCard'; // Import NovelCard component
 import { 
   BookOpen as BookOpenIcon, 
   TrendingUp as TrendingUpIcon,
@@ -328,194 +329,211 @@ const RecommendedStories = () => {
   // Hiển thị loading nếu đang tải lịch sử hoặc đang fetch categories
   if (isUserHistoryLoading || fetchingCategories) {
     return (
-      <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}>
-        <div className="flex items-center justify-center py-8">
-          <LoaderIcon className="w-6 h-6 animate-spin mr-2" />
-          <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
-            {isUserHistoryLoading ? 'Đang tải lịch sử đọc...' : 'Đang phân tích sở thích...'}
-          </span>
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className={`rounded-xl shadow-lg overflow-hidden ${
+          isDarkMode 
+            ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700' 
+            : 'bg-gradient-to-br from-white to-gray-50 border border-gray-200'
+        }`}>
+          <div className="p-6">
+            <div className="flex flex-col items-center justify-center py-12">
+              <LoaderIcon className="w-8 h-8 animate-spin text-sky-500 mb-3" />
+              <span className={`text-lg font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {isUserHistoryLoading ? 'Đang tải lịch sử đọc...' : 'Đang phân tích sở thích...'}
+              </span>
+              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+                Vui lòng đợi trong giây lát
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <SparklesIcon className="w-6 h-6 text-yellow-500 mr-2" />
-          <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            {userCategories.length > 0 ? 'Gợi ý cho bạn' : 'Truyện phổ biến'}
-          </h2>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className={`p-2 rounded-lg transition-colors ${
-            isDarkMode 
-              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-          } disabled:opacity-50`}
-          title="Làm mới gợi ý"
-        >
-          <RefreshIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
+    <section className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8`}>
+      <div className={`rounded-xl shadow-lg overflow-hidden ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700' 
+          : 'bg-gradient-to-br from-white to-gray-50 border border-gray-200'
+      }`}>
+        {/* Header */}
+        <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`p-2 rounded-lg mr-3 ${
+                isDarkMode ? 'bg-yellow-500/20' : 'bg-yellow-100'
+              }`}>
+                <SparklesIcon className="w-6 h-6 text-yellow-500" />
+              </div>
+              <div>
+                <h2 className={`text-2xl font-bold ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {userCategories.length > 0 ? 'Gợi ý cho bạn' : 'Truyện phổ biến'}
+                </h2>
+                <p className={`text-sm ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  {userCategories.length > 0 
+                    ? 'Dựa trên sở thích đọc của bạn' 
+                    : 'Những tác phẩm được yêu thích nhất'
+                  }
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className={`p-3 rounded-lg transition-all duration-200 ${
+                isDarkMode 
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-700'
+              } disabled:opacity-50 hover:scale-105 active:scale-95`}
+              title="Làm mới gợi ý"
+            >
+              <RefreshIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
 
-      {/* Categories Preview - chỉ hiển thị khi có lịch sử đọc */}
-      {userCategories.length > 0 && (
-        <div className="mb-4">
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-            Dựa trên thể loại bạn đã đọc:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {userCategories.slice(0, 3).map((category, index) => (
-              <span
-                key={index}
-                className={`px-2 py-1 text-xs rounded-full ${
+          {/* Categories Preview - chỉ hiển thị khi có lịch sử đọc */}
+          {userCategories.length > 0 && (
+            <div className="mt-4">
+              <div className="flex flex-wrap gap-2">
+                {userCategories.slice(0, 5).map((category, index) => (
+                  <span
+                    key={index}
+                    className={`px-3 py-1 text-sm rounded-full font-medium transition-colors ${
+                      isDarkMode 
+                        ? 'bg-sky-900/30 text-sky-300 border border-sky-700/50' 
+                        : 'bg-sky-100 text-sky-700 border border-sky-200'
+                    }`}
+                  >
+                    {category}
+                  </span>
+                ))}
+                {userCategories.length > 5 && (
+                  <span className={`px-3 py-1 text-sm rounded-full ${
+                    isDarkMode 
+                      ? 'text-gray-400 bg-gray-700/50' 
+                      : 'text-gray-500 bg-gray-100'
+                  }`}>
+                    +{userCategories.length - 5}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Message for new users */}
+          {userCategories.length === 0 && userHistory.length === 0 && (
+            <div className={`mt-4 p-4 rounded-lg ${
+              isDarkMode ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'
+            }`}>
+              <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                💡 Bắt đầu đọc một vài truyện để chúng tôi có thể gợi ý những tác phẩm phù hợp với sở thích của bạn!
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {/* Error State */}
+          {error && (
+            <div className={`text-center py-8 rounded-lg ${
+              isDarkMode ? 'bg-red-900/20 border border-red-700/30' : 'bg-red-50 border border-red-200'
+            }`}>
+              <div className="text-red-500 text-4xl mb-3">⚠️</div>
+              <p className="text-red-500 font-medium mb-2">{error}</p>
+              <button
+                onClick={handleRefresh}
+                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
                   isDarkMode 
-                    ? 'bg-sky-900/30 text-sky-300' 
-                    : 'bg-sky-100 text-sky-700'
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-red-500 hover:bg-red-600 text-white'
                 }`}
               >
-                {category}
+                Thử lại
+              </button>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <LoaderIcon className="w-8 h-8 animate-spin text-sky-500 mb-3" />
+              <span className={`text-lg font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Đang tìm truyện phù hợp...
               </span>
-            ))}
-            {userCategories.length > 3 && (
-              <span className={`px-2 py-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                +{userCategories.length - 3} thể loại khác
+              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+                Vui lòng đợi trong giây lát
               </span>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* Message for new users */}
-      {userCategories.length === 0 && userHistory.length === 0 && (
-        <div className="mb-4">
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Bắt đầu đọc một vài truyện để chúng tôi có thể gợi ý những tác phẩm phù hợp với sở thích của bạn!
-          </p>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="text-center py-4">
-          <p className="text-red-500 text-sm">{error}</p>
-          <button
-            onClick={handleRefresh}
-            className="mt-2 text-sky-500 hover:text-sky-600 text-sm underline"
-          >
-            Thử lại
-          </button>
-        </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center py-8">
-          <LoaderIcon className="w-5 h-5 animate-spin mr-2" />
-          <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            Đang tìm truyện phù hợp...
-          </span>
-        </div>
-      )}
-
-      {/* Recommended Novels Grid */}
-      {!loading && !error && recommendedNovels.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {recommendedNovels.map((novel) => (
-            <Link
-              key={novel.idNovel}
-              to={`/novel/${novel.idNovel}`}
-              className="group block"
-            >
-              <div className={`rounded-lg overflow-hidden transition-all duration-200 ${
-                isDarkMode 
-                  ? 'bg-gray-700 hover:bg-gray-600' 
-                  : 'bg-gray-50 hover:bg-gray-100'
-              } group-hover:scale-105 group-hover:shadow-lg`}>
-                {/* Novel Cover */}
-                <div className="aspect-[3/4] relative overflow-hidden">
-                  <img
-                    src={novel.imageNovel || ''}
-                    alt={novel.nameNovel}
-                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
-                    onError={(e) => {
-                      e.target.src = '';
-                    }}
-                  />
-                  {/* Rating Badge */}
-                  {novel.rating && Number(novel.rating) > 0 && (
-                    <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded">
-                      ★ {Number(novel.rating).toFixed(1)}
-                    </div>
-                  )}
-                  {/* Status Badge */}
-                  <div className={`absolute top-2 right-2 text-xs px-1 py-0.5 rounded ${
-                    novel.statusNovel === 'COMPLETED' 
-                      ? 'bg-green-500 text-white'
-                      : 'bg-blue-500 text-white'
-                  }`}>
-                    {novel.statusNovel === 'COMPLETED' ? 'Hoàn' : 'Đang ra'}
+          {/* Recommended Novels Grid */}
+          {!loading && !error && recommendedNovels.length > 0 && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+                {recommendedNovels.slice(0, 12).map((novel) => (
+                  <div key={novel.idNovel} className="transform transition-all duration-200 hover:scale-105">
+                    <NovelCard novel={novel} />
                   </div>
-                </div>
-
-                {/* Novel Info */}
-                <div className="p-3">
-                  <h3 className={`font-medium text-sm line-clamp-2 mb-1 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {novel.nameNovel}
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>
-                    {novel.authors && novel.authors.length > 0 ? novel.authors[0].nameAuthor : 'Tác giả không rõ'}
-                  </p>
-                  {novel.totalView && (
-                    <div className="flex items-center text-xs text-gray-500">
-                      <BookOpenIcon className="w-3 h-3 mr-1" />
-                      {novel.totalView.toLocaleString()} lượt đọc
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
-            </Link>
-          ))}
-        </div>
-      )}
+              
+              {/* View More Link */}
+              <div className="mt-8 text-center">
+                <Link
+                  to="/discover"
+                  className={`inline-flex items-center px-6 py-3 text-base font-medium rounded-lg transition-all duration-200 ${
+                    isDarkMode 
+                      ? 'bg-sky-600 hover:bg-sky-700 text-white shadow-lg hover:shadow-sky-500/25' 
+                      : 'bg-sky-500 hover:bg-sky-600 text-white shadow-lg hover:shadow-sky-500/25'
+                  } hover:scale-105 active:scale-95`}
+                >
+                  <TrendingUpIcon className="w-5 h-5 mr-2" />
+                  Khám phá thêm truyện
+                  <ChevronRightIcon className="w-5 h-5 ml-2" />
+                </Link>
+              </div>
+            </>
+          )}
 
-      {/* Empty State */}
-      {!loading && !error && recommendedNovels.length === 0 && userCategories.length > 0 && (
-        <div className="text-center py-8">
-          <BookOpenIcon className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-            Không tìm thấy truyện phù hợp
-          </p>
-          <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-            Hãy đọc thêm một số truyện để chúng tôi hiểu sở thích của bạn
-          </p>
+          {/* Empty State */}
+          {!loading && !error && recommendedNovels.length === 0 && userCategories.length > 0 && (
+            <div className="text-center py-12">
+              <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
+              }`}>
+                <BookOpenIcon className={`w-10 h-10 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+              </div>
+              <h3 className={`text-lg font-medium mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Không tìm thấy truyện phù hợp
+              </h3>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-4 max-w-md mx-auto`}>
+                Hãy đọc thêm một số truyện khác để chúng tôi hiểu rõ hơn về sở thích của bạn
+              </p>
+              <Link
+                to="/discover"
+                className={`inline-flex items-center text-sm font-medium transition-colors ${
+                  isDarkMode 
+                    ? 'text-sky-400 hover:text-sky-300' 
+                    : 'text-sky-600 hover:text-sky-700'
+                }`}
+              >
+                Khám phá truyện mới
+                <ChevronRightIcon className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* View More Link */}
-      {!loading && recommendedNovels.length > 0 && (
-        <div className="mt-6 text-center">
-          <Link
-            to="/discover"
-            className={`inline-flex items-center text-sm font-medium transition-colors ${
-              isDarkMode 
-                ? 'text-sky-400 hover:text-sky-300' 
-                : 'text-sky-600 hover:text-sky-700'
-            }`}
-          >
-            Khám phá thêm truyện
-            <ChevronRightIcon className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 };
 

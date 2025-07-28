@@ -24,6 +24,7 @@ import TransactionHistoryPage from './component/page/TransactionHistoryPage';
 import SearchResultsPage from './component/SearchResultsPage';
 import UserProfilePage from './component/page/UserProfilePage'; // Đổi tên route để khớp với đây
 import LibraryPage from './component/page/LibraryPage'; // Thêm trang Thư viện
+import DiscoverPage from './component/page/DiscoverPage'; // Thêm trang Discovery
 import PaymentCallbackPage from './component/PaymentCallbackPage'; // Import component mới
 import SupportPage from './component/page/SupportPage'; // Trang hỗ trợ khách hàng
 import AboutUs from './component/page/AboutUs'; // Trang giới thiệu về công ty
@@ -95,6 +96,7 @@ const AppContent = () => {
 
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/novel/:novelId" element={<DetailPage />} />
         <Route path="/novel/:novelId/chapter/:chapterId" element={<ReadingPage />} />
         <Route path="/deposit" element={<DepositPage />} />

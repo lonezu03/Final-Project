@@ -72,6 +72,75 @@ export const getTransactions = createAsyncThunk(
   }
 );
 
+export const getAllTransactions = createAsyncThunk(
+  'transaction/getAllTransactions',
+  async ({ statusDeposit = 'SUCCESS' }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.get(`/transaction/getAllTransaction?statusDeposit=${statusDeposit}`);
+      if (response.data && response.data.code === 1000) {
+        // Process all transactions to separate rented and purchased chapters
+        const allTransactions = response.data.result || [];
+        
+        const rentedChapters = [];
+        const purchasedChapters = [];
+        const rentedNovels = {};
+        const purchasedNovels = {};
+
+        allTransactions.forEach(transaction => {
+          const novelBought = transaction.novelBought || {};
+          
+          Object.values(novelBought).forEach(novel => {
+            if (novel.chapterBoughtRespone && Array.isArray(novel.chapterBoughtRespone)) {
+              novel.chapterBoughtRespone.forEach(chapter => {
+                // Check if chapter has rental expiration date (dayRentAmount is array format)
+                if (chapter.dayRentAmount && Array.isArray(chapter.dayRentAmount)) {
+                  rentedChapters.push(chapter.idChapter);
+                  
+                  // Convert dayRentAmount array to Date object
+                  const [year, month, day, hour, minute, second, nano] = chapter.dayRentAmount;
+                  const expirationDate = new Date(year, month - 1, day, hour, minute, second, Math.floor(nano / 1000000));
+                  
+                  if (!rentedNovels[novel.idNovel]) {
+                    rentedNovels[novel.idNovel] = {
+                      ...novel,
+                      chapterBoughtRespone: []
+                    };
+                  }
+                  rentedNovels[novel.idNovel].chapterBoughtRespone.push({
+                    ...chapter,
+                    rentExpiration: expirationDate.toISOString() // Convert to ISO string for consistency
+                  });
+                } else {
+                  purchasedChapters.push(chapter.idChapter);
+                  
+                  if (!purchasedNovels[novel.idNovel]) {
+                    purchasedNovels[novel.idNovel] = {
+                      ...novel,
+                      chapterBoughtRespone: []
+                    };
+                  }
+                  purchasedNovels[novel.idNovel].chapterBoughtRespone.push(chapter);
+                }
+              });
+            }
+          });
+        });
+
+        return {
+          rentedChapters,
+          purchasedChapters,
+          rentedNovels,
+          purchasedNovels,
+          allTransactions
+        };
+      }
+      return rejectWithValue(response.data?.message || 'Không thể lấy danh sách giao dịch.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
+
 
 // --- Slice Definition ---
 const initialState = {
@@ -81,13 +150,23 @@ const initialState = {
   confirmError: null,
   
   pendingTransaction: null, // Lưu giao dịch đang chờ xác nhận
-transactions: {
+  transactions: {
     user: null,
     purchasedChapters: [], // Store chapter IDs
     novelBought: {}, // Store full novelBought data
-  },  transactionLoading: false, // Separate loading for transactions
+  },
+  allTransactions: {
+    rentedChapters: [], // Store rented chapter IDs
+    purchasedChapters: [], // Store purchased chapter IDs
+    rentedNovels: {}, // Store rented novels with expiration data
+    purchasedNovels: {}, // Store purchased novels
+    allTransactions: [] // Raw transaction data
+  },
+  transactionLoading: false, // Separate loading for transactions
+  allTransactionLoading: false, // Loading for getAllTransactions
   error: null,
   transactionError: null,
+  allTransactionError: null,
 };
 
 const transactionSlice = createSlice({
@@ -141,6 +220,24 @@ const transactionSlice = createSlice({
       .addCase(getTransactions.rejected, (state, action) => {
         state.transactionLoading = false;
         state.transactionError = action.payload;
+      })
+      .addCase(getAllTransactions.pending, (state) => {
+        state.allTransactionLoading = true;
+        state.allTransactionError = null;
+      })
+      .addCase(getAllTransactions.fulfilled, (state, action) => {
+        state.allTransactionLoading = false;
+        state.allTransactions = {
+          rentedChapters: action.payload.rentedChapters,
+          purchasedChapters: action.payload.purchasedChapters,
+          rentedNovels: action.payload.rentedNovels,
+          purchasedNovels: action.payload.purchasedNovels,
+          allTransactions: action.payload.allTransactions,
+        };
+      })
+      .addCase(getAllTransactions.rejected, (state, action) => {
+        state.allTransactionLoading = false;
+        state.allTransactionError = action.payload;
       });
   },
 });

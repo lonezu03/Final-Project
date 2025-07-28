@@ -70,10 +70,15 @@ const ChapterManagement = ({ novel }) => {
     }
     // 1. Tạo object 'request' chứa dữ liệu JSON
     const coinPriceValue = parseInt(e.target.coinPrice.value, 10) || 0;
+    const cointRentPriceValue = parseInt(e.target.cointRentPrice.value, 10) || 0;
+    const dayRentAmountValue = parseInt(e.target.dayRentAmount.value, 10) || 0;
+    
     const requestData = {
       titleChapter: e.target.titleChapter.value,
       novel:  novel.idNovel,
-      coinPrice: coinPriceValue
+      coinPrice: coinPriceValue,
+      cointRentPrice: cointRentPriceValue,
+      dayRentAmount: dayRentAmountValue
     };
 
     if (isEditing) {
@@ -127,7 +132,7 @@ const ChapterManagement = ({ novel }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
@@ -157,13 +162,27 @@ const ChapterManagement = ({ novel }) => {
         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Trung Bình Coin</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Trung Bình Coin Mua</p>
               <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
                 {chapters.length > 0 ? Math.round(chapters.reduce((total, chapter) => total + (chapter.coinPrice || 0), 0) / chapters.length) : 0}
               </p>
             </div>
             <div className="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
               <Coins className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Trung Bình Coin Thuê</p>
+              <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                {chapters.length > 0 ? Math.round(chapters.reduce((total, chapter) => total + (chapter.cointRentPrice || 0), 0) / chapters.length) : 0}
+              </p>
+            </div>
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl">
+              <Coins className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
         </div>
@@ -262,7 +281,7 @@ const ChapterManagement = ({ novel }) => {
                 
                 <div>
                   <label htmlFor="coinPrice" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Giá coin
+                    Giá coin mua
                   </label>
                   <input
                     id="coinPrice"
@@ -271,7 +290,41 @@ const ChapterManagement = ({ novel }) => {
                     min="0"
                     step="1"
                     defaultValue={isEditing ? currentChapter?.coinPrice || 0 : 0}
-                    placeholder="Nhập giá coin cho chương này"
+                    placeholder="Nhập giá coin để mua vĩnh viễn chương này"
+                    className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-blue-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="cointRentPrice" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Giá coin thuê
+                  </label>
+                  <input
+                    id="cointRentPrice"
+                    name="cointRentPrice"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={isEditing ? currentChapter?.cointRentPrice || 0 : 0}
+                    placeholder="Nhập giá coin để thuê chương này"
+                    className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-blue-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="dayRentAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Số ngày thuê
+                  </label>
+                  <input
+                    id="dayRentAmount"
+                    name="dayRentAmount"
+                    type="number"
+                    min="1"
+                    step="1"
+                    defaultValue={isEditing ? currentChapter?.dayRentAmount || 1 : 1}
+                    placeholder="Nhập số ngày cho phép thuê"
                     className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-blue-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     required
                   />
@@ -362,7 +415,9 @@ const ChapterManagement = ({ novel }) => {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">#</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Tiêu đề</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Lượt xem</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Giá Coin</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Coin Mua</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Coin Thuê</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Ngày Thuê</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
                   </tr>
                 </thead>
@@ -390,6 +445,17 @@ const ChapterManagement = ({ novel }) => {
                         <div className="flex items-center justify-center gap-1">
                           <Coins className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                           <span className="font-medium text-slate-900 dark:text-slate-100">{chapter.coinPrice || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="font-medium text-slate-900 dark:text-slate-100">{chapter.cointRentPrice || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="font-medium text-slate-900 dark:text-slate-100">{chapter.dayRentAmount || 0} ngày</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

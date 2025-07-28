@@ -33,30 +33,51 @@ const SearchResultsPage = () => {
 
   // State để lưu trữ các giá trị lấy từ URL, dùng để điều khiển UI và dispatch
   const [currentSearchTerm, setCurrentSearchTerm] = useState('');
-  // currentPageForUI và pageSizeForUI sẽ được lấy trực tiếp từ paginationInfoFromStore để render
-  // hoặc từ URL khi người dùng tương tác
+  const [currentAuthors, setCurrentAuthors] = useState([]);
+  const [currentCategories, setCurrentCategories] = useState([]);
 
   // Hàm thực hiện tìm kiếm
-  const doSearch = (term, page, size) => {
-    if (!term || term.trim() === "") {
+  const doSearch = (term, page, size, authors = [], categories = []) => {
+    const searchCriteria = {};
+    
+    // Thêm tên truyện nếu có
+    if (term && term.trim() !== "") {
+      searchCriteria.nameNovel = term.trim();
+      searchCriteria.nameOperator = "CONTAINS";
+    }
+    
+    // Thêm tác giả nếu có
+    if (authors && authors.length > 0) {
+      searchCriteria.authorNames = authors;
+    }
+    
+    // Thêm thể loại nếu có
+    if (categories && categories.length > 0) {
+      searchCriteria.categoryNames = categories;
+    }
+    
+    // Debug log để kiểm tra
+    console.log('doSearch called with:', { term, page, size, authors, categories });
+    console.log('Final searchCriteria:', searchCriteria);
+    
+    // Nếu không có tiêu chí tìm kiếm nào thì clear results
+    if (Object.keys(searchCriteria).length === 0) {
       dispatch(clearSearchedNovels());
       return;
     }
-    const searchCriteria = {
-      nameNovel: term.trim(),
-      nameOperator: "CONTAINS",
-    };
+    
     const paginationAndSortParams = { page, size };
-    // console.log("Dispatching searchNovels with:", { searchCriteria, paginationAndSortParams });
+    
     // Chặn việc gọi lại dispatch nếu tham số không thay đổi
     if (
       novels.length > 0 &&
-      currentSearchTerm === term.trim() &&
+      currentSearchTerm === (term || '') &&
       paginationInfoFromStore?.pageNumber === page &&
       paginationInfoFromStore?.pageSize === size
     ) {
       return;
     }
+    
     dispatch(searchNovels({ searchCriteria, paginationAndSortParams }));
   };
 
@@ -65,26 +86,50 @@ const SearchResultsPage = () => {
     const termFromUrl = queryParams.get('q') || '';
     const pageFromUrl = Number(queryParams.get('page')) || 0;
     const sizeFromUrl = Number(queryParams.get('size')) || 20;
+    const authorsFromUrl = queryParams.get('authors') ? queryParams.get('authors').split(',').map(a => a.trim()).filter(a => a) : [];
+    const categoriesFromUrl = queryParams.get('categories') ? queryParams.get('categories').split(',').map(c => c.trim()).filter(c => c) : [];
 
-    setCurrentSearchTerm(termFromUrl); // Cập nhật từ khóa hiển thị trên UI
+    console.log('SearchResultsPage useEffect - URL params:', {
+      term: termFromUrl,
+      page: pageFromUrl,
+      size: sizeFromUrl,
+      authors: authorsFromUrl,
+      categories: categoriesFromUrl
+    });
 
-      if (termFromUrl.trim() !== "") {
-    setCurrentSearchTerm(termFromUrl); // Cập nhật từ khóa tìm kiếm
-    doSearch(termFromUrl, pageFromUrl, sizeFromUrl); // Trigger tìm kiếm
-  } else {
-    dispatch(clearSearchedNovels()); // Xóa kết quả nếu không có từ khóa
-  }
-}, [location.search, dispatch]); // Chỉ chạy lại khi query params trên URL thay đổi hoặc dispatch thay đổi
+    setCurrentSearchTerm(termFromUrl);
+    setCurrentAuthors(authorsFromUrl);
+    setCurrentCategories(categoriesFromUrl);
+
+    // Thực hiện tìm kiếm nếu có ít nhất một tiêu chí
+    if (termFromUrl.trim() !== "" || authorsFromUrl.length > 0 || categoriesFromUrl.length > 0) {
+      doSearch(termFromUrl, pageFromUrl, sizeFromUrl, authorsFromUrl, categoriesFromUrl);
+    } else {
+      dispatch(clearSearchedNovels());
+    }
+  }, [location.search, dispatch]);
 
   const handlePageChange = (newPage) => {
     const currentSize = paginationInfoFromStore?.pageSize || 20;
     if (newPage >= 0 && newPage < (paginationInfoFromStore?.totalPages || 0)) {
-      navigate(`/search-results?q=${encodeURIComponent(currentSearchTerm)}&page=${newPage}&size=${currentSize}`);
+      const urlParams = new URLSearchParams();
+      if (currentSearchTerm) urlParams.append('q', currentSearchTerm);
+      if (currentAuthors.length > 0) urlParams.append('authors', currentAuthors.join(','));
+      if (currentCategories.length > 0) urlParams.append('categories', currentCategories.join(','));
+      urlParams.append('page', newPage);
+      urlParams.append('size', currentSize);
+      navigate(`/search-results?${urlParams.toString()}`);
     }
   };
 
   const handleSizeChange = (newSize) => {
-    navigate(`/search-results?q=${encodeURIComponent(currentSearchTerm)}&page=0&size=${newSize}`);
+    const urlParams = new URLSearchParams();
+    if (currentSearchTerm) urlParams.append('q', currentSearchTerm);
+    if (currentAuthors.length > 0) urlParams.append('authors', currentAuthors.join(','));
+    if (currentCategories.length > 0) urlParams.append('categories', currentCategories.join(','));
+    urlParams.append('page', 0);
+    urlParams.append('size', newSize);
+    navigate(`/search-results?${urlParams.toString()}`);
   };
 
 
@@ -114,13 +159,22 @@ const SearchResultsPage = () => {
   }
 
   // Sau khi loading xong và không có lỗi
-  // Hiển thị "Không tìm thấy kết quả" nếu có từ khóa tìm kiếm, nhưng novels rỗng
-  if (currentSearchTerm.trim() !== "" && novels.length === 0) {
+  // Hiển thị "Không tìm thấy kết quả" nếu có tiêu chí tìm kiếm, nhưng novels rỗng
+  const hasSearchCriteria = currentSearchTerm.trim() !== "" || currentAuthors.length > 0 || currentCategories.length > 0;
+  
+  if (hasSearchCriteria && novels.length === 0) {
+    const criteriaDisplay = [];
+    if (currentSearchTerm.trim() !== "") criteriaDisplay.push(`"${currentSearchTerm}"`);
+    if (currentAuthors.length > 0) criteriaDisplay.push(`Tác giả: ${currentAuthors.join(', ')}`);
+    if (currentCategories.length > 0) criteriaDisplay.push(`Thể loại: ${currentCategories.join(', ')}`);
+    
     return (
       <div className="container mx-auto p-6 text-center">
         <SearchX size={64} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
         <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-2">Không tìm thấy kết quả</h2>
-        <p className="text-gray-600 dark:text-gray-400">Không có truyện nào phù hợp với từ khóa "{currentSearchTerm}".</p>
+        <p className="text-gray-600 dark:text-gray-400">
+          Không có truyện nào phù hợp với tiêu chí: {criteriaDisplay.join(' | ')}
+        </p>
         <button
             onClick={() => navigate('/')}
             className="mt-6 px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -131,21 +185,40 @@ const SearchResultsPage = () => {
     );
   }
 
-  // Hiển thị "Vui lòng nhập từ khóa" nếu không có từ khóa và novels rỗng
-   if (currentSearchTerm.trim() === "" && novels.length === 0) {
+  // Hiển thị "Vui lòng nhập từ khóa" nếu không có tiêu chí tìm kiếm và novels rỗng
+   if (!hasSearchCriteria && novels.length === 0) {
     return (
         <div className="container mx-auto p-6 text-center">
-            <p className="text-gray-600 dark:text-gray-400">Vui lòng nhập từ khóa từ thanh tìm kiếm để tìm truyện.</p>
+            <p className="text-gray-600 dark:text-gray-400">Vui lòng nhập từ khóa tìm kiếm hoặc sử dụng bộ lọc để tìm truyện.</p>
         </div>
     );
   }
 
   return (
     <div className="container mx-auto p-4 sm:p-6">
-      {currentSearchTerm.trim() !== "" && novels.length > 0 && ( // Chỉ hiển thị tiêu đề nếu có kết quả và từ khóa
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800 dark:text-white">
-          Kết quả tìm kiếm cho: "<span className="text-blue-600 dark:text-sky-400">{currentSearchTerm}</span>"
-        </h1>
+      {hasSearchCriteria && novels.length > 0 && (
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800 dark:text-white">
+            Kết quả tìm kiếm
+          </h1>
+          <div className="flex flex-wrap gap-2 text-sm text-gray-600 dark:text-gray-400">
+            {currentSearchTerm.trim() !== "" && (
+              <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                Từ khóa: "{currentSearchTerm}"
+              </span>
+            )}
+            {currentAuthors.length > 0 && (
+              <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded">
+                Tác giả: {currentAuthors.join(', ')}
+              </span>
+            )}
+            {currentCategories.length > 0 && (
+              <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
+                Thể loại: {currentCategories.join(', ')}
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       {novels.length > 0 ? (

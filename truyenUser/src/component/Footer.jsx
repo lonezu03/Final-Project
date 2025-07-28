@@ -165,7 +165,7 @@ const Footer = () => {
             <div className={`flex space-x-2 text-xs mb-3 md:mb-0 md:mr-6 ${
               isDarkMode ? 'text-gray-400' : 'text-gray-500'
             }`}>
-              <a href="#" className={`transition-colors ${
+              <a href="about-us" className={`transition-colors ${
                 isDarkMode ? 'hover:text-white' : 'hover:text-gray-800'
               }`}>About</a>
               <span className="select-none">-</span>
