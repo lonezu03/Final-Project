@@ -1,15 +1,11 @@
 package com.example.demo.config;
 
 import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-
-import javax.crypto.spec.SecretKeySpec;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,10 +15,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
@@ -30,11 +23,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.example.demo.entity.User;
+import com.example.demo.entity.Permission;
+import com.example.demo.repository.IPermissionRepository;
+import com.example.demo.repository.IRoleUserRepository;
 import com.example.demo.repository.IUserRepository;
 import com.example.demo.repository.RefreshTokenRepository;
-
-import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Central configuration class for Spring Security.
@@ -58,6 +51,12 @@ public class SecurityConfig {
 	@Autowired
 	private RefreshTokenRepository refreshTokenRepository;
     
+	@Autowired
+	private IRoleUserRepository roleUserRepository;
+
+	@Autowired
+	private IPermissionRepository permissionRepository;
+	
 	@Autowired
 	private IUserRepository userRepository;
 	
@@ -92,31 +91,20 @@ public class SecurityConfig {
                 .jwtAuthenticationConverter(jwtAuthenticationConverter())));
        
 
+        
         // Configure authorization rules
         httpSecurity.authorizeHttpRequests(auth -> {
-            // 1. WHITELIST configuration: endpoints accessible without authentication
-            for (String endpoint : resolver.getWhiteList()) {
-                String[] parts = endpoint.split(":", 2);
-                auth.requestMatchers(HttpMethod.valueOf(parts[0]), parts[1]).permitAll();
-            }
 
-            // 2. Dynamic role-based permission configuration from YAML
-            Map<String, Set<String>> endpointToRoles = resolver.getEnpointToRolesMap();
+        	 List<Permission> whitelist = permissionRepository.findAll().stream()
+        		        .filter(Permission::isWhiteList)
+        		        .toList();
 
-            logger.info("--- CONFIGURING ENDPOINT PERMISSIONS FROM YAML ---");
-            for (Map.Entry<String, Set<String>> entry : endpointToRoles.entrySet()) {
-                String[] endpointParts = entry.getKey().split(":", 2);
-                HttpMethod method = HttpMethod.valueOf(endpointParts[0]);
-                String path = endpointParts[1];
-                String[] roles = entry.getValue().toArray(new String[0]);
-
-                logger.info("Mapping [{} {}] -> Roles: {}", method, path, roles);
-                auth.requestMatchers(method, path).hasAnyAuthority(roles);
-            }
-            logger.info("--- FINISHED CONFIGURING ENDPOINT PERMISSIONS ---");
+        		    for (Permission p : whitelist) {
+        		        auth.requestMatchers(HttpMethod.valueOf(p.getMethod()), p.getEndPoint()).permitAll();
+        		    }
+        	
             // Insert custom TokenValidationFilter after Spring’s default Bearer token filter
             httpSecurity.addFilterAfter(tokenValidationFilter, BearerTokenAuthenticationFilter.class);
-            // 3. Catch-all rule: Any other request requires authentication
             auth.anyRequest().authenticated();
         });
 

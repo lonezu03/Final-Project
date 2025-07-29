@@ -17,6 +17,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import lombok.AccessLevel;
@@ -60,6 +63,8 @@ public class User {
 	
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
     RefreshToken refreshToken;
+    
+
 	
 	@OneToMany(mappedBy = "user",cascade = CascadeType.ALL,orphanRemoval = true)
 	List<Comment> comments=new ArrayList<>();
@@ -78,5 +83,12 @@ public class User {
 	
 	@OneToMany(mappedBy = "user")
 	List<Transaction> transactions;
+	
+	@ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
+	@JoinTable(
+			name = "user_permission",
+			joinColumns = @JoinColumn(name = "user_id"),
+			inverseJoinColumns = @JoinColumn(name = "permission_id"))
+	Set<Permission> permissions = new HashSet<>();
 
 }
