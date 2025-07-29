@@ -1,6 +1,6 @@
 // src/constants/index.js (hoặc file tương tự)
 
-import { Home, Users, MessageSquare, Package } from "lucide-react"; // Ví dụ
+import { Home, Users, MessageSquare, Package, Shield } from "lucide-react"; // Ví dụ
 
 export const navbarLinks = [
     {
@@ -58,8 +58,13 @@ export const navbarLinks = [
         links: [
             {
                 label: "Người dùng",
-                icon: Package,
+                icon: Users,
                 path: "user",
+            },
+            {
+                label: "Quản lý quyền",
+                icon: Shield,
+                path: "role-permission",
             },
         ],
     },

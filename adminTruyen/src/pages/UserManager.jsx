@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { getalluser, grantManagerRole, clearGrantRoleStatus } from '../redux/userSlice';
 import { useTheme } from '../context/ThemeContext';
-import { Users, Search, UserPlus, Shield, Calendar, Mail, User } from 'lucide-react';
+import { Users, Search, UserPlus, Shield, Calendar, Mail, User, Settings } from 'lucide-react';
 
 const UserManager = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const { 
     allUsers, 
@@ -116,15 +118,28 @@ const UserManager = () => {
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 dark:border-slate-700/50 p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
-              <Users className="h-6 w-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+                  Quản Lý Người Dùng
+                </h1>
+                <p className="text-slate-600 dark:text-slate-400">Quản lý tài khoản và phân quyền người dùng</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                Quản Lý Người Dùng
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400">Quản lý tài khoản và phân quyền người dùng</p>
+            
+            {/* Quick Actions */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/admin/role-permission')}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg shadow-indigo-500/25"
+              >
+                <Settings size={16} />
+                Quản lý quyền chi tiết
+              </button>
             </div>
           </div>
         </div>

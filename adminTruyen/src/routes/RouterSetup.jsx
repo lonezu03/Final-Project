@@ -8,19 +8,20 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { getAllAuthors } from "@/redux/authorSlice";
 import { getAllNovels } from "@/redux/novelSlice";
 import { getAllCategories } from "@/redux/categorySlice";
-// `loadUserFromStorage` không còn cần thiết ở đây nữa
-import UserManager from "@/pages/UserManager";
+
 // Layout & Pages
 import AdminLayouts from "@/pages/layouts/AdminLayouts";
 import LoginAdmin from "@/pages/admin/LoginAdmin";
 import AuthorManager from "@/pages/admin/authorManager";
-import CategoryManagement from "@/pages/admin/CategoryManagement";
-import NovelManagement from "@/pages/admin/NovelManagement";
 import TransactionManager from "@/pages/TransactionManager";
-import  CommentManagement  from "../pages/admin/CommentManagement"; // Thêm import cho CommentManagement
 import PageNotFound from "@/pages/PageNotFound";
 import {
-  Dashboard
+  Dashboard,
+  CategoryManagement,
+  NovelManagement,
+  CommentManagement,
+  UserManager,
+  RolePermissionManager
 } from "../pages";
 
 const adminTheme = createTheme({
@@ -111,6 +112,10 @@ const router = createBrowserRouter([
       { 
         path: "comments", // Khớp với path: "comments" trong navbarLinks
         element: < CommentManagement/>
+      },
+      { 
+        path: "role-permission", // Khớp với path: "role-permission" 
+        element: <RolePermissionManager />
       },
       // Thêm các route khác của bạn ở đây nếu có
     ],

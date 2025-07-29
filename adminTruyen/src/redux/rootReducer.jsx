@@ -9,6 +9,7 @@ import userReducer from './userSlice';
 import statisticReducer from './statisticSlice';
 import transactionReducer from './transactionSlice';
 import commentsReducer from './commentSlice';
+import rolePermissionReducer from './rolePermissionSlice';
 
 
 const rootReducer = combineReducers({
@@ -20,6 +21,7 @@ const rootReducer = combineReducers({
   statistics: statisticReducer,
   transaction: transactionReducer,
   comments: commentsReducer,
+  rolePermission: rolePermissionReducer,
 });
 
 export default rootReducer;
