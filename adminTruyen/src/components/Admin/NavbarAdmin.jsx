@@ -63,16 +63,19 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                 </Button>
 
                 {/* Search Bar */}
-                <div className="relative hidden md:flex">
+                {/* <div className="relative hidden md:flex">
                     <div className="flex items-center gap-4 rounded-2xl border-2 border-orange-200/60 bg-gradient-to-r from-orange-50/80 to-red-50/80 px-6 py-3 backdrop-blur-sm transition-all duration-300 focus-within:border-orange-400 focus-within:from-orange-100/90 focus-within:to-red-100/90 focus-within:shadow-xl focus-within:scale-105 dark:border-slate-700/60 dark:from-slate-800/80 dark:to-slate-700/80 dark:focus-within:border-orange-500 dark:focus-within:from-slate-700/90 dark:focus-within:to-slate-600/90">
                         <Search className="h-5 w-5 text-orange-500 dark:text-orange-400" />
                         <input
                             type="text"
-                            placeholder="Tìm kiếm tác giả, truyện, bình luận..."
+                            placeholder={currentUser?.role === 'MANAGER' ? 
+                                "Tìm kiếm người dùng, truyện, giao dịch..." : 
+                                "Tìm kiếm tác giả, truyện, bình luận..."
+                            }
                             className="w-72 bg-transparent text-sm font-medium text-slate-900 placeholder:text-orange-400/70 focus:outline-none dark:text-slate-100 dark:placeholder:text-orange-400/50"
                         />
                     </div>
-                </div>
+                </div> */}
             </div>
 
             {/* Right Side */}
@@ -177,7 +180,14 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                         className="w-96 rounded-2xl border-2 border-orange-200/50 bg-white/95 backdrop-blur-xl shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/95"
                     >
                         <DropdownMenuLabel className="text-sm font-bold text-orange-700 dark:text-orange-300 px-6 py-4 border-b border-orange-200/30 dark:border-orange-700/30">
-                            🔔 Thông báo mới
+                            <div className="flex items-center gap-2">
+                                🔔 Thông báo mới 
+                                {currentUser?.role === 'MANAGER' && (
+                                    <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
+                                        MANAGER
+                                    </span>
+                                )}
+                            </div>
                         </DropdownMenuLabel>
                         <div className="max-h-80 overflow-y-auto">
                             <DropdownMenuItem className="flex flex-col items-start gap-2 p-6 hover:bg-gradient-to-r hover:from-orange-50/50 hover:to-red-50/50 dark:hover:from-orange-900/20 dark:hover:to-red-900/20 transition-all duration-200">
@@ -221,33 +231,103 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                     <DropdownMenuTrigger className="cursor-pointer">
                         <div className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-orange-100/80 to-red-100/80 p-3 transition-all duration-300 hover:from-orange-200/90 hover:to-red-200/90 hover:shadow-xl hover:scale-105 dark:from-orange-900/30 dark:to-red-900/30 dark:hover:from-orange-800/40 dark:hover:to-red-800/40 border border-orange-200/50 dark:border-orange-700/30">
                             <Avatar className="h-10 w-10 ring-3 ring-orange-300/50 dark:ring-orange-600/50 shadow-lg">
-                                <AvatarImage src={currentUser?.avatar || "https://github.com/shadcn.png"} />
+                                <AvatarImage src={currentUser?.avatarUser || "https://github.com/shadcn.png"} />
                                 <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-600 text-white font-bold text-lg">
-                                    {currentUser?.nameUser?.charAt(0) || "A"}
+                                    {currentUser?.userNameUser?.charAt(0) || "A"}
                                 </AvatarFallback>
                             </Avatar>
                             <div className={cn(
                                 "hidden flex-col items-start lg:flex",
                                 !collapsed && "md:hidden lg:flex"
                             )}>
-                                <span className="text-sm font-bold text-orange-700 dark:text-orange-300">
-                                    {currentUser?.nameUser || "Admin"}
-                                </span>
-                                <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">
-                                    {currentUser?.email || "admin@example.com"}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-orange-700 dark:text-orange-300">
+                                        {currentUser?.userNameUser || "Admin"}
+                                    </span>
+                                    {currentUser?.role === 'MANAGER' && (
+                                        <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full font-semibold">
+                                            MANAGER
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">
+                                        {currentUser?.emailUser || "admin@example.com"}
+                                    </span>
+                                    {currentUser?.coin !== undefined && (
+                                        <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-semibold">
+                                            {currentUser.coin.toLocaleString()} 💰
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent 
                         align="end" 
-                        className="w-64 rounded-2xl border-2 border-orange-200/50 bg-white/95 backdrop-blur-xl shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/95"
+                        className="w-80 rounded-2xl border-2 border-orange-200/50 bg-white/95 backdrop-blur-xl shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/95"
                     >
-                        <DropdownMenuLabel className="text-sm font-bold text-orange-700 dark:text-orange-300 px-6 py-4">
-                            👤 Tài khoản của tôi
+                        <DropdownMenuLabel className="px-6 py-4">
+                            <div className="flex items-center gap-4">
+                                <Avatar className="h-12 w-12 ring-2 ring-orange-300/50 dark:ring-orange-600/50">
+                                    <AvatarImage src={currentUser?.avatarUser || "https://github.com/shadcn.png"} />
+                                    <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-600 text-white font-bold">
+                                        {currentUser?.userNameUser?.charAt(0) || "A"}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold text-orange-700 dark:text-orange-300">
+                                            {currentUser?.userNameUser || "Admin"}
+                                        </span>
+                                        {currentUser?.role === 'MANAGER' && (
+                                            <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full font-semibold">
+                                                MANAGER
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">
+                                        {currentUser?.emailUser || "admin@example.com"}
+                                    </span>
+                                    {currentUser?.coin !== undefined && (
+                                        <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-full font-semibold mt-1 w-fit">
+                                            💰 {currentUser.coin.toLocaleString()} coin
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-gradient-to-r from-orange-200 to-red-200 dark:from-orange-700 dark:to-red-700 h-px" />
+                        
+                        {/* User Stats */}
+                        {(currentUser?.chapterBought?.length > 0 || currentUser?.historyRead?.length > 0) && (
+                            <>
+                                <div className="px-6 py-3 bg-gradient-to-r from-orange-50/50 to-red-50/50 dark:from-orange-900/20 dark:to-red-900/20">
+                                    <h4 className="text-xs font-semibold text-orange-700 dark:text-orange-300 mb-2">📊 Thống kê</h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {currentUser?.chapterBought?.length > 0 && (
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                                    {currentUser.chapterBought.length}
+                                                </div>
+                                                <div className="text-xs text-slate-600 dark:text-slate-400">Chương đã mua</div>
+                                            </div>
+                                        )}
+                                        {currentUser?.historyRead?.length > 0 && (
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                    {currentUser.historyRead.length}
+                                                </div>
+                                                <div className="text-xs text-slate-600 dark:text-slate-400">Truyện đã đọc</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <DropdownMenuSeparator className="bg-gradient-to-r from-orange-200 to-red-200 dark:from-orange-700 dark:to-red-700 h-px" />
+                            </>
+                        )}
+                        
                         <DropdownMenuItem className="flex items-center gap-3 rounded-xl m-2 p-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-900/20 dark:hover:to-red-900/20 font-medium">
                             <User className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                             <span className="text-orange-700 dark:text-orange-300">Hồ sơ</span>
