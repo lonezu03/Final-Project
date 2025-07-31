@@ -22,9 +22,6 @@ export const optimizeCloudinaryUrl = (url, type = 'auto') => {
     const beforeUpload = url.substring(0, uploadIndex + 8); // Include '/upload/'
     const afterUpload = url.substring(uploadIndex + 8);
     
-    // Kiểm tra transformations hiện có
-    const hasExistingTransforms = afterUpload.match(/^[a-z_,0-9]+\//);
-    
     let optimizationParams = 'f_auto,q_auto';
     
     // Thêm tối ưu hóa đặc biệt cho audio
@@ -32,11 +29,21 @@ export const optimizeCloudinaryUrl = (url, type = 'auto') => {
       optimizationParams = 'f_auto,q_auto'; // Giữ đơn giản cho audio
     }
     
+    // Kiểm tra xem có version number (vXXXXXXXXXX) hay không
+    const versionMatch = afterUpload.match(/^v\d+\//);
+    if (versionMatch) {
+      // Nếu có version number, chèn transformations trước version
+      return `${beforeUpload}${optimizationParams}/${afterUpload}`;
+    }
+    
+    // Kiểm tra transformations hiện có (không phải version number)
+    const hasExistingTransforms = afterUpload.match(/^[a-z_,]+\//);
+    
     if (hasExistingTransforms) {
       // Nếu đã có transforms, thêm vào đầu
       return `${beforeUpload}${optimizationParams},${afterUpload}`;
     } else {
-      // Nếu chưa có transforms
+      // Nếu chưa có transforms, thêm transforms với dấu /
       return `${beforeUpload}${optimizationParams}/${afterUpload}`;
     }
   } catch (error) {
