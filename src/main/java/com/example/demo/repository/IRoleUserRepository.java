@@ -20,8 +20,14 @@ public interface IRoleUserRepository extends JpaRepository<RoleUser, Integer>{
 		    FROM RoleUser r
 		    JOIN r.permissions p
 		    WHERE r.role = :role
-		    AND p.endPoint = :endPoint
+		      AND p.endPoint = :endPoint
+		      AND p.method = :method
 		""")
-		boolean existsByRoleAndEndPoint(@Param("role") Role role, @Param("endPoint") String endPoint);
+		boolean existsByRoleAndEndPointAndMethod(
+		    @Param("role") Role role,
+		    @Param("endPoint") String endPoint,
+		    @Param("method") String method
+		);
+
 
 }

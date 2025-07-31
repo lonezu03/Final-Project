@@ -13,8 +13,18 @@ public interface IPermissionRepository extends JpaRepository<Permission, Integer
 
 	List<Permission> findByEndPoint(String endPoint);
 	
-	@Query("SELECT p FROM Permission p LEFT JOIN FETCH p.roles WHERE p.endPoint = :endPoint")
-	List<Permission> findByEndPointWithRoles(@Param("endPoint") String endPoint);
+	@Query("""
+		    SELECT p 
+		    FROM Permission p 
+		    LEFT JOIN FETCH p.roles 
+		    WHERE p.endPoint = :endPoint 
+		      AND p.method = :method
+		""")
+		List<Permission> findByEndPointAndMethodWithRoles(
+		    @Param("endPoint") String endPoint,
+		    @Param("method") String method
+		);
+
 
 
 }

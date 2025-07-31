@@ -74,7 +74,7 @@ public class TokenValidationFilter extends OncePerRequestFilter {
 //		String endPoint = convertToRegex(request.getRequestURI());
 		String endPoint = normalizeEndpoint(request.getRequestURI());
 //		logger.info(endPoint);
-		List<Permission> permissions = permissionRepository.findByEndPointWithRoles(endPoint);
+		List<Permission> permissions = permissionRepository.findByEndPointAndMethodWithRoles(endPoint,request.getMethod());
 		Boolean isWhiteList=false;
 		if (permissions != null && !permissions.isEmpty()) {
 			for (Permission permission : permissions) {
@@ -155,7 +155,7 @@ public class TokenValidationFilter extends OncePerRequestFilter {
 					}
 					
 					
-						if (!roleUserRepository.existsByRoleAndEndPoint(roleEnum, endPoint) && !isWhiteList) {
+						if (!roleUserRepository.existsByRoleAndEndPointAndMethod(roleEnum, endPoint,request.getMethod()) && !isWhiteList) {
 							logger.info("Role {}",roleEnum);
 							// Clear the security context to invalidate the session.
 							SecurityContextHolder.clearContext();
