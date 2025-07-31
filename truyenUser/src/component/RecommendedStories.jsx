@@ -1,10 +1,11 @@
 // src/component/RecommendedStories.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { searchNovels, getAllNovels, getNovelById } from '../redux/novelSlice';
 import { getAllHistoryByUser } from '../redux/userSlice';
+import { isNovelsLoading, isNovelsLoaded, setNovelsLoading } from '../utils/apiCache';
 import NovelCard from './NovelCard'; // Import NovelCard component
 import { 
   BookOpen as BookOpenIcon, 
@@ -20,13 +21,16 @@ const RecommendedStories = () => {
   const { isDarkMode } = useTheme();
   
   const { currentUser, userHistory, isUserHistoryLoading } = useSelector((state) => state.user);
-  const { searchResults, searchLoading, searchPagination } = useSelector((state) => state.novels);
+  const { searchResults, searchLoading, searchPagination, novels } = useSelector((state) => state.novels);
   
   const [recommendedNovels, setRecommendedNovels] = useState([]);
   const [userCategories, setUserCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [fetchingCategories, setFetchingCategories] = useState(false);
+  
+  // Ref để tránh fetch getAllNovels nhiều lần
+  const hasLoadedAllNovels = useRef(false);
 
   // Lấy lịch sử đọc của người dùng khi component mount
   useEffect(() => {
@@ -66,30 +70,43 @@ const RecommendedStories = () => {
             }
           }
 
-          // Nếu không lấy được categories từ getNovelById, thử fallback
+          // Nếu không lấy được categories từ getNovelById, thử sử dụng data có sẵn
           if (allCategories.length === 0) {
-            console.log('Fallback: Using getAllNovels to get categories...');
-            try {
-              const allNovels = await dispatch(getAllNovels()).unwrap();
-              if (allNovels && Array.isArray(allNovels)) {
-                // Map novel IDs từ history
-                const readNovelIds = new Set();
-                userHistory.forEach(novelGroup => {
-                  novelGroup.historyReadRespones.forEach(history => {
-                    if (history.idNovel) readNovelIds.add(history.idNovel);
-                  });
-                });
-
-                // Tìm categories của các truyện đã đọc
-                allNovels.forEach(novel => {
-                  if (readNovelIds.has(novel.idNovel) && novel.categories && Array.isArray(novel.categories)) {
-                    const categories = novel.categories.map(cat => cat.nameCategory);
-                    allCategories.push(...categories);
-                  }
-                });
+            console.log('Fallback: Using existing novels data to get categories...');
+            // Chỉ gọi getAllNovels nếu chưa có data và không đang loading
+            if (!novels || novels.length === 0) {
+              if (!hasLoadedAllNovels.current && !isNovelsLoading() && !isNovelsLoaded()) {
+                try {
+                  console.log('🔄 Loading novels for categories from RecommendedStories...');
+                  setNovelsLoading(true);
+                  await dispatch(getAllNovels()).unwrap();
+                  hasLoadedAllNovels.current = true;
+                } catch (err) {
+                  console.error('Error loading all novels:', err);
+                } finally {
+                  setNovelsLoading(false);
+                }
               }
-            } catch (fallbackErr) {
-              console.error('Fallback getAllNovels also failed:', fallbackErr);
+            }
+            
+            // Sử dụng data đã có trong store
+            const allNovels = novels;
+            if (allNovels && Array.isArray(allNovels)) {
+              // Map novel IDs từ history
+              const readNovelIds = new Set();
+              userHistory.forEach(novelGroup => {
+                novelGroup.historyReadRespones.forEach(history => {
+                  if (history.idNovel) readNovelIds.add(history.idNovel);
+                });
+              });
+
+              // Tìm categories của các truyện đã đọc
+              allNovels.forEach(novel => {
+                if (readNovelIds.has(novel.idNovel) && novel.categories && Array.isArray(novel.categories)) {
+                  const categories = novel.categories.map(cat => cat.nameCategory);
+                  allCategories.push(...categories);
+                }
+              });
             }
           }
 
@@ -121,7 +138,7 @@ const RecommendedStories = () => {
     };
 
     fetchCategoriesFromHistory();
-  }, [dispatch, userHistory, userCategories.length]);
+  }, [dispatch, userHistory, userCategories.length, novels]);
 
   // Tìm kiếm truyện gợi ý dựa trên categories
   const fetchRecommendedNovels = async (categories) => {
@@ -198,10 +215,24 @@ const RecommendedStories = () => {
       }
     } catch (err) {
       console.error('Error fetching recommended novels:', err);
-      // Nếu tìm kiếm theo categories thất bại, thử lấy tất cả truyện và lọc client-side
+      // Nếu tìm kiếm theo categories thất bại, sử dụng data có sẵn
       try {
-        console.log('Falling back to getAllNovels...');
-        const allNovelsResponse = await dispatch(getAllNovels()).unwrap();
+        console.log('Falling back to using existing novels data...');
+        
+        // Sử dụng data có sẵn thay vì gọi API mới
+        let allNovelsResponse = novels;
+        if (!allNovelsResponse || allNovelsResponse.length === 0) {
+          if (!hasLoadedAllNovels.current && !isNovelsLoading()) {
+            console.log('🔄 Loading novels for fallback from RecommendedStories...');
+            setNovelsLoading(true);
+            try {
+              allNovelsResponse = await dispatch(getAllNovels()).unwrap();
+              hasLoadedAllNovels.current = true;
+            } finally {
+              setNovelsLoading(false);
+            }
+          }
+        }
         
         if (allNovelsResponse && Array.isArray(allNovelsResponse)) {
           // Lọc truyện theo categories ở client-side
@@ -293,9 +324,22 @@ const RecommendedStories = () => {
       }
     } catch (err) {
       console.error('Error fetching popular novels:', err);
-      // Fallback to getAllNovels
+      // Sử dụng data có sẵn thay vì gọi API mới
       try {
-        const allNovelsResponse = await dispatch(getAllNovels()).unwrap();
+        let allNovelsResponse = novels;
+        if (!allNovelsResponse || allNovelsResponse.length === 0) {
+          if (!hasLoadedAllNovels.current && !isNovelsLoading()) {
+            console.log('🔄 Loading novels for popular fallback from RecommendedStories...');
+            setNovelsLoading(true);
+            try {
+              allNovelsResponse = await dispatch(getAllNovels()).unwrap();
+              hasLoadedAllNovels.current = true;
+            } finally {
+              setNovelsLoading(false);
+            }
+          }
+        }
+        
         if (allNovelsResponse && Array.isArray(allNovelsResponse)) {
           const popularNovels = allNovelsResponse
             .filter(novel => novel.statusNovel === 'COMPLETED')

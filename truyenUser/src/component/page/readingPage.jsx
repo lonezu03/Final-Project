@@ -12,6 +12,7 @@ import {
 } from '../../redux/chapterSlice';
 import { createHistory, getAllHistoryByUser  } from '../../redux/userSlice';
 import apiClient from '../../services/api'; // Đảm bảo đường dẫn này đúng
+import { optimizeCloudinaryAudioUrl, optimizeCloudinaryImageUrl } from '../../utils/cloudinaryOptimizer';
 
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -717,13 +718,13 @@ useEffect(() => {
       </div>
        {showAudioPlayer && (currentChapterContent?.urlAudio || urlAudio) && (
   <AudioPlayer 
-    audioSrc={currentChapterContent?.urlAudio || urlAudio} 
+    audioSrc={optimizeCloudinaryAudioUrl(currentChapterContent?.urlAudio || urlAudio)} 
     onPrevChapter={handlePrevChapter} 
     onNextChapter={handleNextChapter} 
     isFirstChapter={isFirstChapter} 
     isLastChapter={isLastChapter} 
     novel={currentNovel}  // Đảm bảo truyền novel thay vì novelTitle
-    coverImage={currentNovel?.imageNovel}
+    coverImage={optimizeCloudinaryImageUrl(currentNovel?.imageNovel)}
     onProgressUpdate={handleAudioProgressUpdate}
     initialTime={savedAudioPosition}
   />

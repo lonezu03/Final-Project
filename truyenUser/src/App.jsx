@@ -7,6 +7,7 @@ import store from "./redux/store";
 import { getAllNovels, searchNovels, LyberiNovels } from './redux/novelSlice';
 import { getAllCategories } from './redux/categorySlice';
 import { setUserFromStorage,loadUserFromStorage,loadAndRefreshUser } from './redux/userSlice';
+import { setNovelsLoading, isNovelsLoading, isNovelsLoaded } from './utils/apiCache';
 import NotificationWebSocket from './redux/NotificationWebSocket'; // Import NotificationWebSocket
 import 'react-toastify/dist/ReactToastify.css'; // Đảm bảo bạn import CSS của react-toastify
 import { ToastContainer } from 'react-toastify';
@@ -50,11 +51,15 @@ const AppContent = () => {
 
   // Chỉ fetch novels 1 lần nếu chưa có
   useEffect(() => {
-    if (!fetchedNovels.current && (!novels || novels.length === 0)) {
-      dispatch(getAllNovels());
-      fetchedNovels.current = true;
+    if (!fetchedNovels.current && (!novels || novels.length === 0) && !isNovelsLoading() && !isNovelsLoaded()) {
+      console.log('🔄 Fetching all novels from App.jsx...');
+      setNovelsLoading(true);
+      dispatch(getAllNovels()).finally(() => {
+        setNovelsLoading(false);
+        fetchedNovels.current = true;
+      });
     }
-  }, [dispatch, novels]);
+  }, [dispatch]); // Bỏ novels khỏi dependency để tránh loop
 
   // Chỉ fetch categories 1 lần nếu chưa có
   useEffect(() => {
@@ -62,7 +67,7 @@ const AppContent = () => {
       // dispatch(getAllCategories());
       fetchedCategories.current = true;
     }
-  }, [dispatch, categories]);
+  }, [dispatch]); // Bỏ categories khỏi dependency để tránh loop
 
   // Chỉ fetch library khi user đổi và chưa fetch cho user đó
   useEffect(() => {
@@ -74,7 +79,7 @@ const AppContent = () => {
     if (!currentUser?.idUser) {
       fetchedLibrary.current = false;
     }
-  }, [dispatch, currentUser]);
+  }, [dispatch, currentUser?.idUser]); // Chỉ theo dõi idUser thay vì toàn bộ currentUser
 
   return (
     <Router>

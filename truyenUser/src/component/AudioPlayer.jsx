@@ -4,6 +4,7 @@ import {
   FaFastBackward, FaFastForward, FaEllipsisV, FaMoon
 } from 'react-icons/fa';
 import { IoMdSunny } from "react-icons/io";
+import { optimizeCloudinaryAudioUrl, optimizeCloudinaryImageUrl } from '../utils/cloudinaryOptimizer';
 
 // Component con để quản lý việc chọn tốc độ phát
 const PlaybackSpeedControl = ({ currentSpeed, onSpeedChange }) => {
@@ -67,6 +68,9 @@ const AudioPlayer = ({
   className = '',
   onProgressUpdate,
 }) => {
+  // Optimize Cloudinary URLs for better audio seeking and image loading
+  const optimizedAudioSrc = optimizeCloudinaryAudioUrl(audioSrc);
+  const optimizedCoverImage = optimizeCloudinaryImageUrl(coverImage);
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -113,11 +117,11 @@ const position = audioRef.current?.currentTime || 0;
 
     // Kiểm tra khả năng Range Request của server
     const checkRangeSupport = async () => {
-      if (rangeCheckRef.current || !audioSrc) return;
+      if (rangeCheckRef.current || !optimizedAudioSrc) return;
       rangeCheckRef.current = true;
       
       try {
-        const response = await fetch(audioSrc, { 
+        const response = await fetch(optimizedAudioSrc, { 
           method: 'HEAD',
           headers: { 'Range': 'bytes=0-1' }
         });
@@ -230,7 +234,7 @@ const position = audioRef.current?.currentTime || 0;
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('loadstart', handleLoadStart);
     };
-  }, [duration, isManualSeeking, onProgressUpdate, audioSrc]);
+  }, [duration, isManualSeeking, onProgressUpdate, optimizedAudioSrc]);
 
   // Effect #2: Đồng bộ state với thuộc tính của thẻ audio
   useEffect(() => {
@@ -254,18 +258,18 @@ const position = audioRef.current?.currentTime || 0;
     setRangeSupport('unknown'); // Reset range support check
     setIsBuffering(false);
     rangeCheckRef.current = false; // Reset range check flag
-  }, [audioSrc]);
+  }, [optimizedAudioSrc]);
 
-  // THÊM EFFECT ĐỂ ĐỒNG BỘ initialTime MỚI KHI audioSrc THAY ĐỔI
+  // THÊM EFFECT ĐỂ ĐỒNG BỘ initialTime MỚI KHI optimizedAudioSrc THAY ĐỔI
 useEffect(() => {
   if (audioRef.current && typeof initialTime === 'number') {
     audioRef.current.currentTime = initialTime;
   }
-}, [initialTime, audioSrc]);
+}, [initialTime, optimizedAudioSrc]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
-    if (audio && audioSrc) {
+    if (audio && optimizedAudioSrc) {
       if (isPlaying) {
       audio.pause();
       } else {
@@ -427,7 +431,7 @@ useEffect(() => {
         {/* 1. Bên trái: Ảnh bìa + Thông số */}
         <div className="flex items-center space-x-2 flex-shrink-0">
           <img
-            src={coverImage || MOCK_COVER_IMAGE_URL}
+            src={optimizedCoverImage || MOCK_COVER_IMAGE_URL}
             alt="Bìa truyện"
             className="w-10 h-10 object-cover rounded-sm"
           />
@@ -444,7 +448,7 @@ useEffect(() => {
           <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">
             <button onClick={onPrevChapter} disabled={isFirstChapter} className="text-base sm:text-lg md:text-xl text-slate-600 hover:text-slate-900 disabled:opacity-40" title="Chương trước"><FaStepBackward /></button>
             <button onClick={() => rewind(10)} className="text-base sm:text-lg md:text-xl text-slate-600 hover:text-slate-900" title="Tua lại 10 giây"><FaFastBackward /></button>
-            <button onClick={togglePlayPause} className="text-xl sm:text-2xl md:text-3xl text-orange-500 hover:text-orange-600 disabled:opacity-40" title={isPlaying ? "Tạm dừng" : "Phát"} disabled={!audioSrc}>
+            <button onClick={togglePlayPause} className="text-xl sm:text-2xl md:text-3xl text-orange-500 hover:text-orange-600 disabled:opacity-40" title={isPlaying ? "Tạm dừng" : "Phát"} disabled={!optimizedAudioSrc}>
               {isPlaying ? <FaPause /> : <FaPlay />}
             </button>
             <button onClick={() => fastForward(10)} className="text-base sm:text-lg md:text-xl text-slate-600 hover:text-slate-900" title="Tua tới 10 giây"><FaFastForward /></button>
@@ -518,7 +522,7 @@ useEffect(() => {
 
         <audio
           ref={audioRef}
-          src={audioSrc}
+          src={optimizedAudioSrc}
           preload="auto"
           playsInline
           controls={false}

@@ -5,6 +5,7 @@ import apiClient from '../services/api'; // Import apiClient đã cấu hình
 import { rooturl } from './element'; // Import đường dẫn gốc từ file element
 import { LyberiNovels } from './novelSlice'; // <<-- THÊM IMPORT NÀY Ở ĐẦU FILE
 import { confirmTransactions } from './transactionSlice'; 
+import { resetApiCache } from '../utils/apiCache'; 
 
 const userApiBase = `${rooturl}/user`; // Chỉ dùng cho các API không cần auth
 
@@ -595,6 +596,9 @@ const userSlice = createSlice({
       state.otpMessage = null;
       localStorage.removeItem('currentUser');
       localStorage.removeItem('authToken');
+      // Reset API cache để tránh spam khi login lại
+      resetApiCache();
+      console.log('🔄 User logged out, API cache reset');
     },
     clearUserError: (state) => { state.error = null; },
     clearOtpMessage: (state) => { state.otpMessage = null; },
