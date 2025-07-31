@@ -21,7 +21,7 @@ public class ApplicationInitConfig {
 	@Bean
 	ApplicationRunner applicationRunner(IUserRepository userRepository) {
 		return args -> {
-			if (userRepository.findByUserNameUser("admin").isEmpty()) {
+			if (userRepository.findByEmailUser("admin@gmail.com")==null) {
 				PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
 				User user = User.builder().userNameUser("admin").passwordUser(passwordEncoder.encode("Admin!22"))
 						.emailUser("admin@gmail.com") 
