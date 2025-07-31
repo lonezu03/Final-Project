@@ -99,13 +99,21 @@ public class SecurityConfig {
         		        .filter(Permission::isWhiteList)
         		        .toList();
 
-        		    for (Permission p : whitelist) {
-        		        auth.requestMatchers(HttpMethod.valueOf(p.getMethod()), p.getEndPoint()).permitAll();
-        		    }
-        	
+        	 for (Permission p : whitelist) {
+                 try {
+                     HttpMethod method = HttpMethod.valueOf(p.getMethod());
+//                     String endpoint = p.getEndPoint();
+                     String endpoint = p.getEndPoint().replace("[^/]+", "*");
+
+                     logger.info("Whitelisting endpoint [{}] with method [{}]", endpoint, method);
+                     auth.requestMatchers(method, endpoint).permitAll();
+                 } catch (IllegalArgumentException e) {
+                	 logger.warn("Invalid HTTP method [{}] for endpoint [{}]", p.getMethod(), p.getEndPoint());
+                 }
+             }        	
             // Insert custom TokenValidationFilter after Spring’s default Bearer token filter
             httpSecurity.addFilterAfter(tokenValidationFilter, BearerTokenAuthenticationFilter.class);
-            auth.anyRequest().authenticated();
+            auth.anyRequest().authenticated(); 
         });
 
         // Disable CSRF protection (commonly disabled for stateless token-based APIs)
