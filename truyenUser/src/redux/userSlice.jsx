@@ -223,6 +223,25 @@ export const getAllHistoryByUser = createAsyncThunk(
     }
   }
 );
+
+// Thunk để refresh lịch sử đọc
+export const refreshUserHistory = createAsyncThunk(
+  'user/refreshHistory',
+  async (_, { getState, dispatch, rejectWithValue }) => {
+    try {
+      const { currentUser } = getState().user;
+      if (!currentUser?.idUser) {
+        return rejectWithValue('Người dùng chưa đăng nhập.');
+      }
+      
+      const result = await dispatch(getAllHistoryByUser(currentUser.idUser)).unwrap();
+      return result;
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
 //10
 
 export const updateUserProfile = createAsyncThunk(
@@ -704,17 +723,8 @@ const userSlice = createSlice({
       .addCase(createHistory.fulfilled, (state, action) => {
         state.historyLoading = false;
         state.historyActionStatus = action.payload.message || 'Lịch sử đọc đã được cập nhật.';
-        // Tùy chọn: Nếu API trả về danh sách lịch sử đã cập nhật, bạn có thể cập nhật state.userHistory ở đây.
-        // Hoặc, bạn có thể dispatch lại getAllHistoryByUser sau khi hành động này thành công
-        // để đảm bảo danh sách lịch sử luôn mới nhất.
-        // Ví dụ: nếu action.payload.result là một history item mới/đã cập nhật:
-        // const updatedHistoryItem = action.payload.result;
-        // const index = state.userHistory.findIndex(item => item.id?.idNovel === updatedHistoryItem.id?.idNovel && item.id?.idChapter === updatedHistoryItem.id?.idChapter);
-        // if (index !== -1) {
-        //   state.userHistory[index] = updatedHistoryItem;
-        // } else {
-        //   state.userHistory.unshift(updatedHistoryItem);
-        // }
+        // Không cần cập nhật userHistory ở đây vì đã được fetch từ App.jsx
+        // và sẽ được refresh khi cần thiết
       })
      .addCase(createHistory.rejected, (state, action) => {
     state.historyLoading = false;

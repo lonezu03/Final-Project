@@ -4,10 +4,7 @@ import { Provider, useDispatch, useSelector } from "react-redux";
 
 import store from "./redux/store";
 
-import { getAllNovels, searchNovels, LyberiNovels } from './redux/novelSlice';
-import { getAllCategories } from './redux/categorySlice';
-import { setUserFromStorage,loadUserFromStorage,loadAndRefreshUser } from './redux/userSlice';
-import { setNovelsLoading, isNovelsLoading, isNovelsLoaded } from './utils/apiCache';
+import { loadAndRefreshUser } from './redux/userSlice';
 import NotificationWebSocket from './redux/NotificationWebSocket'; // Import NotificationWebSocket
 import 'react-toastify/dist/ReactToastify.css'; // Đảm bảo bạn import CSS của react-toastify
 import { ToastContainer } from 'react-toastify';
@@ -31,55 +28,14 @@ import SupportPage from './component/page/SupportPage'; // Trang hỗ trợ khá
 import AboutUs from './component/page/AboutUs'; // Trang giới thiệu về công ty
 import NovelChatBot from './component/NovelChatBot'; // Import chatbot trợ lý truyện
 
-// AppContent bây giờ chỉ chịu trách nhiệm fetch dữ liệu không thay đổi thường xuyên
+// AppContent bây giờ chỉ chịu trách nhiệm routing và layout
 const AppContent = () => {
-
-  const dispatch = useDispatch();
-  const novels = useSelector((state) => state.novels.novels);
-  const categories = useSelector((state) => state.categories.categories);
   const [notifications, setNotifications] = useState([]);
-  const currentUser = useSelector((state) => state.user.currentUser);
-  // Dùng ref để đảm bảo chỉ fetch 1 lần nếu dữ liệu đã có
-  const fetchedNovels = useRef(false);
-  const fetchedCategories = useRef(false);
-  const fetchedLibrary = useRef(false);
 
   // Xử lý khi nhận thông báo từ WebSocket
   const handleNotificationMessage = (message) => {
     setNotifications((prevNotifications) => [...prevNotifications, message]);
   };
-
-  // Chỉ fetch novels 1 lần nếu chưa có
-  useEffect(() => {
-    if (!fetchedNovels.current && (!novels || novels.length === 0) && !isNovelsLoading() && !isNovelsLoaded()) {
-      console.log('🔄 Fetching all novels from App.jsx...');
-      setNovelsLoading(true);
-      dispatch(getAllNovels()).finally(() => {
-        setNovelsLoading(false);
-        fetchedNovels.current = true;
-      });
-    }
-  }, [dispatch]); // Bỏ novels khỏi dependency để tránh loop
-
-  // Chỉ fetch categories 1 lần nếu chưa có
-  useEffect(() => {
-    if (!fetchedCategories.current && (!categories || categories.length === 0)) {
-      // dispatch(getAllCategories());
-      fetchedCategories.current = true;
-    }
-  }, [dispatch]); // Bỏ categories khỏi dependency để tránh loop
-
-  // Chỉ fetch library khi user đổi và chưa fetch cho user đó
-  useEffect(() => {
-    if (currentUser?.idUser && !fetchedLibrary.current) {
-      dispatch(LyberiNovels({ idUser: currentUser.idUser }));
-      fetchedLibrary.current = true;
-    }
-    // Reset flag nếu user logout
-    if (!currentUser?.idUser) {
-      fetchedLibrary.current = false;
-    }
-  }, [dispatch, currentUser?.idUser]); // Chỉ theo dõi idUser thay vì toàn bộ currentUser
 
   return (
     <Router>

@@ -65,9 +65,12 @@ const UserReadingHistory = () => {
   const [disableLinks, setDisableLinks] = useState(false); // Thêm trạng thái disable link
 
   // Chỉ fetch lịch sử khi user đổi hoặc tab chuyển sang 'dangDoc', tránh spam API
+  // Bỏ việc fetch vì đã được fetch từ App.jsx
   const fetchedHistory = React.useRef({});
   useEffect(() => {
-    if (currentUser?.idUser && activeTab === 'dangDoc') {
+    // Không cần fetch nữa vì dữ liệu đã được load từ App.jsx
+    // Chỉ cần kiểm tra nếu chưa có dữ liệu và user đã đăng nhập thì mới fetch
+    if (currentUser?.idUser && activeTab === 'dangDoc' && (!userHistory || userHistory.length === 0)) {
       if (!fetchedHistory.current[currentUser.idUser]) {
         dispatch(getAllHistoryByUser(currentUser.idUser));
         fetchedHistory.current[currentUser.idUser] = true;
@@ -79,7 +82,7 @@ const UserReadingHistory = () => {
         fetchedHistory.current = {};
       }
     };
-  }, [dispatch, currentUser, activeTab]);
+  }, [dispatch, currentUser, activeTab, userHistory]);
 
   useEffect(() => {
     if (historyActionStatus) {

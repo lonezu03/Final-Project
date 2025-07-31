@@ -10,7 +10,7 @@ import {
   increaseChapterView, 
 
 } from '../../redux/chapterSlice';
-import { createHistory, getAllHistoryByUser  } from '../../redux/userSlice';
+import { createHistory, getAllHistoryByUser, refreshUserHistory  } from '../../redux/userSlice';
 import apiClient from '../../services/api'; // Đảm bảo đường dẫn này đúng
 import { optimizeCloudinaryAudioUrl, optimizeCloudinaryImageUrl } from '../../utils/cloudinaryOptimizer';
 
@@ -206,17 +206,20 @@ useEffect(() => {
   };
 }, [dispatch, novelId, chapterId]);
 
-// Effect #3: Tải lịch sử đọc của người dùng
+// Effect #3: Tải lịch sử đọc của người dùng (chỉ một lần cho mỗi user)
+const historyLoadedForUser = useRef(null);
+
 useEffect(() => {
   let isActive = true;
 
   const loadUserHistory = async () => {
-    if (currentUser?.idUser && novelId && chapterId) {
-      // console.log("[Effect #3] Tải lịch sử cho user:", currentUser.idUser);
+    if (currentUser?.idUser && currentUser.idUser !== historyLoadedForUser.current) {
+      console.log("[Effect #3] Tải lịch sử cho user:", currentUser.idUser);
       
       try {
         if (isActive) {
           await dispatch(getAllHistoryByUser(currentUser.idUser));
+          historyLoadedForUser.current = currentUser.idUser; // Đánh dấu đã tải cho user này
         }
       } catch (error) {
         console.error("[Effect #3] Lỗi khi tải lịch sử:", error);
@@ -232,11 +235,18 @@ useEffect(() => {
 }, [dispatch, currentUser?.idUser]); // Chỉ phụ thuộc vào user ID
 
 // Effect #4: Hiển thị dialog "ĐỌC TIẾP?" (chạy khi có lịch sử hoặc nội dung chương)
-// Luôn set savedAudioPosition = 0 khi vào chương mới, chỉ khi ấn Đọc tiếp mới truyền vị trí đã lưu
+// Sử dụng ref để tránh hiển thị dialog nhiều lần cho cùng một chương
+const dialogShownForChapter = useRef(null);
+
 useEffect(() => {
   // Điều kiện tiên quyết: chỉ chạy khi có đủ dữ liệu
   if (loadingContent || !currentChapterContent || !Array.isArray(userHistory) || userHistory.length === 0) {
     setSavedAudioPosition(0); // reset audio về 0 khi vào chương mới
+    return;
+  }
+
+  // Nếu đã hiển thị dialog cho chương này rồi thì không hiển thị nữa
+  if (dialogShownForChapter.current === chapterId) {
     return;
   }
 
@@ -256,6 +266,7 @@ useEffect(() => {
   if (chapterHistoryFound && chapterHistoryFound.readPlace > 50) {
     setSavedScrollPosition(chapterHistoryFound.readPlace);
     setShowContinueDialog(true);
+    dialogShownForChapter.current = chapterId; // Đánh dấu đã hiển thị dialog cho chương này
     // KHÔNG setSavedAudioPosition ở đây, chỉ set khi ấn Đọc tiếp
   } else {
     setSavedAudioPosition(0); // reset audio về 0 nếu không có lịch sử
@@ -263,9 +274,13 @@ useEffect(() => {
 }, [userHistory, loadingContent, currentChapterContent, chapterId]);
 
 // Effect set lại scroll position khi dialog được xác nhận
-// Khi vào chương mới, luôn scroll về top 0
+// Khi vào chương mới, luôn scroll về top 0 và reset dialog state
 useEffect(() => {
   window.scrollTo({ top: 0, behavior: 'auto' });
+  // Reset dialog state khi chương thay đổi
+  setShowContinueDialog(false);
+  setSavedScrollPosition(null);
+  dialogShownForChapter.current = null; // Reset flag để có thể hiển thị dialog cho chương mới
 }, [chapterId]);
 
 // Khi ấn Đọc tiếp mới scroll tới vị trí đã lưu
@@ -276,7 +291,8 @@ useEffect(() => {
   }
 }, [showContinueDialog, savedScrollPosition]);
 // Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC (trước đây là Effect #4)
-let vitrilandau=100
+let vitrilandau = 100;
+const lastSavedPosition = useRef(0); // Track vị trí đã lưu gần nhất
 
 useEffect(() => {
   // THAY ĐỔI Ở ĐÂY:
@@ -288,6 +304,7 @@ useEffect(() => {
   if (!scrollContainer || !currentUser || !currentChapterContent?.titleChapter) {
     return;
   }
+  
   const handleScroll = () => {
     // --- THÊM LOG DEBUG ---
     const windowScrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -299,8 +316,12 @@ useEffect(() => {
     debounceTimerRef.current = setTimeout(() => {
       // SỬA Ở ĐÂY: Luôn sử dụng `windowScrollTop` để có giá trị chính xác.
       const readPlace = Math.round(windowScrollTop); 
-      // Giữ nguyên điều kiện > 100
-      if (readPlace > vitrilandau && chapterId) { // <-- Đảm bảo chapterId không phải null/undefined
+      
+      // Chỉ lưu nếu vị trí thay đổi đáng kể (ít nhất 200px)
+      const positionDiff = Math.abs(readPlace - lastSavedPosition.current);
+      
+      // Giữ nguyên điều kiện > 100 và thêm điều kiện chống spam
+      if (readPlace > vitrilandau && chapterId && positionDiff >= 200) {
         // console.log(currentChapterContent)
         const payload = {
           email: currentUser.emailUser,
@@ -309,11 +330,22 @@ useEffect(() => {
           readPlace,
           hearTime: currentAudioTimeRef.current, // Luôn lấy giá trị mới nhất
         };
-        // console.log(`[Effect #5 - Debounced Save] Dispatching createHistory... Position: ${readPlace}`);
+        console.log(`[Effect #5 - Debounced Save] Dispatching createHistory... Position: ${readPlace}`);
+        
         vitrilandau = readPlace + 400; // CẬP NHẬT VỊ TRÍ ĐỌC LẦN ĐẦU
-        dispatch(createHistory(payload));
+        lastSavedPosition.current = readPlace; // Cập nhật vị trí đã lưu
+        
+        dispatch(createHistory(payload))
+          .unwrap()
+          .then(() => {
+            // Chỉ refresh history nếu cần thiết (ví dụ: mỗi 5 lần lưu)
+            // dispatch(refreshUserHistory()); // Tạm thời comment để giảm spam API
+          })
+          .catch(error => {
+            console.error('Error creating history:', error);
+          });
       }
-    }, 2000)
+    }, 3000); // Tăng debounce time từ 2s lên 3s
   };
 
   // console.log(`[Effect #5] Gắn listener cuộn chuột cho chapterId: ${chapterId}`);
@@ -493,6 +525,7 @@ useEffect(() => {
         });
       }, 100);
     }
+    
     // Lấy lại vị trí audio từ lịch sử (nếu có)
     if (savedAudioPosition === 0 && userHistory && Array.isArray(userHistory)) {
       for (const novelGroup of userHistory) {
@@ -507,10 +540,17 @@ useEffect(() => {
         }
       }
     }
+    
     setShowContinueDialog(false);
+    // Đánh dấu rằng dialog đã được xử lý cho chương này
+    dialogShownForChapter.current = chapterId;
   };
   const handleCancelContinue = () => {
     setShowContinueDialog(false);
+    setSavedScrollPosition(null);
+    setSavedAudioPosition(0);
+    // Đánh dấu rằng dialog đã được xử lý cho chương này
+    dialogShownForChapter.current = chapterId;
     localStorage.removeItem(getPositionKey());
   };
   

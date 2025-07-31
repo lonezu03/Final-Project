@@ -11,13 +11,23 @@ export const getAllChapters = createAsyncThunk(
   async (novelId, { rejectWithValue, getState }) => {
     try {
       const token = getState().user.token;
-      const payload = { idNovel: novelId };
+      const payload = { 
+        idNovel: String(novelId) // Đảm bảo idNovel là string
+      };
       if (token) {
         payload.token = token;
       }
+      
+      console.log('🔍 [getAllChapters] Calling API with payload:', payload);
+      console.log('🔍 [getAllChapters] Current token:', token ? 'EXISTS' : 'NO TOKEN');
+      console.log('🔍 [getAllChapters] Full URL:', `${rooturl}${API_BASE_CHAPTER}/getAll`);
+      console.log('🔍 [getAllChapters] novelId type:', typeof novelId, 'value:', novelId);
+      
       const response = await apiClient.post(`${API_BASE_CHAPTER}/getAll`, payload, {
         headers: { 'Content-Type': 'application/json' },
       });
+
+      console.log('✅ [getAllChapters] API Response:', response.data);
 
       if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
         const chapters = response.data.result;
@@ -43,6 +53,32 @@ export const getAllChapters = createAsyncThunk(
       }
       return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương.');
     } catch (error) {
+      console.error('❌ [getAllChapters] API Error:', error);
+      console.error('❌ [getAllChapters] Error message:', error.message);
+      console.error('❌ [getAllChapters] Response status:', error.response?.status);
+      console.error('❌ [getAllChapters] Response data:', error.response?.data);
+      console.error('❌ [getAllChapters] Response headers:', error.response?.headers);
+      console.error('❌ [getAllChapters] Request config:', error.config);
+      
+      // Nếu lỗi 401 hoặc 403, có thể do token hết hạn
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.warn('⚠️ [getAllChapters] Token might be expired, trying without token...');
+        try {
+          // Thử gọi lại API mà không cần token
+          const fallbackPayload = { idNovel: String(novelId) };
+          const fallbackResponse = await apiClient.post(`${API_BASE_CHAPTER}/getAll`, fallbackPayload, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          
+          if (fallbackResponse.data && fallbackResponse.data.code === 1000) {
+            console.log('✅ [getAllChapters] Fallback API success');
+            return fallbackResponse.data.result || [];
+          }
+        } catch (fallbackError) {
+          console.error('❌ [getAllChapters] Fallback also failed:', fallbackError);
+        }
+      }
+      
       return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách chương.');
     }
   }

@@ -471,11 +471,11 @@ useEffect(() => {
               />
               
               {/* Hiển thị cảnh báo Range Request */}
-              {rangeSupport === 'not-supported' && (
+              {/* {rangeSupport === 'not-supported' && (
                 <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
                   ⚠️ Tua có thể không chính xác
                 </div>
-              )}
+              )} */}
               
               {/* Hiển thị trạng thái buffering */}
               {isBuffering && (

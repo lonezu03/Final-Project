@@ -28,19 +28,28 @@ const DetailPage = () => {
   const [activeTab, setActiveTab] = useState('summary');
   const [currentChapterListPage, setCurrentChapterListPage] = useState(1); // Đổi tên để rõ ràng
   const chaptersPerPageInList = 50;
-  const { currentUser, followedNovels } = useSelector((state) => state.user);
+  const { currentUser, followedNovels, userHistory } = useSelector((state) => state.user);
 
   // Chỉ fetch dữ liệu khi novelId đổi, tránh spam API
   const fetchedNovel = React.useRef({});
+  const isInitialLoad = React.useRef(true);
+  
   useEffect(() => {
     if (novelId) {
+      console.log('🔍 [DetailPage] novelId from URL:', novelId, 'type:', typeof novelId);
       setActiveTab('summary');
       setCurrentChapterListPage(1);
-      if (!fetchedNovel.current[novelId]) {
+      
+      // Chỉ fetch nếu chưa fetch cho novelId này hoặc là lần load đầu tiên
+      if (!fetchedNovel.current[novelId] || isInitialLoad.current) {
+        console.log('🔄 [DetailPage] Fetching data for novelId:', novelId);
         dispatch(getNovelById(novelId));
         dispatch(getAllChapters(novelId));
         dispatch(getAllReviews(novelId));
         fetchedNovel.current[novelId] = true;
+        isInitialLoad.current = false;
+      } else {
+        console.log('✅ [DetailPage] Data already fetched for novelId:', novelId);
       }
     }
     // Reset flag nếu novelId không còn
@@ -50,67 +59,83 @@ const DetailPage = () => {
       }
     };
   }, [dispatch, novelId]);
+ // Tối ưu việc fetch danh sách theo dõi
+ const fetchedLibrary = React.useRef(null);
+ 
  useEffect(() => {
-    // Khi component mount và có người dùng, tải danh sách truyện họ đã theo dõi
-    if (currentUser?.idUser&&followedNovels) {
+    // Chỉ tải danh sách theo dõi khi user thay đổi và chưa tải cho user này
+    if (currentUser?.idUser && fetchedLibrary.current !== currentUser.idUser) {
+        console.log('🔄 [DetailPage] Fetching library for user:', currentUser.idUser);
         dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+        fetchedLibrary.current = currentUser.idUser;
     }
-  }, [currentUser, dispatch]); // Chạy khi currentUser thay đổi
+    
+    // Reset khi user logout
+    if (!currentUser?.idUser && fetchedLibrary.current !== null) {
+        fetchedLibrary.current = null;
+    }
+  }, [currentUser?.idUser, dispatch]); // Chỉ theo dõi idUser
 
  const isFollowing = useMemo(() => {
   return Array.isArray(followedNovels) && followedNovels.includes(novelId);
 }, [followedNovels, novelId]);
   const handleFollowToggle = () => {
-  if (!currentUser) {
-    toast.info("Vui lòng đăng nhập để theo dõi truyện!");
-    navigate('/');
-    return;
-  }
-
-  const actionPayload = { idUser: currentUser.idUser, idNovel: novelId };
-
-  // Kiểm tra nếu người dùng đã theo dõi truyện
-  if (isFollowing) {
-    // Gọi action để bỏ theo dõi truyện
-    dispatch(followNovel(actionPayload))
-      .unwrap()
-      .then(() => {
-        toast.success("Đã bỏ theo dõi truyện.");
-        // Cập nhật ngay lập tức danh sách truyện theo dõi trong Redux store
-        dispatch(LyberiNovels({ idUser: currentUser.idUser })); // Tải lại danh sách truyện theo dõi
-      })
-      .catch((err) => toast.error(`Lỗi: ${err.message || err}`));
-  } else {
-    // Gọi action để theo dõi truyện
-    dispatch(followNovel(actionPayload))
-      .unwrap()
-      .then(() => {
-        toast.success("Đã theo dõi truyện thành công!");
-        // Cập nhật ngay lập tức danh sách truyện theo dõi trong Redux store
-        dispatch(LyberiNovels({ idUser: currentUser.idUser })); // Tải lại danh sách truyện theo dõi
-      })
-      .catch((err) => toast.error(`Lỗi: ${err.message || err}`));
-  }
-};
-
- const handleNavigateToChapter = (targetChapterId) => {
-  if (!currentUser) {
-      toast.info("Vui lòng đăng nhập để đọc chương này.");
-      navigate('/login');
-      return;
-    } 
-  if (!targetChapterId) {
-      toast.warn("Không thể xác định chương cần đọc.");
+    if (!currentUser) {
+      toast.info("Vui lòng đăng nhập để theo dõi truyện!");
+      navigate('/');
       return;
     }
 
+    const actionPayload = { idUser: currentUser.idUser, idNovel: novelId };
+
+    // Kiểm tra nếu người dùng đã theo dõi truyện
+    if (isFollowing) {
+      // Gọi action để bỏ theo dõi truyện
+      dispatch(followNovel(actionPayload))
+        .unwrap()
+        .then(() => {
+          toast.success("Đã bỏ theo dõi truyện.");
+          // Chỉ tải lại danh sách theo dõi, không cần tải lại toàn bộ
+          dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+        })
+        .catch((err) => {
+          console.error('Error unfollowing novel:', err);
+          toast.error(`Lỗi: ${err.message || err}`);
+        });
+    } else {
+      // Gọi action để theo dõi truyện
+      dispatch(followNovel(actionPayload))
+        .unwrap()
+        .then(() => {
+          toast.success("Đã theo dõi truyện thành công!");
+          // Chỉ tải lại danh sách theo dõi, không cần tải lại toàn bộ
+          dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+        })
+        .catch((err) => {
+          console.error('Error following novel:', err);
+          toast.error(`Lỗi: ${err.message || err}`);
+        });
+    }
+  };
+
+ const handleNavigateToChapter = (targetChapterId) => {
+    if (!currentUser) {
+        toast.info("Vui lòng đăng nhập để đọc chương này.");
+        navigate('/login');
+        return;
+    } 
     
-    
+    if (!targetChapterId) {
+        toast.warn("Không thể xác định chương cần đọc.");
+        return;
+    }
+
     // Logic kiểm tra chương đã mua
     const isPurchased = currentUser.chapterBought?.includes(targetChapterId);
 
     if (isPurchased) {
       // Nếu đã mua, cho phép điều hướng
+      console.log('🔄 [DetailPage] Navigating to chapter:', targetChapterId);
       navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
     } else {
       // Nếu chưa mua, thông báo lỗi và chuyển tab
@@ -126,10 +151,15 @@ const DetailPage = () => {
       navigate('/login');
       return;
     }
+    console.log('📝 [DetailPage] Opening review dialog for novel:', novelId);
     setShowReviewDialog(true);
   };
 
-  const renderErrorText = (err) => (typeof err === 'string' ? err : err?.message || 'Đã có lỗi xảy ra.');
+  const renderErrorText = (err) => {
+    const errorMessage = typeof err === 'string' ? err : err?.message || 'Đã có lỗi xảy ra.';
+    console.error('❌ [DetailPage] Error occurred:', errorMessage);
+    return errorMessage;
+  };
 
   const sortedChaptersForDetailPage = useMemo(() => {
     if (chaptersFromApiForDetailPage && Array.isArray(chaptersFromApiForDetailPage)) {
@@ -141,8 +171,10 @@ const DetailPage = () => {
   const handleReadFirstChapter = () => {
     if (sortedChaptersForDetailPage.length > 0) {
       const firstChapter = sortedChaptersForDetailPage[0];
+      console.log('📖 [DetailPage] Reading first chapter:', firstChapter?.idChapter);
       handleNavigateToChapter(firstChapter?.idChapter);
     } else if (!chaptersLoading) {
+      console.warn('⚠️ [DetailPage] No chapters available');
       toast.info("Truyện này chưa có chương nào.");
     }
   };
@@ -150,30 +182,80 @@ const DetailPage = () => {
   const handleReadLatestChapter = () => {
     if (sortedChaptersForDetailPage.length > 0) {
       const latestChapter = sortedChaptersForDetailPage[sortedChaptersForDetailPage.length - 1];
+      console.log('🔥 [DetailPage] Reading latest chapter:', latestChapter?.idChapter);
       handleNavigateToChapter(latestChapter?.idChapter);
     } else if (!chaptersLoading) {
+      console.warn('⚠️ [DetailPage] No chapters available for latest');
       toast.info("Truyện này chưa có chương nào.");
     }
   };
 
   const handleReadContinue = () => {
-    const lastReadChapterId = localStorage.getItem(`lastRead_${novelId}`);
+    // Tìm chương cuối cùng đã đọc từ userHistory trong Redux store
+    let lastReadChapterId = null;
+    
+    console.log('🔍 [DetailPage] Looking for continue reading position...');
+    
+    if (userHistory && Array.isArray(userHistory)) {
+      // Tìm novel hiện tại trong lịch sử
+      const currentNovelHistory = userHistory.find(novelGroup => 
+        novelGroup.idNovel === novelId || novelGroup.idNovel === parseInt(novelId)
+      );
+      
+      if (currentNovelHistory && Array.isArray(currentNovelHistory.historyReadRespones)) {
+        // Sắp xếp các chương theo thời gian đọc gần nhất
+        const sortedChapters = [...currentNovelHistory.historyReadRespones].sort((a, b) => {
+          const timeA = Array.isArray(a.readingTime) ? new Date(...a.readingTime.slice(0, 3), ...a.readingTime.slice(3)).getTime() : 0;
+          const timeB = Array.isArray(b.readingTime) ? new Date(...b.readingTime.slice(0, 3), ...b.readingTime.slice(3)).getTime() : 0;
+          return timeB - timeA; // Sắp xếp từ mới nhất đến cũ nhất
+        });
+        
+        if (sortedChapters.length > 0) {
+          lastReadChapterId = sortedChapters[0].id?.idChapter;
+          console.log('✅ [DetailPage] Found last read chapter from server:', lastReadChapterId);
+        }
+      }
+    }
+    
+    // Fallback về localStorage nếu không tìm thấy trong userHistory
+    if (!lastReadChapterId) {
+      lastReadChapterId = localStorage.getItem(`lastRead_${novelId}`);
+      if (lastReadChapterId) {
+        console.log('📱 [DetailPage] Found last read chapter from localStorage:', lastReadChapterId);
+      }
+    }
+    
     if (lastReadChapterId) {
       const chapterExists = sortedChaptersForDetailPage.some(ch => ch.idChapter.toString() === lastReadChapterId.toString());
       if (chapterExists) {
+        console.log('🔄 [DetailPage] Continuing from chapter:', lastReadChapterId);
         handleNavigateToChapter(lastReadChapterId);
       } else {
         console.warn(`Chapter ID ${lastReadChapterId} đã lưu không hợp lệ. Đọc từ đầu.`);
         handleReadFirstChapter();
       }
     } else {
+      console.log('📖 [DetailPage] No reading history found, starting from first chapter');
       handleReadFirstChapter();
     }
   };
 
-  if (novelLoading && !novelDetailData) return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Đang tải thông tin truyện...</div>;
-  if (novelError && !novelDetailData) return <div className={`flex justify-center items-center min-h-screen text-red-500 text-xl p-10 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>Lỗi tải thông tin truyện: {renderErrorText(novelError)}</div>;
-  if (!novelDetailData && !novelLoading) return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-800 bg-gray-50'}`}>Không tìm thấy truyện.</div>;
+  // Early returns với improved loading states
+  if (novelLoading && !novelDetailData) {
+    console.log('⏳ [DetailPage] Loading novel data...');
+    return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Đang tải thông tin truyện...</div>;
+  }
+  
+  if (novelError && !novelDetailData) {
+    console.error('❌ [DetailPage] Novel loading error:', novelError);
+    return <div className={`flex justify-center items-center min-h-screen text-red-500 text-xl p-10 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>Lỗi tải thông tin truyện: {renderErrorText(novelError)}</div>;
+  }
+  
+  if (!novelDetailData && !novelLoading) {
+    console.warn('⚠️ [DetailPage] No novel data found');
+    return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-800 bg-gray-50'}`}>Không tìm thấy truyện.</div>;
+  }
+  
   if (!novelDetailData) return null;
   let authorDisplay = novelDetailData.authors?.map(auth => auth.nameAuthor || "N/A").join(', ') || "Chưa rõ tác giả";
   let categoriesDisplay = novelDetailData.categories?.map(cat => cat.nameCategory || "N/A") || ["Chưa phân loại"];
@@ -204,21 +286,34 @@ const DetailPage = () => {
   );
 
   const handleGoToChapterInTab = (chapterNum) => {
+    console.log('🔍 [DetailPage] Going to chapter number:', chapterNum);
     const targetChapter = sortedChaptersForDetailPage.find(chap => chap.chapterNumber === chapterNum);
     if (targetChapter?.idChapter) {
+      console.log('✅ [DetailPage] Found chapter, navigating to:', targetChapter.idChapter);
       navigate(`/novel/${novelId}/chapter/${targetChapter.idChapter}`);
     } else {
       const targetPage = Math.ceil(chapterNum / chaptersPerPageInList);
-      if (targetPage >= 1 && targetPage <= totalChapterListPages) setCurrentChapterListPage(targetPage);
-      else alert("Số chương không hợp lệ.");
+      if (targetPage >= 1 && targetPage <= totalChapterListPages) {
+        console.log('📄 [DetailPage] Chapter not in current page, switching to page:', targetPage);
+        setCurrentChapterListPage(targetPage);
+      } else {
+        console.warn('⚠️ [DetailPage] Invalid chapter number:', chapterNum);
+        alert("Số chương không hợp lệ.");
+      }
     }
   };
 
   const handlePageChangeInTab = (page) => {
-    if (page >= 1 && page <= totalChapterListPages) setCurrentChapterListPage(page);
+    console.log('📄 [DetailPage] Changing to page:', page);
+    if (page >= 1 && page <= totalChapterListPages) {
+      setCurrentChapterListPage(page);
+    }
   };
 
-  const handleSortChaptersInTab = () => console.log("Sort chapters in tab");
+  const handleSortChaptersInTab = () => {
+    console.log('🔄 [DetailPage] Sorting chapters in tab');
+    // Implement sorting logic if needed
+  };
 
 
   const renderStars = (rating) => {
