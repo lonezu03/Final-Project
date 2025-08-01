@@ -4,12 +4,9 @@ import {
   BookOpen, 
   Users, 
   Award, 
-  Globe, 
   Heart,
   Star,
-  Zap,
   Target,
-  TrendingUp,
   Sparkles,
   ArrowRight,
   Play,
@@ -28,77 +25,63 @@ const AboutUs = () => {
   const isStatsInView = useInView(statsRef, { once: true });
 
   const stats = [
-    { number: 1000000, suffix: '+', label: 'Người đọc', icon: Users, color: 'blue' },
-    { number: 50000, suffix: '+', label: 'Truyện', icon: BookOpen, color: 'green' },
-    { number: 99, suffix: '%', label: 'Hài lòng', icon: Heart, color: 'red' },
-    { number: 24, suffix: '/7', label: 'Hỗ trợ', icon: Shield, color: 'purple' }
+    { number: 2, suffix: '', label: 'Thành viên nhóm', icon: Users, color: 'blue' },
+    { number: 100, suffix: '+', label: 'Giờ code', icon: BookOpen, color: 'green' },
+    { number: 85, suffix: '%', label: 'Hoàn thành', icon: Heart, color: 'red' },
+    { number: 1, suffix: '', label: 'Đồ án cuối kỳ', icon: Shield, color: 'purple' }
   ];
 
   const team = [
     {
-      name: 'Nguyễn Văn An',
-      role: 'CEO & Founder',
+      name: 'Phan Thanh Vũ',
+      role: 'Frontend Developer (React Vite) - Sinh viên năm 4, Đồ án cuối kỳ',
       avatar: '/api/placeholder/150/150',
-      quote: 'Tạo ra nền tảng đọc truyện tốt nhất Việt Nam',
-      social: ['linkedin', 'twitter']
-    },
-    {
-      name: 'Trần Thị Bình',
-      role: 'CTO',
-      avatar: '/api/placeholder/150/150',
-      quote: 'Công nghệ phục vụ trải nghiệm người dùng',
+      quote: 'Đam mê xây dựng trải nghiệm đọc truyện hiện đại, mượt mà cho mọi người',
       social: ['github', 'linkedin']
     },
     {
-      name: 'Lê Văn Cường',
-      role: 'Head of Content',
+      name: 'Trương Thái Dương',
+      role: 'Backend Developer (Java Spring Boot)',
       avatar: '/api/placeholder/150/150',
-      quote: 'Chất lượng nội dung là ưu tiên hàng đầu',
-      social: ['twitter', 'instagram']
-    },
-    {
-      name: 'Phạm Thị Dung',
-      role: 'Head of Design',
-      avatar: '/api/placeholder/150/150',
-      quote: 'Thiết kế đẹp tạo nên trải nghiệm tuyệt vời',
-      social: ['dribbble', 'behance']
+      quote: 'Kiến tạo nền tảng backend vững chắc, bảo mật và hiệu quả cho hệ thống truyện',
+      social: ['github', 'linkedin']
     }
   ];
 
   const achievements = [
     {
-      year: '2020',
-      title: 'Thành lập công ty',
-      description: 'Bắt đầu hành trình với đội ngũ 5 người',
+      year: '2024',
+      title: 'Khởi động đồ án cuối kỳ',
+      description: 'Hai thành viên nhóm bắt đầu hợp tác phát triển hệ thống đọc truyện chữ hiện đại',
       icon: Rocket,
       color: 'blue'
     },
     {
-      year: '2021',
-      title: 'Ra mắt nền tảng',
-      description: '100,000 người dùng đầu tiên',
-      icon: Star,
+      year: '2024',
+      title: 'Thiết kế hệ thống',
+      description: 'Hoàn thiện thiết kế UI/UX và kiến trúc backend với Spring Boot',
+      icon: Lightbulb,
       color: 'yellow'
     },
     {
-      year: '2022',
-      title: 'Mở rộng quy mô',
-      description: 'Đạt 500,000 người dùng hoạt động',
-      icon: TrendingUp,
+      year: '2024',
+      title: 'Phát triển MVP',
+      description: 'Xây dựng thành công frontend React Vite và backend Java Spring Boot',
+      icon: Star,
       color: 'green'
     },
     {
-      year: '2023',
-      title: 'Giải thưởng lớn',
-      description: 'Top 10 ứng dụng của năm',
-      icon: Award,
+      year: '2024',
+      title: 'Tích hợp và kiểm thử',
+      description: 'Kết nối frontend-backend, API testing và tối ưu hiệu năng',
+      icon: Target,
       color: 'purple'
     },
     {
       year: '2024',
-      title: 'Triệu người dùng',
-      description: 'Cột mốc 1 triệu người dùng',
-      icon: Target,
+      title: 'Hoàn thiện dự án',
+      description: 'Triển khai thành công và bảo vệ đồ án cuối kỳ',
+      icon: Award,
       color: 'red'
     }
   ];
@@ -132,23 +115,23 @@ const AboutUs = () => {
 
   const testimonials = [
     {
-      name: 'Nguyễn Minh Hoàng',
-      role: 'Độc giả thân thiết',
-      content: 'Ứng dụng tuyệt vời! Giao diện đẹp, kho truyện phong phú. Tôi đã đọc hơn 50 cuốn truyện ở đây.',
+      name: 'Thầy Nguyễn Văn A',
+      role: 'Giảng viên hướng dẫn',
+      content: 'Đây là một dự án ấn tượng với kiến trúc hệ thống tốt và giao diện người dùng thân thiện. Nhóm đã áp dụng hiệu quả các công nghệ hiện đại.',
       rating: 5,
       avatar: '/api/placeholder/80/80'
     },
     {
-      name: 'Trần Thị Lan',
-      role: 'Tác giả',
-      content: 'Nền tảng hỗ trợ tác giả rất tốt. Thu nhập ổn định và có cộng đồng độc giả nhiệt tình.',
+      name: 'Bạn Lê Thị B',
+      role: 'Sinh viên cùng khóa',
+      content: 'Mình đã test thử ứng dụng và thấy rất thích. Giao diện đẹp, tính năng đầy đủ. Chúc mừng nhóm bạn!',
       rating: 5,
       avatar: '/api/placeholder/80/80'
     },
     {
-      name: 'Lê Văn Đức',
-      role: 'Người dùng mới',
-      content: 'Mới sử dụng 1 tháng nhưng đã rất ấn tượng. Gợi ý truyện chuẩn xác, đọc rất nghiện.',
+      name: 'Anh Trần Văn C',
+      role: 'Developer',
+      content: 'Với tư cách là người trong ngành, tôi đánh giá cao cách nhóm tổ chức code và thiết kế API REST. Rất chuyên nghiệp!',
       rating: 5,
       avatar: '/api/placeholder/80/80'
     }
@@ -298,7 +281,9 @@ const AboutUs = () => {
               className="text-xl md:text-2xl mb-8 text-blue-100 max-w-4xl mx-auto"
               variants={itemVariants}
             >
-              Chúng tôi là đội ngũ đam mê văn học, tận tâm mang đến cho bạn{' '}
+              Dự án được thực hiện bởi <strong>Phan Thanh Vũ</strong> (Frontend - React Vite) và <strong>Trương Thái Dương</strong> (Backend - Java Spring Boot), 
+              sinh viên năm 4 thực hiện đồ án cuối kỳ. Chúng tôi cùng nhau xây dựng nền tảng đọc truyện chữ hiện đại, 
+              tối ưu trải nghiệm cho người dùng Việt Nam với{' '}
               <motion.span
                 className="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent font-bold"
                 animate={{ 
@@ -306,7 +291,7 @@ const AboutUs = () => {
                 }}
                 transition={{ duration: 3, repeat: Infinity }}
               >
-                trải nghiệm đọc truyện tuyệt vời nhất
+                công nghệ hiện đại và tình yêu văn học
               </motion.span>
             </motion.p>
 
@@ -504,7 +489,7 @@ const AboutUs = () => {
             Đội ngũ của chúng tôi
           </motion.h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
             {team.map((member, index) => (
               <motion.div
                 key={index}
@@ -637,10 +622,10 @@ const AboutUs = () => {
             </motion.div>
             
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Hãy cùng chúng tôi viết nên câu chuyện của bạn
+              Cảm ơn bạn đã ghé thăm dự án của chúng tôi
             </h2>
             <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
-              Tham gia cộng đồng hơn 1 triệu người yêu văn học. Khám phá thế giới truyện tranh và tiểu thuyết vô tận.
+              Đây là kết quả của hành trình học tập và nghiên cứu. Chúng tôi hy vọng có thể mang đến trải nghiệm đọc truyện tuyệt vời cho mọi người.
             </p>
             
             <motion.button

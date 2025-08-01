@@ -4,11 +4,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getNovelById } from '../../redux/novelSlice';
 import {
+  getAllChapters,
   getNovelChaptersList, 
   getChapterContentById,
   clearChapterState,
   increaseChapterView, 
-
 } from '../../redux/chapterSlice';
 import { createHistory, getAllHistoryByUser, refreshUserHistory  } from '../../redux/userSlice';
 import apiClient from '../../services/api'; // Đảm bảo đường dẫn này đúng
@@ -154,17 +154,35 @@ const userHistory = useSelector((state) => state.user.userHistory);
 // Effect #1: Tải dữ liệu cơ bản của truyện
 useEffect(() => {
   if (novelId) {
-    // console.log("[Effect #1] Tải dữ liệu cơ bản cho novelId:", novelId);
-    Promise.all([
-      dispatch(getNovelById(novelId)),
-      dispatch(getNovelChaptersList(novelId))
-    ]);
+    console.log("[Effect #1] Tải dữ liệu cơ bản cho novelId:", novelId);
+    
+    // Kiểm tra xem đã có novel data trong store chưa (có thể từ DetailPage)
+    const shouldFetchNovel = !currentNovel || String(currentNovel.idNovel) !== String(novelId);
+    
+    const promises = [];
+    
+    if (shouldFetchNovel) {
+      console.log("🔄 [ReadingPage] Fetching novel data for:", novelId);
+      promises.push(dispatch(getNovelById(novelId)));
+    } else {
+      console.log("✅ [ReadingPage] Novel data already available in store");
+    }
+    
+    // Luôn load chapters và dropdown
+    promises.push(
+      dispatch(getAllChapters(novelId)).then(() => {
+        // Sau khi getAllChapters hoàn thành, gọi getNovelChaptersList để tạo dropdown
+        return dispatch(getNovelChaptersList(novelId));
+      })
+    );
+    
+    Promise.all(promises);
   }
   
   return () => {
     dispatch(clearChapterState());
   };
-}, [dispatch, novelId]);
+}, [dispatch, novelId, currentNovel]);
 
 // Effect #2: Tải nội dung chương và tăng lượt xem
 useEffect(() => {

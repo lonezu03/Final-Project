@@ -1,4 +1,11 @@
 // src/redux/chapterSlice.js
+// 
+// LOGIC TỐI ƯU HÓA API:
+// 1. DetailPage gọi getAllChapters() -> Lưu toàn bộ chapters vào state.chapters
+// 2. ReadingPage gọi getAllChapters() -> Sau đó gọi getNovelChaptersList() -> Tái sử dụng dữ liệu từ state
+// 3. getChapterContentById() -> Kiểm tra state trước, chỉ gọi getAllChapters() nếu cần
+// 4. Không còn gọi API /chapter/getAll nhiều lần -> Tiết kiệm băng thông
+//
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../services/api'; // Luôn dùng apiClient vì API có thể yêu cầu token
 import { rooturl } from './element'; // Import đường dẫn gốc từ file element
@@ -85,61 +92,52 @@ export const getAllChapters = createAsyncThunk(
 );
 
 // Action để lấy danh sách chương cho dropdown của ReadingPage
-// Sửa lại để nó cũng gửi token, đảm bảo nhận được idChapter và indexChapter
+// KHÔNG GỌI API - chỉ tái sử dụng dữ liệu từ getAllChapters
 export const getNovelChaptersList = createAsyncThunk(
   'chapters/getNovelChaptersList',
-
-  async (novelId, { rejectWithValue, getState }) => { // Thêm getState
+  async (novelId, { rejectWithValue, getState, dispatch }) => {
     try {
-      const token = getState().user.token; // Lấy token
-      const payload = {
-        idNovel: novelId,
-      };
-      if (token) {
-        payload.token = token; // Gửi token nếu có
-      }
-
-      const response = await apiClient.post(`${API_BASE_CHAPTER}/getAll`, payload, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
-        const chaptersFromApi = response.data.result;
-
-        // Nếu không có token, API chỉ trả về titleChapter
-        if (!token && chaptersFromApi.length > 0 && chaptersFromApi[0].idChapter === undefined) {
-          // Tạo dữ liệu giả cho dropdown khi chưa đăng nhập
-          return chaptersFromApi.map((chapter, index) => ({
-            idChapter: `temp_${index}`, // ID tạm thời
-            chapterNumber: index + 1,
-            titleChapter: chapter.titleChapter || "Chưa có tiêu đề",
-            isLoginRequired: true // Flag để biết cần đăng nhập
-          }));
-        }
-
-        if (token && chaptersFromApi.length > 0 && (chaptersFromApi[0].idChapter === undefined || chaptersFromApi[0].indexChapter === undefined)) {
-            console.error("API /chapter/getAll VẪN KHÔNG TRẢ VỀ idChapter hoặc indexChapter đầy đủ!", chaptersFromApi[0]);
-            return rejectWithValue('Dữ liệu chương từ API không có idChapter hoặc indexChapter.');
-        }
-
-        const sortedChapters = [...chaptersFromApi].sort((a, b) => (Number(a.indexChapter) || 0) - (Number(b.indexChapter) || 0));
-
-        // Map để tạo ra định dạng chuẩn cho dropdown
+      const state = getState();
+      
+      // Kiểm tra xem đã có dữ liệu chapters cho novelId này chưa
+      const existingChapters = state.chapters.chapters.filter(chap => chap.novelId === novelId);
+      
+      if (existingChapters.length > 0) {
+        console.log('✅ [getNovelChaptersList] Tái sử dụng dữ liệu từ getAllChapters');
+        // Tái sử dụng dữ liệu đã có, map sang định dạng dropdown
+        const sortedChapters = [...existingChapters].sort((a, b) => (Number(a.indexChapter) || 0) - (Number(b.indexChapter) || 0));
+        
         return sortedChapters.map(chap => ({
           idChapter: String(chap.idChapter),
-          // Sử dụng indexChapter + 1 để hiển thị số chương cho người dùng
           chapterNumber: (chap.indexChapter !== null && chap.indexChapter !== undefined) ? Number(chap.indexChapter) + 1 : 'N/A',
           titleChapter: chap.titleChapter || "Chưa có tiêu đề"
         }));
       }
-      return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương cho dropdown.');
+      
+      // Nếu chưa có dữ liệu, gọi getAllChapters trước
+      console.log('🔄 [getNovelChaptersList] Chưa có dữ liệu, gọi getAllChapters trước');
+      const getAllResult = await dispatch(getAllChapters(novelId));
+      
+      if (getAllChapters.fulfilled.match(getAllResult)) {
+        const chaptersFromGetAll = getAllResult.payload;
+        const sortedChapters = [...chaptersFromGetAll].sort((a, b) => (Number(a.indexChapter) || 0) - (Number(b.indexChapter) || 0));
+        
+        return sortedChapters.map(chap => ({
+          idChapter: String(chap.idChapter),
+          chapterNumber: (chap.indexChapter !== null && chap.indexChapter !== undefined) ? Number(chap.indexChapter) + 1 : 'N/A',
+          titleChapter: chap.titleChapter || "Chưa có tiêu đề"
+        }));
+      } else {
+        return rejectWithValue(getAllResult.payload || 'Không thể tải danh sách chương.');
+      }
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách chương cho dropdown.');
+      return rejectWithValue(error.message || 'Lỗi khi tải danh sách chương cho dropdown.');
     }
   }
 );
 
 // Action để lấy nội dung chi tiết của một chương
+// LOGIC MỚI: Tái sử dụng dữ liệu từ getAllChapters thay vì gọi API riêng
 export const getChapterContentById = createAsyncThunk(
   'chapters/getChapterContentById',
   async ({ novelId, chapterId }, { getState, dispatch, rejectWithValue }) => {
@@ -151,12 +149,49 @@ export const getChapterContentById = createAsyncThunk(
       chap => String(chap.idChapter) === String(chapterId) && chap.novelId === novelId && chap.contentChapter
     );
     if (existingChapterWithContent) {
+      console.log('✅ [getChapterContentById] Sử dụng nội dung đã có trong state');
       return existingChapterWithContent;
     }
 
-    // 2. Nếu chưa có content, fetch lại toàn bộ chương của novel đó KÈM TOKEN
+    // 2. Kiểm tra có chương không có content -> cần gọi getAllChapters để lấy content
+    const existingChapterWithoutContent = state.chapters.chapters.find(
+      chap => String(chap.idChapter) === String(chapterId) && chap.novelId === novelId
+    );
+    
+    if (existingChapterWithoutContent && !existingChapterWithoutContent.contentChapter) {
+      console.log('🔄 [getChapterContentById] Chapter tồn tại nhưng chưa có content, gọi getAllChapters');
+      // Chapter đã tồn tại nhưng chưa có content, gọi getAllChapters với token để lấy content
+      try {
+        const actionResult = await dispatch(getAllChapters(novelId));
+        
+        if (getAllChapters.fulfilled.match(actionResult)) {
+          const chaptersFetchedWithContent = actionResult.payload;
+          const targetChapter = chaptersFetchedWithContent.find(chap => String(chap.idChapter) === String(chapterId));
+
+          if (targetChapter) {
+              // Nếu có token mà backend vẫn không trả content, trả về thông báo lỗi trong content
+              if (token && !targetChapter.contentChapter) {
+                   return { ...targetChapter, contentChapter: "Lỗi: Không thể tải nội dung chương (token có thể không hợp lệ)." };
+              }
+              // Nếu không có token, trả về thông báo yêu cầu đăng nhập
+              if (!token && !targetChapter.contentChapter) {
+                   return { ...targetChapter, contentChapter: "Vui lòng đăng nhập để đọc nội dung chương này." };
+              }
+              return targetChapter;
+          } else {
+            return rejectWithValue(`Chương ${chapterId} không tìm thấy sau khi fetch.`);
+          }
+        } else {
+          return rejectWithValue(actionResult.payload || 'Không thể tải nội dung chương.');
+        }
+      } catch (error) {
+        return rejectWithValue(error.message || 'Lỗi khi tải nội dung chương.');
+      }
+    }
+
+    // 3. Nếu chưa có dữ liệu gì, gọi getAllChapters trước
+    console.log('🔄 [getChapterContentById] Chưa có dữ liệu chapter, gọi getAllChapters');
     try {
-      // Gọi getAllChapters vì nó đã có logic gửi token
       const actionResult = await dispatch(getAllChapters(novelId));
 
       if (getAllChapters.fulfilled.match(actionResult)) {

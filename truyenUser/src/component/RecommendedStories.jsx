@@ -1,9 +1,15 @@
 // src/component/RecommendedStories.jsx
+//
+// TỐI ƯU HÓA API: 
+// - KHÔNG GỌI getNovelById() cho từng truyện trong lịch sử
+// - Sử dụng dữ liệu novels đã có từ Home.jsx
+// - Tiết kiệm hàng chục API calls không cần thiết
+//
 import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { searchNovels, getAllNovels, getNovelById } from '../redux/novelSlice';
+import { searchNovels, getAllNovels } from '../redux/novelSlice';
 import { getAllHistoryByUser } from '../redux/userSlice';
 import { isNovelsLoading, isNovelsLoaded, setNovelsLoading } from '../utils/apiCache';
 import NovelCard from './NovelCard'; // Import NovelCard component
@@ -39,75 +45,64 @@ const RecommendedStories = () => {
     }
   }, [dispatch, currentUser?.idUser, userHistory.length]);
 
-  // Trích xuất categories từ lịch sử đọc bằng cách lấy thông tin novel
+  // Trích xuất categories từ lịch sử đọc KHÔNG GỌI API CHO TỪNG TRUYỆN
   useEffect(() => {
-    const fetchCategoriesFromHistory = async () => {
+    const extractCategoriesFromHistory = async () => {
       if (userHistory && userHistory.length > 0 && userCategories.length === 0) {
         setFetchingCategories(true);
-        console.log('Fetching categories from history...');
+        console.log('🔍 [RecommendedStories] Extracting categories from history...');
         
         try {
           const allCategories = [];
           
-          // Lấy thông tin chi tiết từng truyện để có categories
-          for (const novelGroup of userHistory) {
-            for (const history of novelGroup.historyReadRespones) {
-              if (history.idNovel) {
-                try {
-                  console.log('Fetching novel details for:', history.idNovel);
-                  const novelDetails = await dispatch(getNovelById(history.idNovel)).unwrap();
-                  
-                  if (novelDetails && novelDetails.categories && Array.isArray(novelDetails.categories)) {
-                    const categories = novelDetails.categories.map(cat => cat.nameCategory);
-                    allCategories.push(...categories);
-                    console.log('Categories found for', novelDetails.nameNovel, ':', categories);
-                  }
-                } catch (err) {
-                  console.error('Error fetching novel details:', err);
-                  // Nếu không lấy được details, thử fallback bằng getAllNovels
-                }
+          // Đảm bảo có dữ liệu novels từ Home.jsx
+          let availableNovels = novels;
+          
+          // Nếu chưa có novels, chờ Home.jsx load xong
+          if (!availableNovels || availableNovels.length === 0) {
+            console.log('⏳ [RecommendedStories] Waiting for novels data from Home...');
+            // Đợi một chút để Home.jsx load novels
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            availableNovels = novels; // Lấy lại sau khi đợi
+          }
+          
+          // Nếu vẫn chưa có, gọi getAllNovels (chỉ 1 lần)
+          if (!availableNovels || availableNovels.length === 0) {
+            if (!hasLoadedAllNovels.current && !isNovelsLoading() && !isNovelsLoaded()) {
+              console.log('🔄 [RecommendedStories] Loading novels as fallback...');
+              try {
+                setNovelsLoading(true);
+                await dispatch(getAllNovels()).unwrap();
+                hasLoadedAllNovels.current = true;
+                availableNovels = novels;
+              } catch (err) {
+                console.error('❌ [RecommendedStories] Error loading novels:', err);
+              } finally {
+                setNovelsLoading(false);
               }
             }
           }
+          
+          // Sử dụng dữ liệu novels có sẵn thay vì gọi getNovelById
+          if (availableNovels && Array.isArray(availableNovels)) {
+            // Map novel IDs từ history
+            const readNovelIds = new Set();
+            userHistory.forEach(novelGroup => {
+              novelGroup.historyReadRespones.forEach(history => {
+                if (history.idNovel) readNovelIds.add(history.idNovel);
+              });
+            });
 
-          // Nếu không lấy được categories từ getNovelById, thử sử dụng data có sẵn
-          if (allCategories.length === 0) {
-            console.log('Fallback: Using existing novels data to get categories...');
-            // Chỉ gọi getAllNovels nếu chưa có data và không đang loading
-            if (!novels || novels.length === 0) {
-              if (!hasLoadedAllNovels.current && !isNovelsLoading() && !isNovelsLoaded()) {
-                try {
-                  console.log('🔄 Loading novels for categories from RecommendedStories...');
-                  setNovelsLoading(true);
-                  await dispatch(getAllNovels()).unwrap();
-                  hasLoadedAllNovels.current = true;
-                } catch (err) {
-                  console.error('Error loading all novels:', err);
-                } finally {
-                  setNovelsLoading(false);
-                }
-              }
-            }
+            console.log('📚 [RecommendedStories] Found novels in history:', readNovelIds.size);
             
-            // Sử dụng data đã có trong store
-            const allNovels = novels;
-            if (allNovels && Array.isArray(allNovels)) {
-              // Map novel IDs từ history
-              const readNovelIds = new Set();
-              userHistory.forEach(novelGroup => {
-                novelGroup.historyReadRespones.forEach(history => {
-                  if (history.idNovel) readNovelIds.add(history.idNovel);
-                });
-              });
-
-              // Tìm categories của các truyện đã đọc
-              allNovels.forEach(novel => {
-                if (readNovelIds.has(novel.idNovel) && novel.categories && Array.isArray(novel.categories)) {
-                  const categories = novel.categories.map(cat => cat.nameCategory);
-                  allCategories.push(...categories);
-                }
-              });
-            }
+            // Tìm categories của các truyện đã đọc từ dữ liệu có sẵn
+            availableNovels.forEach(novel => {
+              if (readNovelIds.has(novel.idNovel) && novel.categories && Array.isArray(novel.categories)) {
+                const categories = novel.categories.map(cat => cat.nameCategory);
+                allCategories.push(...categories);
+                console.log('✅ [RecommendedStories] Categories from', novel.nameNovel, ':', categories);
+              }
+            });
           }
 
           if (allCategories.length > 0) {
@@ -125,19 +120,19 @@ const RecommendedStories = () => {
               .map(([category]) => category);
 
             setUserCategories(sortedCategories);
-            console.log('User reading categories:', sortedCategories);
+            console.log('🎯 [RecommendedStories] User reading categories:', sortedCategories);
           } else {
-            console.log('No categories found in user history');
+            console.log('⚠️ [RecommendedStories] No categories found in user history');
           }
         } catch (err) {
-          console.error('Error fetching categories from history:', err);
+          console.error('❌ [RecommendedStories] Error extracting categories from history:', err);
         } finally {
           setFetchingCategories(false);
         }
       }
     };
 
-    fetchCategoriesFromHistory();
+    extractCategoriesFromHistory();
   }, [dispatch, userHistory, userCategories.length, novels]);
 
   // Tìm kiếm truyện gợi ý dựa trên categories

@@ -131,7 +131,7 @@ const SupportPage = () => {
       >
         {/* Animated Background */}
         <div className="absolute inset-0">
-          {[...Array(20)].map((_, i) => (
+          {[...Array(50)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute w-2 h-2 bg-white rounded-full opacity-20"
@@ -466,7 +466,7 @@ const SupportPage = () => {
           </motion.h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: Mail, title: 'Email', info: 'support@truyen.com', color: 'blue' },
+              { icon: Mail, title: 'Email', info: 'phanthanhvu8548@gmail.com', color: 'blue' },
               { icon: Phone, title: 'Hotline', info: '1900 123 456', color: 'green' },
               { icon: Clock, title: 'Giờ làm việc', info: '24/7 - Mọi lúc', color: 'purple' }
             ].map((contact, index) => (
