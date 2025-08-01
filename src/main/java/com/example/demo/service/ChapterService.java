@@ -2,23 +2,13 @@ package com.example.demo.service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,8 +25,6 @@ import com.example.demo.entity.FollowNovel;
 import com.example.demo.entity.HistoryNotify;
 import com.example.demo.entity.Novel;
 import com.example.demo.entity.TtsJob;
-import com.example.demo.entity.TtsSubJob;
-import com.example.demo.entity.User;
 import com.example.demo.exception.AppException;
 import com.example.demo.exception.ErrorCode;
 import com.example.demo.mapper.IChapterMapper;
@@ -54,8 +42,6 @@ import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -201,10 +187,10 @@ public class ChapterService {
 		
 		chapter.setNovel(novel);
 		if (chapter.getNovel().getCategories()!=null && !chapter.getNovel().getCategories().isEmpty() ) {
-			if (chapter.getNovel().getCategories().contains(category) && chapter.getCoinPrice()!=null) {
+			if (chapter.getNovel().getCategories().contains(category) && chapter.getCoinPrice()!=0) {
 					throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
 			}
-			if (!chapter.getNovel().getCategories().contains(category2)&& chapter.getCoinPrice()!=null) {
+			if (!chapter.getNovel().getCategories().contains(category2)&& chapter.getCoinPrice()!=0 ) {
 				throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
 			}
 		}
