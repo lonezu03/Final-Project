@@ -136,6 +136,43 @@ export const getNovelChaptersList = createAsyncThunk(
   }
 );
 
+// Action để tạo dropdown từ dữ liệu chapters có sẵn trong state (KHÔNG GỌI API)
+export const generateDropdownFromExistingChapters = createAsyncThunk(
+  'chapters/generateDropdownFromExistingChapters',
+  async (novelId, { rejectWithValue, getState }) => {
+    try {
+      const state = getState();
+      const existingChapters = state.chapters.chapters.filter(chap => 
+        String(chap.novelId) === String(novelId) || String(chap.idNovel) === String(novelId)
+      );
+      
+      if (existingChapters.length === 0) {
+        console.log('⚠️ [generateDropdownFromExistingChapters] Không có dữ liệu chapters trong state cho novelId:', novelId);
+        return [];
+      }
+      
+      console.log('✅ [generateDropdownFromExistingChapters] Tạo dropdown từ', existingChapters.length, 'chapters có sẵn');
+      
+      // Sắp xếp theo indexChapter và tạo dropdown data
+      const sortedChapters = [...existingChapters].sort((a, b) => 
+        (Number(a.indexChapter) || 0) - (Number(b.indexChapter) || 0)
+      );
+      
+      return sortedChapters.map(chap => ({
+        idChapter: String(chap.idChapter),
+        chapterNumber: (chap.indexChapter !== null && chap.indexChapter !== undefined) 
+          ? Number(chap.indexChapter) + 1 
+          : 'N/A',
+        titleChapter: chap.titleChapter || "Chưa có tiêu đề",
+        novelId: String(novelId) // Thêm novelId để dễ kiểm tra
+      }));
+    } catch (error) {
+      console.error('❌ [generateDropdownFromExistingChapters] Error:', error);
+      return rejectWithValue(error.message || 'Lỗi khi tạo dropdown từ state');
+    }
+  }
+);
+
 // Action để lấy nội dung chi tiết của một chương
 // LOGIC MỚI: Tái sử dụng dữ liệu từ getAllChapters thay vì gọi API riêng
 export const getChapterContentById = createAsyncThunk(
@@ -286,6 +323,23 @@ const chapterSlice = createSlice({
         state.errorDropdownChapters = null;
       })
       .addCase(getNovelChaptersList.rejected, (state, action) => {
+        state.loadingDropdownChapters = false;
+        state.errorDropdownChapters = action.payload;
+        state.chaptersForReadingPageDropdown = [];
+      })
+
+      // generateDropdownFromExistingChapters (action mới không gọi API)
+      .addCase(generateDropdownFromExistingChapters.pending, (state) => {
+        state.loadingDropdownChapters = true;
+        state.errorDropdownChapters = null;
+      })
+      .addCase(generateDropdownFromExistingChapters.fulfilled, (state, action) => {
+        state.loadingDropdownChapters = false;
+        state.chaptersForReadingPageDropdown = action.payload;
+        state.errorDropdownChapters = null;
+        console.log('✅ [Reducer] Dropdown được tạo từ state với', action.payload.length, 'chapters');
+      })
+      .addCase(generateDropdownFromExistingChapters.rejected, (state, action) => {
         state.loadingDropdownChapters = false;
         state.errorDropdownChapters = action.payload;
         state.chaptersForReadingPageDropdown = [];

@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getNovelById } from '../../redux/novelSlice';
 import {
   getAllChapters,
-  getNovelChaptersList, 
+  generateDropdownFromExistingChapters,
   getChapterContentById,
   clearChapterState,
   increaseChapterView, 
@@ -46,6 +46,7 @@ const ReadingPage = () => {
  // Tách ra thành các selector riêng lẻ để tối ưu hóa và tránh cảnh báo
 const currentChapterContent = useSelector((state) => state.chapters.currentChapterContent);
 const chaptersForReadingPageDropdown = useSelector((state) => state.chapters.chaptersForReadingPageDropdown);
+const { chapters: chaptersFromApiForDetailPage, loading: chaptersLoading, error: chaptersError } = useSelector((state) => state.chapters);
 const loadingContent = useSelector((state) => state.chapters.loadingContent);
 const errorContent = useSelector((state) => state.chapters.errorContent);
 const loadingListForReading = useSelector((state) => state.chapters.loadingDropdownChapters);
@@ -151,38 +152,61 @@ const userHistory = useSelector((state) => state.user.userHistory);
     localStorage.setItem('readingTheme', theme);
   }, [fontSize, lineHeight, fontFamily, theme]);
   // Effect #1: Tải dữ liệu chính khi vào trang (chạy khi novelId đổi)
-// Effect #1: Tải dữ liệu cơ bản của truyện
+// Effect #1: Tải dữ liệu cơ bản của truyện và tạo dropdown từ state có sẵn
 useEffect(() => {
   if (novelId) {
     console.log("[Effect #1] Tải dữ liệu cơ bản cho novelId:", novelId);
     
     // Kiểm tra xem đã có novel data trong store chưa (có thể từ DetailPage)
     const shouldFetchNovel = !currentNovel || String(currentNovel.idNovel) !== String(novelId);
+    // Kiểm tra xem đã có chapters data trong store chưa (từ DetailPage)
+    const hasChaptersData = chaptersFromApiForDetailPage && chaptersFromApiForDetailPage.length > 0;
+    // Kiểm tra xem có đang loading không để tránh gọi lại
+    const isChaptersLoading = chaptersLoading;
     
     const promises = [];
     
-    if (shouldFetchNovel) {
+    if (shouldFetchNovel && !novelLoading) {
       console.log("🔄 [ReadingPage] Fetching novel data for:", novelId);
       promises.push(dispatch(getNovelById(novelId)));
     } else {
       console.log("✅ [ReadingPage] Novel data already available in store");
     }
     
-    // Luôn load chapters và dropdown
-    promises.push(
-      dispatch(getAllChapters(novelId)).then(() => {
-        // Sau khi getAllChapters hoàn thành, gọi getNovelChaptersList để tạo dropdown
-        return dispatch(getNovelChaptersList(novelId));
-      })
-    );
+    if (hasChaptersData) {
+      console.log("✅ [ReadingPage] Using existing chapters data from DetailPage");
+      // Tạo dropdown từ dữ liệu có sẵn thay vì gọi API
+      dispatch(generateDropdownFromExistingChapters(novelId));
+    } else if (!isChaptersLoading) {
+      console.log("🔄 [ReadingPage] No chapters data found, fetching from API");
+      // Chỉ gọi getAllChapters nếu chưa có dữ liệu và không đang loading
+      promises.push(dispatch(getAllChapters(novelId)));
+    } else {
+      console.log("⏳ [ReadingPage] Chapters are loading, skipping API call");
+    }
     
     Promise.all(promises);
   }
   
   return () => {
-    dispatch(clearChapterState());
+    // Không clear state nữa để tái sử dụng data
+    // dispatch(clearChapterState());
   };
-}, [dispatch, novelId, currentNovel]);
+}, [dispatch, novelId, currentNovel, chaptersFromApiForDetailPage, chaptersLoading, novelLoading]);
+
+// Effect để tự động tạo dropdown khi có dữ liệu chapters từ DetailPage
+useEffect(() => {
+  if (chaptersFromApiForDetailPage && chaptersFromApiForDetailPage.length > 0 && novelId) {
+    // Kiểm tra xem dropdown đã được tạo cho novelId này chưa
+    const currentDropdownNovelId = chaptersForReadingPageDropdown.length > 0 ? 
+      chaptersForReadingPageDropdown[0]?.novelId || novelId : null;
+    
+    if (!currentDropdownNovelId || String(currentDropdownNovelId) !== String(novelId)) {
+      console.log("🔄 [ReadingPage] Auto-generating dropdown from existing chapters data");
+      dispatch(generateDropdownFromExistingChapters(novelId));
+    }
+  }
+}, [chaptersFromApiForDetailPage, novelId, dispatch, chaptersForReadingPageDropdown]);
 
 // Effect #2: Tải nội dung chương và tăng lượt xem
 useEffect(() => {

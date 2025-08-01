@@ -35,13 +35,18 @@ const NovelChatBot = () => {
   
   // Fetch dữ liệu authors và categories nếu chưa có
   useEffect(() => {
-    if (!authors || authors.length === 0) {
+    const shouldFetchAuthors = !authors || authors.length === 0;
+    const shouldFetchCategories = !categories || categories.length === 0;
+    
+    if (shouldFetchAuthors) {
+      console.log('🔄 [ChatBot] Fetching authors...');
       dispatch(getAllAuthors());
     }
-    if (!categories || categories.length === 0) {
+    if (shouldFetchCategories) {
+      console.log('🔄 [ChatBot] Fetching categories...');
       dispatch(getAllCategories());
     }
-  }, [dispatch, authors, categories]);
+  }, [dispatch]); // Chỉ phụ thuộc vào dispatch, không phụ thuộc vào authors và categories để tránh loop
   
   useEffect(() => {
     if (chatContainerRef.current) {

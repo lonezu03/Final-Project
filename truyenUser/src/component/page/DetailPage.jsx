@@ -32,33 +32,44 @@ const DetailPage = () => {
 
   // Chỉ fetch dữ liệu khi novelId đổi, tránh spam API
   const fetchedNovel = React.useRef({});
-  const isInitialLoad = React.useRef(true);
+  const lastFetchedNovelId = React.useRef(null);
   
   useEffect(() => {
-    if (novelId) {
+    if (novelId && String(novelId) !== String(lastFetchedNovelId.current)) {
       console.log('🔍 [DetailPage] novelId from URL:', novelId, 'type:', typeof novelId);
       setActiveTab('summary');
       setCurrentChapterListPage(1);
       
-      // Chỉ fetch nếu chưa fetch cho novelId này hoặc là lần load đầu tiên
-      if (!fetchedNovel.current[novelId] || isInitialLoad.current) {
-        console.log('🔄 [DetailPage] Fetching data for novelId:', novelId);
-        dispatch(getNovelById(novelId));
-        dispatch(getAllChapters(novelId));
-        dispatch(getAllReviews(novelId));
-        fetchedNovel.current[novelId] = true;
-        isInitialLoad.current = false;
+      // Kiểm tra xem đã có novel data trong store chưa
+      const shouldFetchNovel = !novelDetailData || String(novelDetailData.idNovel) !== String(novelId);
+      // Kiểm tra xem đã có chapters data trong store chưa
+      const shouldFetchChapters = !chaptersFromApiForDetailPage || chaptersFromApiForDetailPage.length === 0;
+      
+      const promises = [];
+      
+      if (shouldFetchNovel) {
+        console.log('🔄 [DetailPage] Fetching novel data for:', novelId);
+        promises.push(dispatch(getNovelById(novelId)));
       } else {
-        console.log('✅ [DetailPage] Data already fetched for novelId:', novelId);
+        console.log('✅ [DetailPage] Novel data already available in store');
       }
+      
+      if (shouldFetchChapters) {
+        console.log('🔄 [DetailPage] Fetching chapters data for:', novelId);
+        promises.push(dispatch(getAllChapters(novelId)));
+      } else {
+        console.log('✅ [DetailPage] Chapters data already available in store');
+      }
+      
+      // Luôn fetch reviews vì có thể có review mới
+      promises.push(dispatch(getAllReviews(novelId)));
+      
+      Promise.all(promises);
+      lastFetchedNovelId.current = novelId;
+    } else {
+      console.log('✅ [DetailPage] Data already available for novelId:', novelId);
     }
-    // Reset flag nếu novelId không còn
-    return () => {
-      if (!novelId) {
-        fetchedNovel.current = {};
-      }
-    };
-  }, [dispatch, novelId]);
+  }, [dispatch, novelId, novelDetailData, chaptersFromApiForDetailPage]);
  // Tối ưu việc fetch danh sách theo dõi
  const fetchedLibrary = React.useRef(null);
  

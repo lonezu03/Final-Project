@@ -40,22 +40,19 @@ const Home = () => {
         // Ưu tiên chức năng: luôn đảm bảo có dữ liệu novels
         const shouldFetchNovels = !fetchedNovels.current && 
                                   (!novels || novels.length === 0) && 
-                                  !isNovelsLoading() && 
-                                  !isNovelsLoaded();
+                                  !novelsLoading;
         
         if (shouldFetchNovels) {
             console.log('🔄 [Home] Fetching all novels...');
-            setNovelsLoading(true);
+            fetchedNovels.current = true; // Đặt flag trước để tránh gọi lại
             dispatch(getAllNovels())
                 .unwrap()
                 .then(() => {
-                    setNovelsLoading(false);
-                    fetchedNovels.current = true;
                     retryCount.current.novels = 0; // Reset retry count on success
                     console.log('✅ [Home] Novels loaded successfully');
                 })
                 .catch((error) => {
-                    setNovelsLoading(false);
+                    fetchedNovels.current = false; // Reset flag nếu lỗi
                     console.error('❌ [Home] Failed to load novels:', error);
                     
                     // Retry logic với exponential backoff
@@ -74,24 +71,26 @@ const Home = () => {
             console.log('✅ [Home] Novels already available in store');
             fetchedNovels.current = true;
         }
-    }, [dispatch, novels]); // Theo dõi novels để đảm bảo chức năng
+    }, [dispatch, novels, novelsLoading]); // Thêm novelsLoading vào dependencies
 
     // Chỉ fetch categories 1 lần nếu chưa có
     useEffect(() => {
         // Ưu tiên chức năng: đảm bảo categories được load khi cần
         const shouldFetchCategories = !fetchedCategories.current && 
-                                     (!categories || categories.length === 0);
+                                     (!categories || categories.length === 0) &&
+                                     !categoriesLoading;
         
         if (shouldFetchCategories) {
             console.log('🔄 [Home] Fetching all categories...');
+            fetchedCategories.current = true; // Đặt flag trước để tránh gọi lại
             dispatch(getAllCategories())
                 .unwrap()
                 .then(() => {
-                    fetchedCategories.current = true;
                     retryCount.current.categories = 0;
                     console.log('✅ [Home] Categories loaded successfully');
                 })
                 .catch((error) => {
+                    fetchedCategories.current = false; // Reset flag nếu lỗi
                     console.error('❌ [Home] Failed to load categories:', error);
                     
                     // Retry với delay
@@ -110,7 +109,7 @@ const Home = () => {
             console.log('✅ [Home] Categories already available in store');
             fetchedCategories.current = true;
         }
-    }, [dispatch, categories]); // Theo dõi categories để đảm bảo chức năng
+    }, [dispatch, categories, categoriesLoading]); // Thêm categoriesLoading vào dependencies
 
     // Chỉ fetch library khi user đổi và chưa fetch cho user đó
     useEffect(() => {
