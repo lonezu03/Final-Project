@@ -11,6 +11,7 @@ import {
   increaseChapterView, 
 } from '../../redux/chapterSlice';
 import { createHistory, getAllHistoryByUser, refreshUserHistory  } from '../../redux/userSlice';
+import { getAllTransactions } from '../../redux/transactionSlice';
 import apiClient from '../../services/api'; // Đảm bảo đường dẫn này đúng
 import { optimizeCloudinaryAudioUrl, optimizeCloudinaryImageUrl } from '../../utils/cloudinaryOptimizer';
 
@@ -55,6 +56,7 @@ const errorListForReading = useSelector((state) => state.chapters.errorDropdownC
 // Phần lấy user vẫn giữ nguyên như đã sửa
 const currentUser = useSelector((state) => state.user.currentUser); 
 const userHistory = useSelector((state) => state.user.userHistory);
+const { allTransactions } = useSelector((state) => state.transaction);
 
 //   const {currentUser,userHistory} = useSelector((state) => state.user || {});
 
@@ -88,6 +90,62 @@ const userHistory = useSelector((state) => state.user.userHistory);
   const currentAudioTimeRef = useRef(0);
 
   const getPositionKey = () => `reading_position_${novelId}_${chapterId}`;
+
+  // Helper function để kiểm tra chapter có được thuê không và còn hạn không
+  const getChapterRentInfo = (chapterId) => {
+    if (!allTransactions?.rentedNovels) return null;
+    
+    for (const novel of Object.values(allTransactions.rentedNovels)) {
+      if (novel.chapters && Array.isArray(novel.chapters)) {
+        const rentedChapter = novel.chapters.find(ch => String(ch.idChapter) === String(chapterId));
+        if (rentedChapter) {
+          const expirationDate = new Date(rentedChapter.dateEndRent);
+          const now = new Date();
+          const isExpired = now > expirationDate;
+          const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
+          
+          return {
+            isRented: true,
+            isExpired,
+            expirationDate,
+            daysLeft: isExpired ? 0 : daysLeft
+          };
+        }
+      }
+    }
+    return null;
+  };
+
+  // Helper function để kiểm tra quyền đọc chapter (tương tự ChapterListDisplay)
+  const checkChapterReadPermission = (chapterId, chapterContent) => {
+    if (!currentUser || !chapterId || !chapterContent) {
+      return { canRead: false, reason: 'Missing user or chapter data' };
+    }
+
+    // Kiểm tra nếu chapter miễn phí (coinPrice = 0)
+    const coinPrice = chapterContent.coinPrice || 0;
+    if (coinPrice === 0) {
+      return { canRead: true, reason: 'Free chapter (coinPrice = 0)' };
+    }
+    
+    // Kiểm tra nếu đã mua chapter
+    const isPurchased = currentUser?.chapterBought?.includes(chapterId);
+    if (isPurchased) {
+      return { canRead: true, reason: 'Chapter purchased' };
+    }
+    
+    // Kiểm tra nếu đã thuê chapter và còn hạn
+    const rentInfo = getChapterRentInfo(chapterId);
+    if (rentInfo?.isRented && !rentInfo?.isExpired) {
+      return { 
+        canRead: true, 
+        reason: `Chapter rented (${rentInfo.daysLeft} days left)`,
+        rentInfo 
+      };
+    }
+    
+    return { canRead: false, reason: 'Chapter not purchased or rented' };
+  };
 
   //luu vị trí đọc audio
   const [audioProgress, setAudioProgress] = useState(0);
@@ -129,22 +187,37 @@ const userHistory = useSelector((state) => state.user.userHistory);
       }, 100);
     }
   }, [audioProgress]);
+
+  // Fetch transaction data để kiểm tra chapter thuê
+  useEffect(() => {
+    if (currentUser?.idUser) {
+      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }));
+    }
+  }, [currentUser?.idUser, dispatch]);
+
  useEffect(() => {
     // Chỉ kiểm tra khi có đầy đủ thông tin cần thiết
-    if (currentUser && chapterId && novelId) {
-      // Giả sử có truyện miễn phí hoặc chương đầu miễn phí (thêm logic nếu cần)
-      // Ví dụ: if (currentNovel.isPaid) { ... }
+    if (currentUser && chapterId && novelId && currentChapterContent) {
+      // Tìm thông tin chapter từ dropdown list để có đầy đủ thông tin về giá
+      const chapterFromDropdown = chaptersForReadingPageDropdown?.find(ch => String(ch.idChapter) === String(chapterId));
+      const chapterForPermissionCheck = chapterFromDropdown || currentChapterContent;
       
-      const isPurchased = currentUser.chapterBought?.includes(chapterId);
-
-      if (!isPurchased) {
-        // Nếu chưa mua, không cho phép truy cập
-        toast.error("Bạn chưa mua chương này. Vui lòng quay lại để thực hiện thanh toán.");
+      const permission = checkChapterReadPermission(chapterId, chapterForPermissionCheck);
+      
+      if (!permission.canRead) {
+        // Chỉ chặn nếu thực sự không có quyền đọc
+        toast.error("Bạn cần mua chương này để có thể đọc. Vui lòng tìm chương trong danh sách bên dưới.");
         // Điều hướng người dùng về trang chi tiết của truyện
         navigate(`/novel/${novelId}`, { replace: true });
+      } else {
+        // Log thông tin để debug
+        console.log(`✅ [ReadingPage] Access granted for chapter ${chapterId} - ${permission.reason}`);
+        if (permission.rentInfo) {
+          console.log(`🕐 [ReadingPage] Rent expires: ${permission.rentInfo.expirationDate.toLocaleDateString('vi-VN')} (${permission.rentInfo.daysLeft} days left)`);
+        }
       }
     }
-  }, [currentUser, chapterId, novelId, navigate, currentNovel]);
+  }, [currentUser, chapterId, novelId, currentChapterContent, navigate, allTransactions, chaptersForReadingPageDropdown]);
   useEffect(() => {
     localStorage.setItem('readingFontSize', fontSize.toString());
     localStorage.setItem('readingLineHeight', lineHeight.toString());
@@ -459,16 +532,32 @@ useEffect(() => {
       return;
     }
 
-    const isPurchased = currentUser.chapterBought?.includes(targetChapterId);
-
-    if (isPurchased) {
-      // ĐÃ MUA: Cho phép điều hướng
-      setProcessedChapterContent(null); // Xóa nội dung cũ để hiển thị loading
-      navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
+    // Tìm chapter trong danh sách để lấy thông tin coinPrice
+    const targetChapter = chaptersForReadingPageDropdown?.find(ch => String(ch.idChapter) === String(targetChapterId));
+    
+    if (targetChapter) {
+      const permission = checkChapterReadPermission(targetChapterId, targetChapter);
+      
+      if (permission.canRead) {
+        // Có quyền đọc: Cho phép điều hướng
+        setProcessedChapterContent(null); // Xóa nội dung cũ để hiển thị loading
+        navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
+      } else {
+        // Không có quyền: Báo lỗi và quay về trang chi tiết
+        toast.error("Bạn cần mua hoặc thuê chương này để đọc. Vui lòng kiểm tra trong danh sách chương.");
+        navigate(`/novel/${novelId}`); 
+      }
     } else {
-      // CHƯA MUA: Báo lỗi và quay về trang chi tiết
-      toast.error("Bạn cần mua chương này để đọc. Vui lòng mua trong danh sách chương.");
-      navigate(`/novel/${novelId}`); 
+      // Không tìm thấy chapter trong danh sách, sử dụng logic cũ
+      const isPurchased = currentUser.chapterBought?.includes(targetChapterId);
+      
+      if (isPurchased) {
+        setProcessedChapterContent(null);
+        navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
+      } else {
+        toast.error("Bạn cần mua chương này để đọc. Vui lòng mua trong danh sách chương.");
+        navigate(`/novel/${novelId}`); 
+      }
     }
   };
   useEffect(() => {
@@ -675,10 +764,16 @@ useEffect(() => {
   const renderErrorText = (err, type = "Nội dung") => (
     <div className="text-center py-10 text-red-500">Lỗi tải {type}: {typeof err === 'string' ? err : (err?.message || 'Đã có lỗi không xác định.')}</div>
   );
- // nhưng để tránh render một frame nội dung sai, có thể thêm kiểm tra ở đây.
-  if (currentUser && !currentUser.chapterBought?.includes(chapterId)) {
-    // Mặc dù đã có useEffect điều hướng, điều này ngăn chặn việc render nội dung trong một khoảnh khắc
-    return <div className="flex justify-center items-center min-h-screen text-xl">Đang kiểm tra quyền truy cập...</div>;
+ // Kiểm tra quyền truy cập trước khi render để tránh flash content
+  if (currentUser && currentChapterContent) {
+    // Sử dụng cùng logic như useEffect
+    const chapterFromDropdown = chaptersForReadingPageDropdown?.find(ch => String(ch.idChapter) === String(chapterId));
+    const chapterForPermissionCheck = chapterFromDropdown || currentChapterContent;
+    const permission = checkChapterReadPermission(chapterId, chapterForPermissionCheck);
+    
+    if (!permission.canRead) {
+      return <div className="flex justify-center items-center min-h-screen text-xl">Đang kiểm tra quyền truy cập...</div>;
+    }
   }
   if (loadingContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải nội dung chương...</div>;
   if (errorContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return renderErrorText(errorContent, "nội dung chương");
@@ -721,9 +816,21 @@ useEffect(() => {
             </p>
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2">
-            <button onClick={handlePrevChapter} disabled={isFirstChapter || !prevChapterDetails} className={`px-2 py-1.5 sm:px-3 ${theme === 'den' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed`}>
-              <FaAngleLeft className="inline mr-1" /> Trước
-            </button>
+            {/* Previous Button - kiểm tra quyền truy cập */}
+            {(() => {
+              const prevCanAccess = prevChapterDetails && currentUser ? 
+                checkChapterReadPermission(prevChapterDetails.idChapter, prevChapterDetails).canRead : false;
+              return (
+                <button 
+                  onClick={handlePrevChapter} 
+                  disabled={isFirstChapter || !prevChapterDetails || !prevCanAccess} 
+                  className={`px-2 py-1.5 sm:px-3 ${theme === 'den' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={!prevCanAccess && prevChapterDetails ? 'Chapter trước cần mua hoặc thuê để đọc' : undefined}
+                >
+                  <FaAngleLeft className="inline mr-1" /> Trước
+                </button>
+              );
+            })()}
             <div className="relative">
               <button onClick={() => setShowChapterListDropdown(prev => !prev)} className="px-2 py-1.5 sm:px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm w-28 sm:w-32 text-center flex items-center justify-center">
                 <FaListUl className="inline mr-1" />  Chương {currentindexChapter !== null && currentindexChapter !== undefined ? currentindexChapter - 1 : '?'}
@@ -743,18 +850,51 @@ useEffect(() => {
                     const chapterTitleText = chap.titleChapter || 'Chưa có tiêu đề';
                     const fullTitle = `Chương ${displayindexChapter}: ${chapterTitleText}`;
 
+                    // Kiểm tra quyền đọc chapter
+                    const permission = currentUser ? checkChapterReadPermission(chap.idChapter, chap) : { canRead: false };
+                    const isCurrentChapter = String(chap.idChapter) === String(chapterId);
+                    const canAccess = permission.canRead;
+                    
+                    // Visual cues cho chapter bị khóa
+                    const lockIcon = !canAccess ? ' 🔒' : '';
+                    const displayTitle = `Chương ${displayindexChapter}: ${chapterTitleText}${lockIcon}`;
+                    
                     return (
-                      <button key={chap.idChapter || `chap-dropdown-${index}`} onClick={() => handleChapterSelect(chap.idChapter)} className={`block w-full text-left px-3 py-2 text-sm truncate ${String(chap.idChapter) === String(chapterId) ? `font-bold ${theme === 'den' ? 'text-blue-300 bg-gray-600' : 'text-blue-600 bg-blue-50'}` : `${theme === 'den' ? 'hover:bg-gray-600' : 'hover:bg-gray-100'}`}`} title={fullTitle}>
-                        Chương {displayindexChapter}: {chapterTitleText}
+                      <button 
+                        key={chap.idChapter || `chap-dropdown-${index}`} 
+                        onClick={() => canAccess ? handleChapterSelect(chap.idChapter) : toast.error("Bạn cần mua hoặc thuê chương này để đọc.")} 
+                        className={`block w-full text-left px-3 py-2 text-sm truncate ${
+                          isCurrentChapter 
+                            ? `font-bold ${theme === 'den' ? 'text-blue-300 bg-gray-600' : 'text-blue-600 bg-blue-50'}` 
+                            : canAccess 
+                              ? `${theme === 'den' ? 'hover:bg-gray-600 text-gray-300' : 'hover:bg-gray-100 text-gray-700'}` 
+                              : `${theme === 'den' ? 'text-gray-500 cursor-not-allowed' : 'text-gray-400 cursor-not-allowed'}`
+                        }`} 
+                        title={canAccess ? fullTitle : `${fullTitle} - Cần mua hoặc thuê để đọc`}
+                        disabled={!canAccess}
+                      >
+                        {displayTitle}
                       </button>
                     );
                   })}
                 </div>
               )}
             </div>
-            <button onClick={handleNextChapter} disabled={isLastChapter || !nextChapterDetails} className={`px-2 py-1.5 sm:px-3 ${theme === 'den' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed`}>
-              Sau <FaAngleRight className="inline ml-1" />
-            </button>
+            {/* Next Button - kiểm tra quyền truy cập */}
+            {(() => {
+              const nextCanAccess = nextChapterDetails && currentUser ? 
+                checkChapterReadPermission(nextChapterDetails.idChapter, nextChapterDetails).canRead : false;
+              return (
+                <button 
+                  onClick={handleNextChapter} 
+                  disabled={isLastChapter || !nextChapterDetails || !nextCanAccess} 
+                  className={`px-2 py-1.5 sm:px-3 ${theme === 'den' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={!nextCanAccess && nextChapterDetails ? 'Chapter tiếp theo cần mua hoặc thuê để đọc' : undefined}
+                >
+                  Sau <FaAngleRight className="inline ml-1" />
+                </button>
+              );
+            })()}
              <div className="relative">
               <button onClick={() => setShowSettings(prev => !prev)} className={`p-2 ${theme === 'den' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded`} title="Tùy chỉnh"><FaCog /></button>
               {showSettings && (

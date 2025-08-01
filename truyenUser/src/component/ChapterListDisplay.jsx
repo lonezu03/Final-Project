@@ -550,8 +550,28 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
     
-    // Logic click bình thường cho user đã đăng nhập
-    navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
+    // Kiểm tra nếu chapter miễn phí (coinPrice = 0)
+    if ((chapter.coinPrice || 0) === 0) {
+      navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
+      return;
+    }
+    
+    // Kiểm tra nếu đã mua chapter
+    const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+    if (isPurchased) {
+      navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
+      return;
+    }
+    
+    // Kiểm tra nếu đã thuê chapter và còn hạn
+    const rentInfo = getChapterRentInfo(chapter.idChapter);
+    if (rentInfo?.isRented && !rentInfo?.isExpired) {
+      navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
+      return;
+    }
+    
+    // Nếu chưa mua và chưa thuê thì thông báo
+    toast.info("Bạn cần mua hoặc thuê chương này để đọc.");
   };
 
   const handleAddToCart = (chapter) => {
@@ -566,9 +586,23 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
+    // Kiểm tra nếu chapter miễn phí
+    if ((chapter.coinPrice || 0) === 0) {
+      toast.info("Chương này miễn phí, bạn có thể đọc trực tiếp.");
+      navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
+      return;
+    }
+
     const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
     if (isPurchased) {
       toast.info("Bạn đã sở hữu chương này.");
+      return;
+    }
+
+    // Kiểm tra nếu đã thuê và còn hạn
+    const rentInfo = getChapterRentInfo(chapter.idChapter);
+    if (rentInfo?.isRented && !rentInfo?.isExpired) {
+      toast.info("Bạn đã thuê chương này và còn hạn sử dụng.");
       return;
     }
 
@@ -625,7 +659,30 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
+    // Kiểm tra nếu chapter miễn phí
     const coinPrice = chapterToBuy.coinPrice || 0;
+    if (coinPrice === 0) {
+      toast.info("Chương này miễn phí, bạn có thể đọc trực tiếp.");
+      navigate(`/novel/${novelId}/chapter/${chapterToBuy.idChapter}`);
+      return;
+    }
+
+    // Kiểm tra nếu đã mua
+    const isPurchased = currentUser?.chapterBought?.includes(chapterToBuy.idChapter);
+    if (isPurchased) {
+      toast.info("Bạn đã sở hữu chương này.");
+      navigate(`/novel/${novelId}/chapter/${chapterToBuy.idChapter}`);
+      return;
+    }
+
+    // Kiểm tra nếu đã thuê và còn hạn
+    const rentInfo = getChapterRentInfo(chapterToBuy.idChapter);
+    if (rentInfo?.isRented && !rentInfo?.isExpired) {
+      toast.info("Bạn đã thuê chương này và còn hạn sử dụng.");
+      navigate(`/novel/${novelId}/chapter/${chapterToBuy.idChapter}`);
+      return;
+    }
+
     if ((currentUser.coin || 0) < coinPrice) {
       toast.error("Số xu không đủ. Vui lòng nạp thêm!");
       navigate('/deposit');
@@ -709,9 +766,24 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
+    // Kiểm tra nếu chapter miễn phí
+    if ((chapter.coinPrice || 0) === 0) {
+      toast.info("Chương này miễn phí, bạn có thể đọc trực tiếp.");
+      navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
+      return;
+    }
+
     const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
     if (isPurchased) {
       toast.info("Bạn đã sở hữu chương này, không cần thuê.");
+      return;
+    }
+
+    // Kiểm tra nếu đã thuê và còn hạn
+    const rentInfo = getChapterRentInfo(chapter.idChapter);
+    if (rentInfo?.isRented && !rentInfo?.isExpired) {
+      toast.info("Bạn đã thuê chương này và còn hạn sử dụng.");
+      navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
       return;
     }
 
@@ -817,6 +889,10 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
           // Kiểm tra thông tin thuê chapter
           const rentInfo = getChapterRentInfo(chapter.idChapter);
           const isRented = rentInfo?.isRented && !rentInfo?.isExpired;
+          // Kiểm tra chapter miễn phí
+          const isFree = coinPrice === 0;
+          // Kiểm tra có thể đọc không (đã mua, đã thuê, hoặc miễn phí)
+          const canRead = isPurchased || isRented || isFree;
 
           return (
             <li key={chapter.idChapter || `temp_${index}`} className={`flex items-center justify-between border-b py-1.5 ${
@@ -827,17 +903,15 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                   isDarkMode ? 'text-gray-400' : 'text-gray-500'
                 }`}>{chapterNumberDisplay}</span>
                 <div className="flex-1 min-w-0">
-                  {isPurchased ? (
+                  {canRead && !requiresLogin ? (
                     <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className={`hover:text-sky-400 truncate ${
-                      isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                      isPurchased 
+                        ? isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                        : isRented 
+                        ? isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                        : isDarkMode ? 'text-green-300' : 'text-green-600' // Miễn phí
                     }`} title={chapterTitle}>
-                      {chapterTitle}
-                    </Link>
-                  ) : isRented ? (
-                    <Link to={`/novel/${novelId}/chapter/${chapter.idChapter}`} className={`hover:text-purple-400 truncate ${
-                      isDarkMode ? 'text-purple-300' : 'text-purple-600'
-                    }`} title={chapterTitle}>
-                      {chapterTitle} 🕐
+                      {chapterTitle} {isRented ? '🕐' : isFree ? '' : ''}
                     </Link>
                   ) : requiresLogin ? (
                     <button 
@@ -850,9 +924,15 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                       {chapterTitle} 🔒
                     </button>
                   ) : (
-                    <span className={`truncate ${
-                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                    }`} title={chapterTitle}>{chapterTitle}</span>
+                    <button 
+                      onClick={() => handleChapterClick(chapter)}
+                      className={`hover:text-orange-400 truncate text-left cursor-pointer ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`} 
+                      title={`${chapterTitle} - Cần mua hoặc thuê để đọc`}
+                    >
+                      {chapterTitle} 
+                    </button>
                   )}
                   
                   {/* Hiển thị thông tin thuê nếu có */}
@@ -881,22 +961,37 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                   >
                     Đăng nhập
                   </button>
-                ) : isPurchased || isRented ? (
-                  <button
-                    onClick={() => handleDownload(chapter)}
-                    disabled={isDownloading}
-                    className={`px-3 py-1 text-xs rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center ${
-                      isRented 
-                        ? isDarkMode 
-                          ? 'bg-purple-600 text-white' 
-                          : 'bg-purple-500 text-white'
-                        : 'bg-green-600 text-white'
-                    }`}
-                    title={`Tải về chương ${chapterTitle}`}
-                  >
-                    {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                  </button>
+                ) : canRead ? (
+                  // Đã mua, đã thuê, hoặc miễn phí - cho phép tải về
+                  <>
+                    <button
+                      onClick={() => handleDownload(chapter)}
+                      disabled={isDownloading}
+                      className={`px-3 py-1 text-xs rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center ${
+                        isFree
+                          ? isDarkMode 
+                            ? 'bg-green-600 text-white' 
+                            : 'bg-green-500 text-white'
+                          : isRented 
+                          ? isDarkMode 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-purple-500 text-white'
+                          : 'bg-green-600 text-white'
+                      }`}
+                      title={`Tải về chương ${chapterTitle}`}
+                    >
+                      {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                    </button>
+                    {isFree && (
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        isDarkMode ? 'bg-green-800 text-green-200' : 'bg-green-100 text-green-700'
+                      }`}>
+                        Miễn phí
+                      </span>
+                    )}
+                  </>
                 ) : (
+                  // Chưa mua, chưa thuê và không miễn phí - hiển thị các tùy chọn mua/thuê
                   <>
                     {/* Nút thêm vào giỏ hàng */}
                     <button
@@ -916,8 +1011,8 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                       {isInCart ? <ShoppingCart size={14} /> : <Plus size={14} />}
                     </button>
 
-                    {/* Nút thuê chapter nếu hỗ trợ và chưa thuê */}
-                    {canRent && !isRented && (
+                    {/* Nút thuê chapter nếu hỗ trợ */}
+                    {canRent && (
                       <button 
                         onClick={() => handleRentClick(chapter)}
                         disabled={createStatus === 'loading' || confirmStatus === 'loading'}

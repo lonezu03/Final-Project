@@ -160,10 +160,14 @@ export const generateDropdownFromExistingChapters = createAsyncThunk(
       
       return sortedChapters.map(chap => ({
         idChapter: String(chap.idChapter),
+        indexChapter: chap.indexChapter, // Thêm indexChapter để dùng trong ReadingPage
         chapterNumber: (chap.indexChapter !== null && chap.indexChapter !== undefined) 
           ? Number(chap.indexChapter) + 1 
           : 'N/A',
         titleChapter: chap.titleChapter || "Chưa có tiêu đề",
+        coinPrice: chap.coinPrice || 0, // QUAN TRỌNG: Thêm coinPrice để kiểm tra quyền truy cập
+        cointRentPrice: chap.cointRentPrice || 0, // Thêm giá thuê
+        dayRentAmount: chap.dayRentAmount || 0, // Thêm số ngày thuê
         novelId: String(novelId) // Thêm novelId để dễ kiểm tra
       }));
     } catch (error) {
