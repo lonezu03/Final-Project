@@ -42,12 +42,22 @@ export const createAuthor = createAsyncThunk(
 // Cập nhật tác giả (CẦN TOKEN, dùng FormData)
 export const updateAuthor = createAsyncThunk(
   'authors/update',
-  async (authorFormData, { rejectWithValue }) => {
+  async ({ authorFormData, idAuthor }, { rejectWithValue }) => {
     try {
-      // Tương tự như create, giả định authorFormData là một object FormData
+      console.log('Updating author with FormData:', authorFormData);
+      console.log('Author ID:', idAuthor);
+      
+      // Log để debug - kiểm tra nội dung FormData
+      for (let [key, value] of authorFormData.entries()) {
+        console.log(`${key}:`, value);
+      }
+      
+      // Backend endpoint là /author/update (không có ID trong path)
+      // ID được gửi trong request body qua FormData
       const response = await apiClient.put(`${apiPath}/update`, authorFormData);
       return response.data.result;
     } catch (error) {
+      console.error('Update author error:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || error.message);
     }
   }

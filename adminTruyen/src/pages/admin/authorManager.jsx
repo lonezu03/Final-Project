@@ -55,6 +55,9 @@ const AuthorManager = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    console.log('handleSubmit - Current newAuthor state:', newAuthor);
+    console.log('handleSubmit - isEditing:', isEditing);
+
     const formData = new FormData();
     const dob = new Date(newAuthor.dobAuthor);
     const currentDate = new Date();
@@ -82,14 +85,22 @@ const AuthorManager = () => {
       return;
     }
     
-    const jsonPayload = new Blob([JSON.stringify({
+    // Tạo payload khác nhau cho create và update
+    const payloadData = {
       nameAuthor: newAuthor.nameAuthor,
       descriptionAuthor: newAuthor.descriptionAuthor,
       nationalityAuthor: newAuthor.nationalityAuthor,
       dobAuthor: newAuthor.dobAuthor,
       genderAuthor: newAuthor.genderAuthor,
       novels: newAuthor.novels.map(String),
-    })], { type: 'application/json' });
+    };
+
+    // Nếu đang edit, thêm idAuthor vào payload
+    if (isEditing && newAuthor.idAuthor) {
+      payloadData.idAuthor = newAuthor.idAuthor;
+    }
+
+    const jsonPayload = new Blob([JSON.stringify(payloadData)], { type: 'application/json' });
 
     formData.append('request', jsonPayload);
     if (image) {
@@ -97,13 +108,20 @@ const AuthorManager = () => {
     }
 
     if (isEditing) {
-      dispatch(updateAuthor(formData));
+      console.log('Updating author with payload:', payloadData);
+      // Gửi cả FormData và idAuthor riêng biệt
+      dispatch(updateAuthor({ 
+        authorFormData: formData, 
+        idAuthor: newAuthor.idAuthor 
+      }));
     } else {
+      console.log('Creating author with payload:', payloadData);
       dispatch(createAuthor(formData));
     }
     
     // Reset
     setNewAuthor({
+
       nameAuthor: '',
       descriptionAuthor: '',
       nationalityAuthor: '',
@@ -118,9 +136,10 @@ const AuthorManager = () => {
 
   // Handle edit click
   const handleEditClick = (author) => {
+    console.log('Editing author:', author);
     setCurrentAuthor(author);
 
-    setNewAuthor({
+    const authorData = {
       idAuthor: author.idAuthor,
       nameAuthor: author.nameAuthor || '',
       descriptionAuthor: author.descriptionAuthor || '',
@@ -128,8 +147,10 @@ const AuthorManager = () => {
       dobAuthor: author.dobAuthor || '',
       genderAuthor: author.genderAuthor || 'MALE',
       novels: Array.isArray(author.novels) ? author.novels.map(n => n.idNovel) : [],
-    });
-    console.log(author);
+    };
+    
+    console.log('Setting newAuthor state with:', authorData);
+    setNewAuthor(authorData);
     setImage(null);
     setIsEditing(true);
     setShowForm(true);
