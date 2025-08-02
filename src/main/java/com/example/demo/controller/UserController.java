@@ -39,6 +39,7 @@ import com.example.demo.dto.respone.HistoryReadNovelRespone;
 import com.example.demo.dto.respone.ReviewNovelRespone;
 import com.example.demo.dto.respone.UserRespone;
 import com.example.demo.entity.HistoryId;
+import com.example.demo.entity.Report;
 import com.example.demo.entity.ReviewNovelId;
 import com.example.demo.exception.AppException;
 import com.example.demo.service.HistoryDepositService;
@@ -354,4 +355,9 @@ public class UserController {
 		return ResponseEntity.ok("Report submitted successfully.");
 	}
 
+	@GetMapping("/getAllReport")
+	public ApiRespone<List<Report>> getAllReport() {
+		return ApiRespone.<List<Report>>builder().result(reportService.getReports()).build() ;
+	}
+	
 }
