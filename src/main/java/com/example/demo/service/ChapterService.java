@@ -120,6 +120,7 @@ public class ChapterService {
 			return chapterRepository.findByNovel_IdNovel(request.getIdNovel()).stream().map(t -> {
 
 				ChapterRespone chapterRespone = new ChapterRespone();
+				chapterRespone.setIdChapter(t.getIdChapter());
 				chapterRespone.setTitleChapter(t.getTitleChapter());
 				return chapterRespone;
 			}).collect(Collectors.toList());
