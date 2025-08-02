@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.util.List;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.dto.request.DeletePermissionRequest;
 import com.example.demo.dto.request.RoleUserAddPermission;
 import com.example.demo.dto.request.RoleUserRemovePermission;
 import com.example.demo.dto.respone.ApiRespone;
@@ -61,5 +63,9 @@ public class RolePermissionController {
 		return ApiRespone.<PermissionRespone>builder().result(roleUserService.unWhiteListPermission(idPermission)).build();
 	}
 	
+	@DeleteMapping("/deletePermission")
+	public ApiRespone<Boolean> deletePermission(@RequestBody DeletePermissionRequest listPermission){
+		return ApiRespone.<Boolean>builder().result(roleUserService.deletePermission(listPermission)).build();
+	}
 	
 }

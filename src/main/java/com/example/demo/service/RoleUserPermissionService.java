@@ -2,9 +2,11 @@ package com.example.demo.service;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.example.demo.dto.request.DeletePermissionRequest;
 import com.example.demo.dto.request.RoleUserAddPermission;
 import com.example.demo.dto.request.RoleUserRemovePermission;
 import com.example.demo.dto.respone.PermissionRespone;
@@ -33,67 +35,89 @@ public class RoleUserPermissionService {
 	IRoleUserMapper roleUserMapper;
 	IPermissionRepository permissionRepository;
 	IPermissionMapper permissionMapper;
+
 	public List<RoleUserRespone> getAllRole() {
-		List<RoleUserRespone> roleUsers=roleUserRepository.findAll().stream().map(t -> {
-			RoleUserRespone respone= roleUserMapper.toRoleUserRespone(t);
-			Set<Permission> permissions=t.getPermissions();
+		List<RoleUserRespone> roleUsers = roleUserRepository.findAll().stream().map(t -> {
+			RoleUserRespone respone = roleUserMapper.toRoleUserRespone(t);
+			Set<Permission> permissions = t.getPermissions();
 			for (Permission permission : permissions) {
-				PermissionRespone permissionRespone=permissionMapper.toPermissionRespone(permission);
+				PermissionRespone permissionRespone = permissionMapper.toPermissionRespone(permission);
 				respone.getPermissionRespones().add(permissionRespone);
 			}
 			return respone;
 		}).toList();
-		
+
 		return roleUsers;
 	}
-	
-	public List<PermissionRespone> getAllPermission(){
-		List<PermissionRespone> permissionRespones=permissionRepository.findAll().stream().map(t -> permissionMapper.toPermissionRespone(t)).toList();
+
+	public List<PermissionRespone> getAllPermission() {
+		List<PermissionRespone> permissionRespones = permissionRepository.findAll().stream()
+				.map(t -> permissionMapper.toPermissionRespone(t)).toList();
 		return permissionRespones;
 	}
-	
+
 	public RoleUserRespone addPermissionToRole(RoleUserAddPermission permission) {
-		RoleUser roleUser=roleUserRepository.findById(permission.getIdRole()).orElseThrow(() ->  new AppException(ErrorCode.ROLE_USER_NOT_EXISTS));
-		Permission per=permissionRepository.findById(permission.getIdPermission()).orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
-		
+		RoleUser roleUser = roleUserRepository.findById(permission.getIdRole())
+				.orElseThrow(() -> new AppException(ErrorCode.ROLE_USER_NOT_EXISTS));
+		Permission per = permissionRepository.findById(permission.getIdPermission())
+				.orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
+
 		roleUser.getPermissions().add(per);
 		per.getRoles().add(roleUser);
 		roleUserRepository.save(roleUser);
 		permissionRepository.save(per);
 		return roleUserMapper.toRoleUserRespone(roleUser);
-		
+
 	}
-	
+
 	public RoleUserRespone removePermissionToRole(RoleUserRemovePermission permission) {
-		RoleUser roleUser=roleUserRepository.findById(permission.getIdRole()).orElseThrow(() ->  new AppException(ErrorCode.ROLE_USER_NOT_EXISTS));
-		Permission per=permissionRepository.findById(permission.getIdPermission()).orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
-		
+		RoleUser roleUser = roleUserRepository.findById(permission.getIdRole())
+				.orElseThrow(() -> new AppException(ErrorCode.ROLE_USER_NOT_EXISTS));
+		Permission per = permissionRepository.findById(permission.getIdPermission())
+				.orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
+
 		roleUser.getPermissions().remove(per);
 		per.getRoles().remove(roleUser);
 		roleUserRepository.save(roleUser);
 		permissionRepository.save(per);
 		return roleUserMapper.toRoleUserRespone(roleUser);
-		
+
 	}
-	
+
 	public PermissionRespone whiteListPermission(Integer idPermission) {
-		Permission per=permissionRepository.findById(idPermission).orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
-		
+		Permission per = permissionRepository.findById(idPermission)
+				.orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
+
 		per.setWhiteList(true);
-		
+
 		permissionRepository.save(per);
 		return permissionMapper.toPermissionRespone(per);
-		
+
 	}
-	
-	
+
 	public PermissionRespone unWhiteListPermission(Integer idPermission) {
-		Permission per=permissionRepository.findById(idPermission).orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
-		
+		Permission per = permissionRepository.findById(idPermission)
+				.orElseThrow(() -> new AppException(ErrorCode.PERMISSION_NOT_EXISTS));
+
 		per.setWhiteList(false);
-		
+
 		permissionRepository.save(per);
 		return permissionMapper.toPermissionRespone(per);
-		
+
 	}
+
+	public Boolean deletePermission(DeletePermissionRequest request) {
+	    List<Integer> idsToDelete = request.getIdPermission();
+
+	    if (idsToDelete == null || idsToDelete.isEmpty()) {
+	        return false;
+	    }
+
+	    List<Permission> permissionsToDelete = permissionRepository.findAllById(idsToDelete);
+	    permissionRepository.deleteAll(permissionsToDelete);
+
+	    return true;
+	}
+
+
 }

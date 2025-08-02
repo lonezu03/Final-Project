@@ -70,9 +70,19 @@ public class TokenValidationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		String endPoint="";
+		logger.info(request.getRequestURI());
 
-//		String endPoint = convertToRegex(request.getRequestURI());
-		String endPoint = normalizeEndpoint(request.getRequestURI());
+		if(isWsEndpoint(request.getRequestURI())) {
+			logger.info("Là web socket");
+			endPoint="/ws/**";
+		}else {
+			endPoint = normalizeEndpoint(request.getRequestURI());
+		}
+			
+
+		
+		
 //		logger.info(endPoint);
 		List<Permission> permissions = permissionRepository.findByEndPointAndMethodWithRoles(endPoint,request.getMethod());
 		Boolean isWhiteList=false;
@@ -207,18 +217,23 @@ public class TokenValidationFilter extends OncePerRequestFilter {
 //		return endpoint.replaceAll("\\{[^/]+}", "[^/]+");
 //	}
 	
-	private String trimPathVariable(String uri) {
-	    // VD: /rolePermission/whiteListPermission/3 => /rolePermission/whiteListPermission
-	    String[] parts = uri.split("/");
-	    if (parts.length > 0 && parts[parts.length - 1].matches("\\d+")) {
-	        return uri.substring(0, uri.lastIndexOf("/"));
-	    }
-	    return uri;
-	}
+//	private String trimPathVariable(String uri) {
+//	    // VD: /rolePermission/whiteListPermission/3 => /rolePermission/whiteListPermission
+//	    String[] parts = uri.split("/");
+//	    if (parts.length > 0 && parts[parts.length - 1].matches("\\d+")) {
+//	        return uri.substring(0, uri.lastIndexOf("/"));
+//	    }
+//	    return uri;
+//	}
 
 	public String normalizeEndpoint(String endpoint) {
 	    // Regex: nếu đoạn cuối là UUID hoặc số thì thay thế bằng [^/]+
 	    return endpoint.replaceAll("/([a-fA-F0-9\\-]{36}|\\d+)(?=$|/)", "/[^/]+");
+	}
+
+
+	public boolean isWsEndpoint(String path) {
+	    return path.matches("^/ws/.*$");
 	}
 
 }
