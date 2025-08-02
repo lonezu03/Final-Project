@@ -11,7 +11,6 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { searchNovels, getAllNovels } from '../redux/novelSlice';
 import { getAllHistoryByUser } from '../redux/userSlice';
-import { isNovelsLoading, isNovelsLoaded, setNovelsLoading } from '../utils/apiCache';
 import NovelCard from './NovelCard'; // Import NovelCard component
 import { 
   BookOpen as BookOpenIcon, 
@@ -66,19 +65,16 @@ const RecommendedStories = () => {
             availableNovels = novels; // Lấy lại sau khi đợi
           }
           
-          // Nếu vẫn chưa có, gọi getAllNovels (chỉ 1 lần)
+          // Nếu vẫn chưa có, gọi getAllNovels (chỉ 1 lần) - sử dụng Redux loading state
           if (!availableNovels || availableNovels.length === 0) {
-            if (!hasLoadedAllNovels.current && !isNovelsLoading() && !isNovelsLoaded()) {
+            if (!hasLoadedAllNovels.current && !loading) {
               console.log('🔄 [RecommendedStories] Loading novels as fallback...');
               try {
-                setNovelsLoading(true);
                 await dispatch(getAllNovels()).unwrap();
                 hasLoadedAllNovels.current = true;
                 availableNovels = novels;
               } catch (err) {
                 console.error('❌ [RecommendedStories] Error loading novels:', err);
-              } finally {
-                setNovelsLoading(false);
               }
             }
           }
@@ -217,14 +213,13 @@ const RecommendedStories = () => {
         // Sử dụng data có sẵn thay vì gọi API mới
         let allNovelsResponse = novels;
         if (!allNovelsResponse || allNovelsResponse.length === 0) {
-          if (!hasLoadedAllNovels.current && !isNovelsLoading()) {
+          if (!hasLoadedAllNovels.current && !loading) {
             console.log('🔄 Loading novels for fallback from RecommendedStories...');
-            setNovelsLoading(true);
             try {
               allNovelsResponse = await dispatch(getAllNovels()).unwrap();
               hasLoadedAllNovels.current = true;
-            } finally {
-              setNovelsLoading(false);
+            } catch (error) {
+              console.error('❌ Error loading novels:', error);
             }
           }
         }
@@ -323,14 +318,13 @@ const RecommendedStories = () => {
       try {
         let allNovelsResponse = novels;
         if (!allNovelsResponse || allNovelsResponse.length === 0) {
-          if (!hasLoadedAllNovels.current && !isNovelsLoading()) {
+          if (!hasLoadedAllNovels.current && !loading) {
             console.log('🔄 Loading novels for popular fallback from RecommendedStories...');
-            setNovelsLoading(true);
             try {
               allNovelsResponse = await dispatch(getAllNovels()).unwrap();
               hasLoadedAllNovels.current = true;
-            } finally {
-              setNovelsLoading(false);
+            } catch (error) {
+              console.error('❌ Error loading novels:', error);
             }
           }
         }

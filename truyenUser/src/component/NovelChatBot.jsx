@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useSelector, useDispatch } from "react-redux";
-import { getAllAuthors } from '../redux/authorSlice';
-import { getAllCategories } from '../redux/categorySlice';
 import { Link } from "react-router-dom";
-import { Send, Bot, X, Book, Star } from "lucide-react";
+import { Send, Bot, X, Book, Star, Clock } from "lucide-react";
 import { useTheme } from '../context/ThemeContext';
 import { GEMINI_CONFIG } from '../config/gemini';
 
@@ -12,7 +10,8 @@ const genAI = new GoogleGenerativeAI(GEMINI_CONFIG.API_KEY);
 
 const NovelChatBot = () => {
   const { isDarkMode } = useTheme();
-  const dispatch = useDispatch();
+  // Không cần dispatch nữa vì dữ liệu đã được load trong App.jsx
+  // const dispatch = useDispatch();
   const [isChatting, setIsChatting] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -23,6 +22,18 @@ const NovelChatBot = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef(null);
+  
+  // Cache và rate limiting
+  const [searchCache, setSearchCache] = useState(new Map());
+  const [lastRequestTime, setLastRequestTime] = useState(0);
+  const [requestCount, setRequestCount] = useState(0);
+  const [rateLimitResetTime, setRateLimitResetTime] = useState(0);
+  
+  // Rate limiting constants
+  const RATE_LIMIT_REQUESTS = 10; // Tối đa 10 requests
+  const RATE_LIMIT_WINDOW = 60000; // Trong 1 phút (60 giây)
+  const MIN_REQUEST_INTERVAL = 2000; // Tối thiểu 2 giây giữa các request
+  const CACHE_DURATION = 300000; // Cache trong 5 phút
 
   // Lấy dữ liệu từ Redux store
   const novels = useSelector((state) => state.novels.novels || []);
@@ -33,20 +44,92 @@ const NovelChatBot = () => {
   console.log("Authors data from Redux:", authors);
   console.log("Categories data from Redux:", categories);
   
-  // Fetch dữ liệu authors và categories nếu chưa có
-  useEffect(() => {
-    const shouldFetchAuthors = !authors || authors.length === 0;
-    const shouldFetchCategories = !categories || categories.length === 0;
+  // Memoize dữ liệu để tránh re-calculate không cần thiết
+  const limitedNovels = useMemo(() => 
+    novels.filter(novel => novel && (novel.nameNovel || novel.title)).slice(0, 100),
+    [novels]
+  );
+  
+  const authorsData = useMemo(() => 
+    authors.filter(author => author && author.nameAuthor),
+    [authors]
+  );
+  
+  const categoriesData = useMemo(() => 
+    categories.filter(category => category && category.nameCategory),
+    [categories]
+  );
+  
+  // Rate limiting check
+  const checkRateLimit = useCallback(() => {
+    const now = Date.now();
     
-    if (shouldFetchAuthors) {
-      console.log('🔄 [ChatBot] Fetching authors...');
-      dispatch(getAllAuthors());
+    // Reset counter nếu đã qua window
+    if (now > rateLimitResetTime) {
+      setRequestCount(0);
+      setRateLimitResetTime(now + RATE_LIMIT_WINDOW);
     }
-    if (shouldFetchCategories) {
-      console.log('🔄 [ChatBot] Fetching categories...');
-      dispatch(getAllCategories());
+    
+    // Kiểm tra rate limit
+    if (requestCount >= RATE_LIMIT_REQUESTS) {
+      return {
+        allowed: false,
+        message: `⏰ Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi ${Math.ceil((rateLimitResetTime - now) / 1000)} giây nữa.`
+      };
     }
-  }, [dispatch]); // Chỉ phụ thuộc vào dispatch, không phụ thuộc vào authors và categories để tránh loop
+    
+    // Kiểm tra khoảng cách tối thiểu giữa các request
+    if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
+      return {
+        allowed: false,
+        message: `⏰ Vui lòng đợi ${Math.ceil((MIN_REQUEST_INTERVAL - (now - lastRequestTime)) / 1000)} giây trước khi gửi yêu cầu tiếp theo.`
+      };
+    }
+    
+    return { allowed: true };
+  }, [requestCount, rateLimitResetTime, lastRequestTime]);
+  
+  // Cache management
+  const getCachedResult = useCallback((query) => {
+    const cached = searchCache.get(query.toLowerCase());
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.result;
+    }
+    return null;
+  }, [searchCache]);
+  
+  const setCachedResult = useCallback((query, result) => {
+    setSearchCache(prev => {
+      const newCache = new Map(prev);
+      newCache.set(query.toLowerCase(), {
+        result,
+        timestamp: Date.now()
+      });
+      
+      // Giới hạn kích thước cache (tối đa 50 entries)
+      if (newCache.size > 50) {
+        const firstKey = newCache.keys().next().value;
+        newCache.delete(firstKey);
+      }
+      
+      return newCache;
+    });
+  }, []);
+  
+  // Không cần fetch dữ liệu authors và categories nữa vì đã được load trong App.jsx
+  // useEffect(() => {
+  //   const shouldFetchAuthors = !authorsData || authorsData.length === 0;
+  //   const shouldFetchCategories = !categoriesData || categoriesData.length === 0;
+  //   
+  //   if (shouldFetchAuthors) {
+  //     console.log('🔄 [ChatBot] Fetching authors...');
+  //     dispatch(getAllAuthors());
+  //   }
+  //   if (shouldFetchCategories) {
+  //     console.log('🔄 [ChatBot] Fetching categories...');
+  //     dispatch(getAllCategories());
+  //   }
+  // }, [dispatch, authorsData, categoriesData]);
   
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -55,17 +138,87 @@ const NovelChatBot = () => {
     }
   }, [messages]);
 
+  // Auto reset rate limit counter
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now > rateLimitResetTime && requestCount > 0) {
+        setRequestCount(0);
+        setRateLimitResetTime(now + RATE_LIMIT_WINDOW);
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, [rateLimitResetTime, requestCount]);
+
+  // Clean old cache entries periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSearchCache(prev => {
+        const newCache = new Map();
+        const now = Date.now();
+        
+        for (const [key, value] of prev.entries()) {
+          if (now - value.timestamp < CACHE_DURATION) {
+            newCache.set(key, value);
+          }
+        }
+        
+        return newCache;
+      });
+    }, 60000); // Clean every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    // Kiểm tra rate limit
+    const rateLimitCheck = checkRateLimit();
+    if (!rateLimitCheck.allowed) {
+      const rateLimitMessage = {
+        sender: "bot",
+        text: rateLimitCheck.message,
+      };
+      setMessages((prev) => [...prev, rateLimitMessage]);
+      return;
+    }
+
+    // Kiểm tra cache trước
+    const cachedResult = getCachedResult(input);
+    if (cachedResult) {
+      const userMessage = { sender: "user", text: input };
+      const cachedMessage = { 
+        sender: "bot", 
+        text: (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={16} className="text-blue-500" />
+              <span className="text-sm text-gray-500">Kết quả từ cache (nhanh hơn)</span>
+            </div>
+            {cachedResult}
+          </div>
+        )
+      };
+      setMessages((prev) => [...prev, userMessage, cachedMessage]);
+      setInput("");
+      return;
+    }
+
     const userMessage = { sender: "user", text: input };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
     setIsLoading(true);
 
+    // Update rate limiting counters
+    setRequestCount(prev => prev + 1);
+    setLastRequestTime(Date.now());
+
     try {
       // Kiểm tra nếu không có dữ liệu novels, authors hoặc categories
-      if (!novels || novels.length === 0) {
+      if (!limitedNovels || limitedNovels.length === 0) {
         const noDataMessage = {
           sender: "bot",
           text: "Lại dám trống rỗng? Thật chướng mắt. Em đợi đi, tôi bắt nó ra cho em.",
@@ -77,35 +230,26 @@ const NovelChatBot = () => {
 
       const chat = genAI.getGenerativeModel({ model: GEMINI_CONFIG.MODEL_NAME });
       
-      // Tạo context từ dữ liệu novels với thông tin chi tiết - tối đa 100 truyện
-      const limitedNovels = novels.filter(novel => novel && (novel.nameNovel || novel.title)).slice(0, 100);
-      
-      // Tạo danh sách đầy đủ tác giả và thể loại từ Redux store
-      const authorsContext = authors.length > 0 ? authors
-        .filter(author => author && author.nameAuthor)
+      // Tối ưu context - chỉ lấy thông tin cần thiết
+      const authorsContext = authorsData.length > 0 ? authorsData
+        .slice(0, 20) // Giới hạn 20 tác giả để giảm token
         .map(author => {
           const authorNovels = limitedNovels.filter(novel => 
             novel.authors && novel.authors.some(a => a.idAuthor === author.idAuthor)
           );
-          return `TÁC GIẢ: ${author.nameAuthor} (ID: ${author.idAuthor})
-- Quốc tịch: ${author.nationalityAuthor || 'Chưa rõ'}
-- Giới tính: ${author.genderAuthor === 'MALE' ? 'Nam' : author.genderAuthor === 'FEMALE' ? 'Nữ' : 'Khác'}
-- Mô tả: ${author.descriptionAuthor || 'Chưa có mô tả'}
-- Số truyện: ${authorNovels.length}
-- Các truyện: ${authorNovels.map(n => n.nameNovel || n.title).join(', ') || 'Chưa có truyện'}`;
-        }).join('\n\n') : "Chưa có dữ liệu tác giả";
+          return `${author.nameAuthor}: ${authorNovels.length} truyện`;
+        }).join(', ') : "Chưa có dữ liệu tác giả";
 
-      const categoriesContext = categories.length > 0 ? categories
-        .filter(category => category && category.nameCategory)
+      const categoriesContext = categoriesData.length > 0 ? categoriesData
+        .slice(0, 15) // Giới hạn 15 thể loại để giảm token
         .map(category => {
           const categoryNovels = limitedNovels.filter(novel => 
             novel.categories && novel.categories.some(c => c.idCategory === category.idCategory)
           );
-          return `THỂ LOẠI: ${category.nameCategory} (ID: ${category.idCategory})
-- Số truyện: ${categoryNovels.length}
-- Các truyện: ${categoryNovels.map(n => n.nameNovel || n.title).join(', ') || 'Chưa có truyện'}`;
-        }).join('\n\n') : "Chưa có dữ liệu thể loại";
+          return `${category.nameCategory}: ${categoryNovels.length} truyện`;
+        }).join(', ') : "Chưa có dữ liệu thể loại";
 
+      // Tối ưu novel context - chỉ thông tin cần thiết
       const novelContext = limitedNovels
         .map((novel) => {
           const title = novel.nameNovel || novel.title || "Chưa có tên";
@@ -114,165 +258,49 @@ const NovelChatBot = () => {
             ? novel.categories
                 .filter(cat => cat && cat.categoryName)
                 .map(cat => cat.categoryName)
+                .slice(0, 2) // Chỉ lấy 2 thể loại đầu
                 .join(", ")
             : "Chưa phân loại";
           const authors = novel.authors && novel.authors.length > 0
             ? novel.authors
                 .filter(author => author && author.authorName)
                 .map(author => author.authorName)
+                .slice(0, 1) // Chỉ lấy 1 tác giả đầu
                 .join(", ")
             : "Chưa có tác giả";
           
           const status = novel.status || novel.statusNovel || "Không xác định";
           const totalChapters = novel.totalChapter || novel.totalChapters || 0;
           const viewCount = novel.totalView || novel.viewCount || 0;
-          const description = (novel.descriptionNovel || novel.description) && (novel.descriptionNovel || novel.description).trim() 
-            ? (novel.descriptionNovel || novel.description).substring(0, 200) + ((novel.descriptionNovel || novel.description).length > 200 ? "..." : "")
-            : "Chưa có mô tả";
 
-          return `[${novel.idNovel}] "${title}"
-- Tác giả: ${authors}
-- Thể loại: ${categories}
-- Đánh giá: ${rating}/5.0 sao
-- Trạng thái: ${status}
-- Số chương: ${totalChapters}
-- Lượt xem: ${viewCount.toLocaleString()}
-- Mô tả: ${description}`;
+          return `[${novel.idNovel}] "${title}" - ${authors} - ${categories} - ${rating}/5 - ${status} - ${totalChapters}ch - ${viewCount}views`;
         })
-        .join("\n\n");
+        .join("\n");
 
-      // Tạo danh sách keywords từ dữ liệu thực tế
-      const allCategories = categories.length > 0 
-        ? categories.map(cat => cat.nameCategory).filter(name => name)
-        : [...new Set(
-            limitedNovels.flatMap(novel =>
-              novel.categories
-                ? novel.categories
-                    .filter(cat => cat && cat.categoryName)
-                    .map(cat => cat.categoryName.toLowerCase())
-                : []
-            )
-          )].filter(cat => cat);
+      // Prompt tối ưu - ngắn gọn hơn
+      const prompt = `Bạn là trợ lý tìm kiếm truyện thông minh.
 
-      const allAuthors = authors.length > 0
-        ? authors.map(author => author.nameAuthor).filter(name => name)
-        : [...new Set(
-            limitedNovels.flatMap(novel =>
-              novel.authors
-                ? novel.authors
-                    .filter(author => author && author.authorName)
-                    .map(author => author.authorName.toLowerCase())
-                : []
-            )
-          )].filter(author => author);
+TÁC GIẢ: ${authorsContext}
 
-      const keywordsList = [
-        `THỂ LOẠI CÓ SẴN: ${allCategories.join(", ")}`,
-        `TÁC GIẢ CÓ SẴN: ${allAuthors.join(", ")}`,
-        "TÌM KIẾM: hot, hay nhất, đánh giá cao, rating cao, mới nhất, hoàn thành, đang cập nhật, nhiều chương, phổ biến"
-      ].join(" | ");
+THỂ LOẠI: ${categoriesContext}
 
-      const prompt = `Bạn là một trợ lý thông minh cho website đọc truyện online với khả năng tìm kiếm nâng cao và hiểu biết sâu về sở thích đọc truyện.
-
-⚠️ QUAN TRỌNG: BẠN CHỈ ĐƯỢC SỬ DỤNG ĐÚNG THÔNG TIN TỪ DANH SÁCH DƯỚI ĐÂY.
-
-=== DANH SÁCH TÁC GIẢ TRONG HỆ THỐNG (${authors.length} tác giả) ===
-
-${authorsContext}
-
-=== DANH SÁCH THỂ LOẠI TRONG HỆ THỐNG (${categories.length} thể loại) ===
-
-${categoriesContext}
-
-=== DANH SÁCH ${limitedNovels.length} TRUYỆN CÓ SẴN TRONG HỆ THỐNG ===
-
+TRUYỆN (${limitedNovels.length}):
 ${novelContext}
 
-${keywordsList}
+NHIỆM VỤ: Tìm truyện phù hợp với yêu cầu "${currentInput}"
 
-HỆ THỐNG ĐÁNH GIÁ VÀ TÌM KIẾM:
-- Rating từ 0 đến 5.0 sao
-- Truyện "hot" = rating >= 4.0 và lượt xem cao
-- Truyện "hay nhất" = rating cao nhất  
-- Truyện "phổ biến" = lượt xem cao nhất
-- Truyện "mới nhất" = ID lớn nhất hoặc được tạo gần đây nhất
-- Truyện "hoàn thành" = status là "COMPLETED"
-- Truyện "đang cập nhật" = status khác "COMPLETED"
-- Truyện "nhiều chương" = số chương > 50
+QUY TẮC:
+1. CHỈ TRẢ JSON ARRAY chứa ID của truyện phù hợp
+2. Tối đa 5 truyện
+3. Ưu tiên rating cao, view nhiều
+4. Nếu không tìm thấy, trả về []
 
-CÁC LOẠI YÊU CẦU TÌM KIẾM CHỦ YẾU:
+JSON:`;
 
-1. **TÌM THEO TÁC GIẢ:**
-   - "truyện của [tên tác giả]" 
-   - "tác giả [tên] viết gì hay"
-   - "gợi ý truyện của [tác giả]"
-   → Tìm tất cả truyện của tác giả đó, sắp xếp theo rating cao nhất
-
-2. **TÌM THEO THỂ LOẠI:**
-   - "thể loại [tên thể loại]"
-   - "truyện [romance/hành động/kinh dị/...]" 
-   - "tìm truyện [thể loại] hay nhất"
-   → Tìm truyện thuộc thể loại đó, ưu tiên rating cao
-
-3. **TÌM THEO SỞ THÍCH/MÔ TẢ:**
-   - "tôi thích truyện về [chủ đề]"
-   - "truyện có nội dung [mô tả]"
-   - "gợi ý truyện [tính cách/tình huống cụ thể]"
-   → Phân tích mô tả trong description để tìm truyện phù hợp
-
-4. **TÌM KẾT HỢP:**
-   - "truyện [thể loại] của tác giả [tên]"
-   - "truyện [thể loại] có [đặc điểm]"
-   → Kết hợp nhiều tiêu chí
-
-5. **TÌM THEO TIÊU CHÍ ĐẶC BIỆT:**
-   - "truyện hot", "hay nhất", "phổ biến"
-   - "truyện hoàn thành", "nhiều chương"
-   - "mới nhất", "đánh giá cao"
-
-HƯỚNG DẪN PHÂN TÍCH YÊU CẦU:
-
-🔍 **Bước 1: Nhận diện loại yêu cầu**
-- Xác định người dùng muốn tìm theo tác giả, thể loại, mô tả sở thích hay kết hợp
-- Trích xuất từ khóa chính (tên tác giả, thể loại, đặc điểm mong muốn)
-
-🎯 **Bước 2: Áp dụng logic tìm kiếm phù hợp**
-- **Tác giả**: Khớp chính xác tên trong trường "authors"
-- **Thể loại**: Khớp trong trường "categories" 
-- **Mô tả sở thích**: Phân tích description để tìm nội dung liên quan
-- **Kết hợp**: Áp dụng nhiều điều kiện cùng lúc
-
-⭐ **Bước 3: Sắp xếp kết quả**
-- Ưu tiên rating cao, lượt xem nhiều
-- Nếu có nhiều lựa chọn, chọn đa dạng thể loại
-- Tối đa 5 truyện chất lượng nhất
-
-NHIỆM VỤ:
-1. Phân tích câu hỏi của người dùng để hiểu chính xác yêu cầu
-2. Xác định loại tìm kiếm (tác giả/thể loại/sở thích/kết hợp)
-3. Áp dụng logic tìm kiếm phù hợp với từng loại
-4. Sắp xếp và chọn lọc kết quả tốt nhất
-5. Trả về JSON chứa ID của các truyện phù hợp
-
-QUY TẮC TRẢ VỀ:
-1. CHỈ TRẢ LỜI BẰNG MỘT CHUỖI JSON HỢP LỆ.
-2. Chuỗi JSON phải là một mảng chứa các ID của truyện tìm được (ví dụ: ["id_truyen_1", "id_truyen_2", "id_truyen_3"]).
-3. Nếu không tìm thấy truyện nào phù hợp, hãy trả về một mảng rỗng [].
-4. Tối đa 5 truyện trong mảng kết quả.
-5. KHÔNG thêm bất kỳ text nào khác ngoài JSON.
-6. Ưu tiên truyện có rating cao và phù hợp nhất với yêu cầu.
-
-Người dùng hỏi: ${input}
-
-JSON response:`;
-
-      console.log("Data being sent to AI:");
+      console.log("Optimized data being sent to AI:");
       console.log("- Novels count:", limitedNovels.length);
-      console.log("- Authors count:", authors.length);
-      console.log("- Categories count:", categories.length);
-      console.log("Sample novels:", limitedNovels.slice(0, 3).map(n => n.nameNovel || n.title));
-      console.log("Sample authors:", authors.slice(0, 3).map(a => a.nameAuthor));
-      console.log("Sample categories:", categories.slice(0, 3).map(c => c.nameCategory));
+      console.log("- Authors count:", authorsData.length);
+      console.log("- Categories count:", categoriesData.length);
 
       const result = await chat.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -397,18 +425,21 @@ JSON response:`;
             <p className="mb-2">🎯 Dựa trên yêu cầu của bạn, tôi tìm thấy {foundNovels.length} truyện phù hợp:</p>
             {novelCards}
             <p className="text-xs text-gray-500 mt-3">
-              💡 Tìm kiếm từ {limitedNovels.length} truyện, {authors.length} tác giả, {categories.length} thể loại
+              💡 Tìm kiếm từ {limitedNovels.length} truyện, {authorsData.length} tác giả, {categoriesData.length} thể loại
             </p>
           </div>
         );
+        
+        // Cache kết quả thành công
+        setCachedResult(currentInput, botResponse);
       } else {
         botResponse = `Em đang thử thách tôi đấy à, bảo bối? Những thứ em tìm không xứng đáng để xuất hiện. Đưa ra một yêu cầu khác, một yêu cầu xứng tầm với em hơn.
 
 💡 **Thử hỏi với các tác giả có sẵn:**
-${authors.slice(0, 5).map(a => `"Truyện của ${a.nameAuthor}"`).join(', ')}
+${authorsData.slice(0, 5).map(a => `"Truyện của ${a.nameAuthor}"`).join(', ')}
 
 💡 **Thử hỏi với các thể loại có sẵn:**
-${categories.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join(', ')}
+${categoriesData.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join(', ')}
 
 💡 **Hoặc thử:** "Gợi ý truyện hot", "Truyện rating cao", "Truyện nhiều view"`;
       }
@@ -460,13 +491,29 @@ ${categories.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join(', ')
   return (
     <div className={`fixed bottom-4 right-4 w-80 max-w-[calc(100vw-2rem)] ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl shadow-2xl z-50 border flex flex-col overflow-hidden max-h-[calc(100vh-2rem)]`}>
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex justify-between items-center flex-shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
             <Bot size={18} />
           </div>
           <h3 className="font-bold text-lg">Trợ lý đọc truyện</h3>
         </div>
         <div className="flex items-center gap-1">
+          {searchCache.size > 0 && (
+            <button
+              onClick={() => {
+                setSearchCache(new Map());
+                const clearMessage = {
+                  sender: "bot",
+                  text: "🗑️ Đã xóa cache. Tìm kiếm tiếp theo sẽ gọi AI mới."
+                };
+                setMessages(prev => [...prev, clearMessage]);
+              }}
+              className="p-2 hover:bg-white/20 rounded-full transition-colors text-xs"
+              title="Xóa cache tìm kiếm"
+            >
+              🗑️
+            </button>
+          )}
           <button
             onClick={() => setIsChatting(false)}
             className="p-2 hover:bg-white/20 rounded-full transition-colors"
@@ -526,6 +573,29 @@ ${categories.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join(', ')
       </div>
 
       <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-100 bg-white'}`}>
+        {/* Rate limit indicator */}
+        {requestCount > 0 && (
+          <div className={`mb-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} flex items-center gap-2`}>
+            <Clock size={12} />
+            <span>
+              Đã sử dụng {requestCount}/{RATE_LIMIT_REQUESTS} requests trong phút này
+              {requestCount >= RATE_LIMIT_REQUESTS && (
+                <span className="text-orange-500 ml-1">
+                  (Đã đạt giới hạn - đợi {Math.ceil((rateLimitResetTime - Date.now()) / 1000)}s)
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+        
+        {/* Cache indicator */}
+        {searchCache.size > 0 && (
+          <div className={`mb-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} flex items-center gap-2`}>
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>{searchCache.size} kết quả được lưu cache (tìm kiếm nhanh hơn)</span>
+          </div>
+        )}
+        
         <div className="flex items-center gap-3">
           <input
             type="text"
@@ -538,8 +608,17 @@ ${categories.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join(', ')
           />
           <button
             onClick={handleSend}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 rounded-full hover:from-blue-700 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-400 transition-all duration-200 shadow-sm hover:shadow-md"
-            disabled={isLoading}
+            className={`p-3 rounded-full transition-all duration-200 shadow-sm hover:shadow-md ${
+              isLoading || requestCount >= RATE_LIMIT_REQUESTS
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
+            }`}
+            disabled={isLoading || requestCount >= RATE_LIMIT_REQUESTS}
+            title={
+              requestCount >= RATE_LIMIT_REQUESTS 
+                ? 'Đã đạt giới hạn request, vui lòng đợi'
+                : 'Gửi tin nhắn'
+            }
           >
             <Send size={18} />
           </button>

@@ -1,9 +1,7 @@
 // src/components/FilterSidebar.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { X, Filter as FilterIcon, Star as StarIcon } from 'lucide-react'; // Icon cho nút đóng và filter
-import { getAllAuthors } from '../redux/authorSlice'; // Điều chỉnh đường dẫn nếu cần
-import { getAllCategories } from '../redux/categorySlice'; // Điều chỉnh đường dẫn nếu cần
 // Import action searchNovels từ novelSlice
 import { searchNovels, clearSearchedNovels } from '../redux/novelSlice';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +12,7 @@ const FilterSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
 
-  // Lấy danh sách tác giả và thể loại từ store
+  // Lấy danh sách tác giả và thể loại từ store (đã được load trong App.jsx)
   const { authors, loading: authorsLoading, error: authorsError } = useSelector((state) => state.authors);
   const { categories, loading: categoriesLoading, error: categoriesError } = useSelector((state) => state.categories);
 
@@ -23,15 +21,7 @@ const FilterSidebar = ({ isOpen, onClose }) => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedRating, setSelectedRating] = useState(0); // 0 nghĩa là không lọc theo rating
 
-  // Fetch authors và categories khi component mount (nếu chưa có)
-  useEffect(() => {
-    if (!authors || authors.length === 0) {
-      dispatch(getAllAuthors());
-    }
-    if (!categories || categories.length === 0) {
-      dispatch(getAllCategories());
-    }
-  }, [dispatch, authors, categories]);
+  // Không cần useEffect để fetch dữ liệu nữa vì đã load trong App.jsx
 
   const handleAuthorChange = (authorName) => {
     setSelectedAuthors(prev =>

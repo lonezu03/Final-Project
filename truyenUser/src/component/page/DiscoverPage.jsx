@@ -3,8 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { searchNovels, getAllNovels } from '../../redux/novelSlice';
-import { getAllCategories } from '../../redux/categorySlice';
-import { getAllAuthors } from '../../redux/authorSlice';
 import NovelCard from '../NovelCard';
 import Footer from '../Footer';
 import { 
@@ -43,11 +41,11 @@ const DiscoverPage = () => {
   const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '');
   const [minRating, setMinRating] = useState(parseFloat(searchParams.get('minRating')) || 0);
 
-  // Fetch initial data
-  useEffect(() => {
-    if (categories.length === 0) dispatch(getAllCategories());
-    if (authors.length === 0) dispatch(getAllAuthors());
-  }, [dispatch, categories.length, authors.length]);
+  // Fetch initial data - Không cần fetch nữa vì đã load trong App.jsx
+  // useEffect(() => {
+  //   if (categories.length === 0) dispatch(getAllCategories());
+  //   if (authors.length === 0) dispatch(getAllAuthors());
+  // }, [dispatch, categories.length, authors.length]);
 
   // Search novels when filters change
   useEffect(() => {

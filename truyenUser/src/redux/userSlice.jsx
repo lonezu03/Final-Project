@@ -5,7 +5,6 @@ import apiClient from '../services/api'; // Import apiClient đã cấu hình
 import { rooturl } from './element'; // Import đường dẫn gốc từ file element
 import { LyberiNovels } from './novelSlice'; // <<-- THÊM IMPORT NÀY Ở ĐẦU FILE
 import { confirmTransactions } from './transactionSlice'; 
-import { resetApiCache } from '../utils/apiCache'; 
 
 const userApiBase = `${rooturl}/user`; // Chỉ dùng cho các API không cần auth
 
@@ -405,6 +404,39 @@ export const followNovel = createAsyncThunk(
     }
   }
 );
+
+// API gửi báo cáo hỗ trợ
+export const reportSupport = createAsyncThunk(
+  'user/reportSupport',
+  async ({ content, statusReport = 'REPORT' }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post('/user/report', {
+        content,
+        statusReport
+      });
+
+      // Kiểm tra response - có thể không có code field khi thành công
+      if (response.data) {
+        // Nếu có code field, kiểm tra code === 1000
+        if (response.data.code !== undefined) {
+          if (response.data.code === 1000) {
+            return response.data.result || response.data;
+          } else {
+            return rejectWithValue(response.data.message || 'Gửi báo cáo thất bại.');
+          }
+        } else {
+          // Nếu không có code field, coi như thành công (HTTP 200)
+          return response.data;
+        }
+      } else {
+        return rejectWithValue('Không nhận được phản hồi từ server.');
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi gửi báo cáo.');
+    }
+  }
+);
+
 export const refreshUser = createAsyncThunk(
   'user/refresh',
   async (_, { getState, rejectWithValue }) => {
@@ -546,6 +578,32 @@ export const getUserIdByEmail = createAsyncThunk(
     }
   }
 );
+
+// API REPORT SUPPORT - Gửi yêu cầu hỗ trợ/báo cáo
+// export const reportSupport = createAsyncThunk(
+//   'user/reportSupport',
+//   async ({ email, content }, { rejectWithValue }) => {
+//     try {
+//       const response = await apiClient.post('/user/report', {
+//         email,
+//         content
+//       }, {
+//         headers: { 'Content-Type': 'application/json' }
+//       });
+
+//       if (response.data && (response.data.code === 1000)) {
+//         return response.data.result || { message: 'Gửi báo cáo thành công' };
+//       }
+      
+//       return rejectWithValue(response.data?.message || 'Gửi báo cáo thất bại.');
+//     } catch (error) {
+//       const errorMessage = error.response?.data?.message || error.message || 'Lỗi khi gửi báo cáo.';
+//       console.error("Report Support API Error:", errorMessage, error.response);
+//       return rejectWithValue(errorMessage);
+//     }
+//   }
+// );
+
  const handlePending = (state) => {
       state.loading = true;
       state.error = null;
@@ -615,9 +673,9 @@ const userSlice = createSlice({
       state.otpMessage = null;
       localStorage.removeItem('currentUser');
       localStorage.removeItem('authToken');
-      // Reset API cache để tránh spam khi login lại
-      resetApiCache();
-      console.log('🔄 User logged out, API cache reset');
+      // Xóa cache khi logout để tránh spam khi login lại
+      sessionStorage.clear();
+      console.log('🔄 User logged out, cache cleared');
     },
     clearUserError: (state) => { state.error = null; },
     clearOtpMessage: (state) => { state.otpMessage = null; },
@@ -937,6 +995,21 @@ const userSlice = createSlice({
             // Chỉ đảm bảo state không bị treo ở trạng thái loading
             state.loading = false;
         })
+
+      // Report Support
+      .addCase(reportSupport.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(reportSupport.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        // Có thể lưu thông báo thành công nếu cần
+      })
+      .addCase(reportSupport.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
 
       // .addMatcher cho các hành động login vẫn giữ nguyên
       .addMatcher(

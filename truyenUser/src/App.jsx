@@ -5,6 +5,8 @@ import { Provider, useDispatch, useSelector } from "react-redux";
 import store from "./redux/store";
 
 import { loadAndRefreshUser } from './redux/userSlice';
+import { getAllCategories } from './redux/categorySlice';
+import { getAllAuthors } from './redux/authorSlice';
 import NotificationWebSocket from './redux/NotificationWebSocket'; // Import NotificationWebSocket
 import 'react-toastify/dist/ReactToastify.css'; // Đảm bảo bạn import CSS của react-toastify
 import { ToastContainer } from 'react-toastify';
@@ -83,6 +85,7 @@ function App() {
   // SỬ DỤNG useRef ĐỂ TẠO CỜ (FLAG)
   // useRef sẽ giữ nguyên giá trị của nó qua các lần re-render
   const hasFetched = useRef(false);
+  const hasFetchedStaticData = useRef(false);
 
   useEffect(() => {
     // Chỉ dispatch action nếu cờ là false
@@ -92,6 +95,39 @@ function App() {
       
       // Sau khi dispatch, đặt cờ thành true để không bao giờ chạy lại nữa
       hasFetched.current = true;
+    }
+  }, []);
+
+  // Tối ưu: Load authors và categories 1 lần duy nhất trong App để tránh spam API
+  useEffect(() => {
+    if (!hasFetchedStaticData.current) {
+      console.log("🔄 [App] Loading static data (authors & categories) once...");
+      
+      // Clear localStorage để force fetch
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Load categories và authors song song để tối ưu thời gian
+      Promise.allSettled([
+        store.dispatch(getAllCategories()).unwrap(),
+        store.dispatch(getAllAuthors()).unwrap()
+      ]).then((results) => {
+        const [categoriesResult, authorsResult] = results;
+        
+        if (categoriesResult.status === 'fulfilled') {
+          console.log('✅ [App] Categories loaded successfully');
+        } else {
+          console.error('❌ [App] Failed to load categories:', categoriesResult.reason);
+        }
+        
+        if (authorsResult.status === 'fulfilled') {
+          console.log('✅ [App] Authors loaded successfully');
+        } else {
+          console.error('❌ [App] Failed to load authors:', authorsResult.reason);
+        }
+      });
+      
+      hasFetchedStaticData.current = true;
     }
   }, []);
 

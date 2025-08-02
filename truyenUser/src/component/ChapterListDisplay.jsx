@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import { Loader2 ,Download, ShoppingCart, Plus, Clock } from 'lucide-react'; // Thêm Clock icon
-import { refreshUser } from '../redux/userSlice';
 import { getChapterContentById } from '../redux/chapterSlice'; 
 import { useTheme } from '../context/ThemeContext'; // Import useTheme 
 
@@ -318,6 +317,33 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme(); // Sử dụng theme context
+
+  console.log('🔍 [ChapterListDisplay] Props received:', { 
+    chapters: chapters?.length || 0, 
+    novelId, 
+    currentPage, 
+    chaptersPerPage 
+  });
+  console.log('📋 [ChapterListDisplay] Chapters data:', chapters);
+
+  // Debug logging
+  console.log('🔍 [ChapterListDisplay] Received props:', {
+    chaptersCount: chapters?.length,
+    novelId,
+    currentPage,
+    chaptersPerPage,
+    firstChapter: chapters?.[0]
+  });
+
+  // Early return nếu không có chapters để hiển thị
+  if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
+    console.warn('⚠️ [ChapterListDisplay] No chapters to display');
+    return (
+      <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        Không có chương nào để hiển thị.
+      </div>
+    );
+  }
 
   // Lấy state mới từ Redux
   const { currentUser } = useSelector((state) => state.user);
@@ -873,7 +899,9 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
 
       <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 text-sm">
         {chapters.map((chapter, index) => {
-          const chapterNumberDisplay = `Chương ${chapter.chapterNumber || (currentPage - 1) * chaptersPerPage + index + 1}`;
+          // Tính số chương hiển thị dựa trên index và trang hiện tại
+          const calculatedChapterNumber = (currentPage - 1) * chaptersPerPage + index + 1;
+          const chapterNumberDisplay = `Chương ${chapter.chapterNumber || calculatedChapterNumber}`;
           const chapterTitle = chapter.titleChapter || "Chưa có tiêu đề";
           const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
           // Kiểm tra xem có đang tải chương này không
@@ -893,7 +921,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
           const isFree = coinPrice === 0;
           // Kiểm tra có thể đọc không (đã mua, đã thuê, hoặc miễn phí)
           const canRead = isPurchased || isRented || isFree;
-
+          
           return (
             <li key={chapter.idChapter || `temp_${index}`} className={`flex items-center justify-between border-b py-1.5 ${
               isDarkMode ? 'border-gray-700' : 'border-gray-200'

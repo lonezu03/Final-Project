@@ -15,12 +15,18 @@ export const getAllNovels = createAsyncThunk(
   'novels/getAll',
   async (_, { rejectWithValue }) => {
     try {
+      console.log('🔄 [getAllNovels] Starting API call to:', `${publicApiBaseNovel}/getAll`);
       const response = await axios.get(`${publicApiBaseNovel}/getAll`);
+      console.log('📨 [getAllNovels] Raw response:', response.status, response.data);
+      
       if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
+        console.log('✅ [getAllNovels] Success - returning', response.data.result.length, 'novels');
         return response.data.result;
       }
+      console.log('❌ [getAllNovels] Invalid response format:', response.data);
       return rejectWithValue(response.data?.message || 'Không thể tải danh sách truyện.');
     } catch (error) {
+      console.error('❌ [getAllNovels] API Error:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải danh sách truyện.');
     }
   }
@@ -302,15 +308,18 @@ const novelSlice = createSlice({
     builder
       // --- getAllNovels ---
       .addCase(getAllNovels.pending, (state) => {
+        console.log('⏳ [Redux] getAllNovels.pending');
         state.loading = true;
         state.error = null;
       })
       .addCase(getAllNovels.fulfilled, (state, action) => {
+        console.log('✅ [Redux] getAllNovels.fulfilled - received', action.payload?.length || 0, 'novels');
         state.loading = false;
         state.novels = action.payload;
         // Khi getAllNovels được gọi, không cập nhật pagination của search
       })
       .addCase(getAllNovels.rejected, (state, action) => {
+        console.error('❌ [Redux] getAllNovels.rejected:', action.payload);
         state.loading = false;
         state.error = action.payload;
         state.novels = [];

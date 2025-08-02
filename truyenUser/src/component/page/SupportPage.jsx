@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
+import { reportSupport } from '../../redux/userSlice';
 import { 
   MessageCircle, 
   HelpCircle, 
@@ -19,16 +22,29 @@ import {
 } from 'lucide-react';
 
 const SupportPage = () => {
+  const dispatch = useDispatch();
+  const { currentUser, loading, error } = useSelector((state) => state.user);
+  
   const [selectedCategory, setSelectedCategory] = useState('general');
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    email: currentUser?.emailUser || '',
     category: 'general',
     subject: '',
     message: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState(null);
+
+  // Cập nhật email khi user thay đổi
+  useEffect(() => {
+    if (currentUser?.emailUser) {
+      setFormData(prev => ({
+        ...prev,
+        email: currentUser.emailUser
+      }));
+    }
+  }, [currentUser]);
 
   const categories = [
     { id: 'general', name: 'Câu hỏi chung', icon: HelpCircle, color: 'blue' },
@@ -74,20 +90,64 @@ const SupportPage = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        name: '',
-        email: '',
-        category: 'general',
-        subject: '',
-        message: ''
-      });
-    }, 3000);
+    
+    // Validate form
+    if (!formData.email || !formData.subject || !formData.message) {
+      toast.error('Vui lòng điền đầy đủ thông tin!');
+      return;
+    }
+
+    try {
+      // Tạo nội dung báo cáo bao gồm email trong content
+      const reportContent = `
+EMAIL LIÊN HỆ: ${formData.email}
+HỌ TÊN: ${formData.name}
+DANH MỤC: ${categories.find(cat => cat.id === formData.category)?.name || formData.category}
+TIÊU ĐỀ: ${formData.subject}
+
+NỘI DUNG:
+${formData.message}
+      `.trim();
+
+      // Map category to statusReport enum values
+      const categoryToStatusMap = {
+        'technical': 'BUG',        // Lỗi kỹ thuật -> BUG
+        'general': 'CONTRIBUTE',   // Câu hỏi chung -> CONTRIBUTE  
+        'account': 'REPORT',       // Tài khoản -> REPORT
+        'payment': 'REPORT'        // Thanh toán -> REPORT
+      };
+
+      const statusReport = categoryToStatusMap[formData.category] || 'REPORT';
+
+      // Gửi báo cáo qua API - theo đúng schema API (content + statusReport)
+      await dispatch(reportSupport({
+        content: reportContent,
+        statusReport: statusReport
+      })).unwrap();
+
+      // Hiển thị thành công
+      setIsSubmitted(true);
+      toast.success('Gửi yêu cầu hỗ trợ thành công!');
+      
+      // Reset form sau 3 giây
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({
+          name: '',
+          email: currentUser?.emailUser || '',
+          category: 'general',
+          subject: '',
+          message: ''
+        });
+        setSelectedCategory('general');
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error sending support request:', error);
+      toast.error(error || 'Có lỗi xảy ra khi gửi yêu cầu hỗ trợ!');
+    }
   };
 
   // Animation variants
@@ -307,6 +367,18 @@ const SupportPage = () => {
                         </div>
                       </div>
 
+                      {/* Error Display */}
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center space-x-3"
+                        >
+                          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                          <span className="text-red-700 text-sm">{error}</span>
+                        </motion.div>
+                      )}
+
                       {/* Form Fields */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -359,12 +431,30 @@ const SupportPage = () => {
 
                       <motion.button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all duration-300"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        disabled={loading}
+                        className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center space-x-2 transition-all duration-300 ${
+                          loading 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-lg'
+                        } text-white`}
+                        whileHover={loading ? {} : { scale: 1.02 }}
+                        whileTap={loading ? {} : { scale: 0.98 }}
                       >
-                        <Send className="w-5 h-5" />
-                        <span>Gửi yêu cầu</span>
+                        {loading ? (
+                          <>
+                            <motion.div
+                              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            />
+                            <span>Đang gửi...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-5 h-5" />
+                            <span>Gửi yêu cầu</span>
+                          </>
+                        )}
                       </motion.button>
                     </motion.form>
                   ) : (

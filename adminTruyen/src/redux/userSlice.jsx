@@ -24,6 +24,24 @@ export const getAllHistoryDeposit = createAsyncThunk(
 );
 
 /**
+ * Lấy tất cả báo cáo từ người dùng
+ */
+export const getAllReport = createAsyncThunk(
+  'user/getAllReport',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/user/getAllReport');
+      if (response.data && response.data.code === 1000 && response.data.result) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data?.message || 'Không thể lấy danh sách báo cáo.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
+
+/**
  * Đăng nhập bằng Email và Mật khẩu.
  */
 export const loginUserWithPassword = createAsyncThunk(
@@ -127,6 +145,8 @@ const initialState = {
   error: null,
   allUsers: [], // Danh sách tất cả người dùng
   allHistoryDeposit: [], // Danh sách lịch sử nạp tiền
+  allReports: [], // Danh sách tất cả báo cáo
+  reportsLoading: false, // Loading riêng cho việc lấy báo cáo
   grantRoleLoading: false, // Loading riêng cho việc cấp quyền
   grantRoleError: null,
   grantRoleSuccess: null,
@@ -228,6 +248,19 @@ const userSlice = createSlice({
       })
       .addCase(getAllHistoryDeposit.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload; // Gán lỗi để hiển thị trên UI
+      })
+      // ---- Xử lý cho LẤY TẤT CẢ BÁO CÁO ----
+      .addCase(getAllReport.pending, (state) => {
+        state.reportsLoading = true;
+        state.error = null;
+      })
+      .addCase(getAllReport.fulfilled, (state, action) => {
+        state.reportsLoading = false;
+        state.allReports = action.payload; // Lưu danh sách báo cáo vào state
+      })
+      .addCase(getAllReport.rejected, (state, action) => {
+        state.reportsLoading = false;
         state.error = action.payload; // Gán lỗi để hiển thị trên UI
       })
       // ---- Xử lý cho CẤP QUYỀN MANAGER ----

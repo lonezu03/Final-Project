@@ -118,14 +118,20 @@ const { allTransactions } = useSelector((state) => state.transaction);
 
   // Helper function để kiểm tra quyền đọc chapter (tương tự ChapterListDisplay)
   const checkChapterReadPermission = (chapterId, chapterContent) => {
-    if (!currentUser || !chapterId || !chapterContent) {
-      return { canRead: false, reason: 'Missing user or chapter data' };
+    // Kiểm tra dữ liệu cơ bản trước
+    if (!chapterId || !chapterContent) {
+      return { canRead: false, reason: 'Missing chapter data' };
     }
 
-    // Kiểm tra nếu chapter miễn phí (coinPrice = 0)
+    // Kiểm tra nếu chapter miễn phí (coinPrice = 0) - KHÔNG CẦN ĐĂNG NHẬP
     const coinPrice = chapterContent.coinPrice || 0;
     if (coinPrice === 0) {
       return { canRead: true, reason: 'Free chapter (coinPrice = 0)' };
+    }
+
+    // Với chapter có phí, yêu cầu phải đăng nhập
+    if (!currentUser) {
+      return { canRead: false, reason: 'Login required for paid chapter' };
     }
     
     // Kiểm tra nếu đã mua chapter
@@ -196,8 +202,8 @@ const { allTransactions } = useSelector((state) => state.transaction);
   }, [currentUser?.idUser, dispatch]);
 
  useEffect(() => {
-    // Chỉ kiểm tra khi có đầy đủ thông tin cần thiết
-    if (currentUser && chapterId && novelId && currentChapterContent) {
+    // Kiểm tra quyền truy cập khi có đầy đủ thông tin chapter (không cần currentUser cho chapter miễn phí)
+    if (chapterId && novelId && currentChapterContent) {
       // Tìm thông tin chapter từ dropdown list để có đầy đủ thông tin về giá
       const chapterFromDropdown = chaptersForReadingPageDropdown?.find(ch => String(ch.idChapter) === String(chapterId));
       const chapterForPermissionCheck = chapterFromDropdown || currentChapterContent;
@@ -206,7 +212,11 @@ const { allTransactions } = useSelector((state) => state.transaction);
       
       if (!permission.canRead) {
         // Chỉ chặn nếu thực sự không có quyền đọc
-        toast.error("Bạn cần mua chương này để có thể đọc. Vui lòng tìm chương trong danh sách bên dưới.");
+        if (permission.reason === 'Login required for paid chapter') {
+          toast.info("Vui lòng đăng nhập để đọc chương có phí này.");
+        } else {
+          toast.error("Bạn cần mua chương này để có thể đọc. Vui lòng tìm chương trong danh sách bên dưới.");
+        }
         // Điều hướng người dùng về trang chi tiết của truyện
         navigate(`/novel/${novelId}`, { replace: true });
       } else {
@@ -224,24 +234,43 @@ const { allTransactions } = useSelector((state) => state.transaction);
     localStorage.setItem('readingFontFamily', fontFamily);
     localStorage.setItem('readingTheme', theme);
   }, [fontSize, lineHeight, fontFamily, theme]);
-  // Effect #1: Tải dữ liệu chính khi vào trang (chạy khi novelId đổi)
-// Effect #1: Tải dữ liệu cơ bản của truyện và tạo dropdown từ state có sẵn
+  // Effect #1: Tối ưu tải dữ liệu cơ bản với intelligent caching và batching
 useEffect(() => {
   if (novelId) {
-    console.log("[Effect #1] Tải dữ liệu cơ bản cho novelId:", novelId);
+    console.log("[Effect #1] Tối ưu tải dữ liệu cho novelId:", novelId);
     
-    // Kiểm tra xem đã có novel data trong store chưa (có thể từ DetailPage)
+    // Tối ưu: Kiểm tra cache với thời gian dài hơn
+    const novelCacheKey = `novel_${novelId}`;
+    const chaptersCacheKey = `chapters_${novelId}`;
+    const cachedNovel = sessionStorage.getItem(novelCacheKey);
+    const cachedChapters = sessionStorage.getItem(chaptersCacheKey);
+    const cacheTimestamp = sessionStorage.getItem(`${novelCacheKey}_timestamp`);
+    const CACHE_DURATION = 15 * 60 * 1000; // Tăng lên 15 phút cache
+    
+    const isCacheValid = cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < CACHE_DURATION;
+    
     const shouldFetchNovel = !currentNovel || String(currentNovel.idNovel) !== String(novelId);
-    // Kiểm tra xem đã có chapters data trong store chưa (từ DetailPage)
     const hasChaptersData = chaptersFromApiForDetailPage && chaptersFromApiForDetailPage.length > 0;
-    // Kiểm tra xem có đang loading không để tránh gọi lại
     const isChaptersLoading = chaptersLoading;
     
-    const promises = [];
+    // Tối ưu: Chỉ batch khi thực sự cần thiết
+    const batchPromises = [];
     
     if (shouldFetchNovel && !novelLoading) {
-      console.log("🔄 [ReadingPage] Fetching novel data for:", novelId);
-      promises.push(dispatch(getNovelById(novelId)));
+      if (cachedNovel && isCacheValid) {
+        console.log("✅ [ReadingPage] Using cached novel data");
+      } else {
+        console.log("🔄 [ReadingPage] Fetching novel data for:", novelId);
+        batchPromises.push(
+          dispatch(getNovelById(novelId)).then((result) => {
+            if (result.payload) {
+              sessionStorage.setItem(novelCacheKey, JSON.stringify(result.payload));
+              sessionStorage.setItem(`${novelCacheKey}_timestamp`, Date.now().toString());
+            }
+            return result;
+          })
+        );
+      }
     } else {
       console.log("✅ [ReadingPage] Novel data already available in store");
     }
@@ -251,14 +280,35 @@ useEffect(() => {
       // Tạo dropdown từ dữ liệu có sẵn thay vì gọi API
       dispatch(generateDropdownFromExistingChapters(novelId));
     } else if (!isChaptersLoading) {
-      console.log("🔄 [ReadingPage] No chapters data found, fetching from API");
-      // Chỉ gọi getAllChapters nếu chưa có dữ liệu và không đang loading
-      promises.push(dispatch(getAllChapters(novelId)));
+      if (cachedChapters && isCacheValid) {
+        console.log("✅ [ReadingPage] Using cached chapters data");
+      } else {
+        console.log("🔄 [ReadingPage] No chapters data found, fetching from API");
+        batchPromises.push(
+          dispatch(getAllChapters(novelId)).then((result) => {
+            if (result.payload) {
+              sessionStorage.setItem(chaptersCacheKey, JSON.stringify(result.payload));
+            }
+            return result;
+          })
+        );
+      }
     } else {
       console.log("⏳ [ReadingPage] Chapters are loading, skipping API call");
     }
     
-    Promise.all(promises);
+    // Execute batch với error handling
+    if (batchPromises.length > 0) {
+      Promise.allSettled(batchPromises).then((results) => {
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          console.warn('[ReadingPage] Some API calls failed:', failures);
+        } else {
+          console.log('✅ [ReadingPage] Batch API calls completed successfully');
+        }
+      });
+    }
+    
   }
   
   return () => {
@@ -526,12 +576,6 @@ useEffect(() => {
       return; 
     }
 
-    if (!currentUser) {
-      toast.info("Vui lòng đăng nhập để chuyển chương.");
-      navigate('/login');
-      return;
-    }
-
     // Tìm chapter trong danh sách để lấy thông tin coinPrice
     const targetChapter = chaptersForReadingPageDropdown?.find(ch => String(ch.idChapter) === String(targetChapterId));
     
@@ -543,21 +587,20 @@ useEffect(() => {
         setProcessedChapterContent(null); // Xóa nội dung cũ để hiển thị loading
         navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
       } else {
-        // Không có quyền: Báo lỗi và quay về trang chi tiết
-        toast.error("Bạn cần mua hoặc thuê chương này để đọc. Vui lòng kiểm tra trong danh sách chương.");
-        navigate(`/novel/${novelId}`); 
+        // Không có quyền: Báo lỗi và thông báo tương ứng
+        if (permission.reason === 'Login required for paid chapter') {
+          toast.info("Vui lòng đăng nhập để đọc chương có phí này.");
+          navigate('/login');
+        } else {
+          toast.error("Bạn cần mua hoặc thuê chương này để đọc. Vui lòng kiểm tra trong danh sách chương.");
+          navigate(`/novel/${novelId}`); 
+        }
       }
     } else {
-      // Không tìm thấy chapter trong danh sách, sử dụng logic cũ
-      const isPurchased = currentUser.chapterBought?.includes(targetChapterId);
-      
-      if (isPurchased) {
-        setProcessedChapterContent(null);
-        navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
-      } else {
-        toast.error("Bạn cần mua chương này để đọc. Vui lòng mua trong danh sách chương.");
-        navigate(`/novel/${novelId}`); 
-      }
+      // Không tìm thấy chapter trong danh sách, cho phép điều hướng (có thể là chapter miễn phí)
+      console.warn("Không tìm thấy chapter trong dropdown, cho phép điều hướng...");
+      setProcessedChapterContent(null);
+      navigate(`/novel/${novelId}/chapter/${targetChapterId}`);
     }
   };
   useEffect(() => {
@@ -701,16 +744,29 @@ useEffect(() => {
   }, [chapterId, chaptersForReadingPageDropdown]);
 
   const currentindexChapter = useMemo(() => {
+    // Ưu tiên lấy từ currentChapterContent nếu có indexChapter hoặc chapterNumber
+    if (currentChapterContent) {
+      // Kiểm tra indexChapter từ currentChapterContent trước
+      if (currentChapterContent.indexChapter !== null && currentChapterContent.indexChapter !== undefined && !isNaN(currentChapterContent.indexChapter)) {
+        return Number(currentChapterContent.indexChapter) ; // Hiển thị từ 1
+      }
+      // Nếu không có indexChapter, thử chapterNumber
+      if (currentChapterContent.chapterNumber !== null && currentChapterContent.chapterNumber !== undefined && !isNaN(currentChapterContent.chapterNumber)) {
+        return Number(currentChapterContent.chapterNumber);
+      }
+    }
+    
+    // Nếu không có từ currentChapterContent, lấy từ dropdown
     if (currentChapterIndex !== -1 && chaptersForReadingPageDropdown?.[currentChapterIndex]) {
-        const chap = chaptersForReadingPageDropdown[currentChapterIndex];
-        if (chap.chapterNumber !== null && chap.chapterNumber !== undefined && chap.chapterNumber !== 'N/A' && !isNaN(Number(chap.chapterNumber))) {
-            return Number(chap.chapterNumber);
-        }
+      const chap = chaptersForReadingPageDropdown[currentChapterIndex];
+      if (chap.indexChapter !== null && chap.indexChapter !== undefined && !isNaN(chap.indexChapter)) {
+        return Number(chap.indexChapter) + 1; // Hiển thị từ 1
+      }
+      if (chap.chapterNumber !== null && chap.chapterNumber !== undefined && chap.chapterNumber !== 'N/A' && !isNaN(Number(chap.chapterNumber))) {
+        return Number(chap.chapterNumber);
+      }
     }
-    const contentNum = currentChapterContent?.chapterNumber;
-    if (contentNum !== null && contentNum !== undefined && !isNaN(contentNum)) {
-        return Number(contentNum);
-    }
+    
     return null;
   }, [currentChapterIndex, chaptersForReadingPageDropdown, currentChapterContent]);
 
@@ -812,13 +868,13 @@ useEffect(() => {
               <Link to={`/novel/${novelId}`} className={`${theme === 'den' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} hover:underline`}>{currentNovel.nameNovel || 'Tên truyện'}</Link>
             </h1>
             <p className={`text-sm ${theme === 'den' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Chương {currentindexChapter !== null && currentindexChapter !== undefined ? currentindexChapter - 1 : 'N/A'}: {currentChapterContent?.titleChapter || 'Tiêu đề chương'}
+              Chương {currentindexChapter !== null && currentindexChapter !== undefined ? currentindexChapter : 'N/A'}: {currentChapterContent?.titleChapter || 'Tiêu đề chương'}
             </p>
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2">
             {/* Previous Button - kiểm tra quyền truy cập */}
             {(() => {
-              const prevCanAccess = prevChapterDetails && currentUser ? 
+              const prevCanAccess = prevChapterDetails ? 
                 checkChapterReadPermission(prevChapterDetails.idChapter, prevChapterDetails).canRead : false;
               return (
                 <button 
@@ -833,7 +889,7 @@ useEffect(() => {
             })()}
             <div className="relative">
               <button onClick={() => setShowChapterListDropdown(prev => !prev)} className="px-2 py-1.5 sm:px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm w-28 sm:w-32 text-center flex items-center justify-center">
-                <FaListUl className="inline mr-1" />  Chương {currentindexChapter !== null && currentindexChapter !== undefined ? currentindexChapter - 1 : '?'}
+                <FaListUl className="inline mr-1" />  Chương {currentindexChapter !== null && currentindexChapter !== undefined ? currentindexChapter : '?'}
                 <svg className={`w-3 h-3 sm:w-4 sm:h-4 ml-1 transition-transform duration-200 ${showChapterListDropdown ? 'transform rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
               </button>
               {showChapterListDropdown && chaptersForReadingPageDropdown && chaptersForReadingPageDropdown.length > 0 && (
@@ -850,8 +906,8 @@ useEffect(() => {
                     const chapterTitleText = chap.titleChapter || 'Chưa có tiêu đề';
                     const fullTitle = `Chương ${displayindexChapter}: ${chapterTitleText}`;
 
-                    // Kiểm tra quyền đọc chapter
-                    const permission = currentUser ? checkChapterReadPermission(chap.idChapter, chap) : { canRead: false };
+                    // Kiểm tra quyền đọc chapter - KHÔNG CẦN currentUser cho chapter miễn phí
+                    const permission = checkChapterReadPermission(chap.idChapter, chap);
                     const isCurrentChapter = String(chap.idChapter) === String(chapterId);
                     const canAccess = permission.canRead;
                     
@@ -882,7 +938,7 @@ useEffect(() => {
             </div>
             {/* Next Button - kiểm tra quyền truy cập */}
             {(() => {
-              const nextCanAccess = nextChapterDetails && currentUser ? 
+              const nextCanAccess = nextChapterDetails ? 
                 checkChapterReadPermission(nextChapterDetails.idChapter, nextChapterDetails).canRead : false;
               return (
                 <button 

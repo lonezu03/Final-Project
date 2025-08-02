@@ -1,5 +1,5 @@
 // src/components/StorySlider.jsx (Giả sử vị trí file)
-import React, { useMemo } from "react"; // Bỏ useEffect, useDispatch
+import React, { useMemo,useState } from "react"; // Bỏ useEffect, useDispatch
 import { useSelector } from "react-redux";
 import { useTheme } from "../context/ThemeContext"; // Import useTheme
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -22,15 +22,51 @@ const StorySlider = () => {
 
   const renderError = (err) => (typeof err === 'string' ? err : err?.message || 'Đã có lỗi xảy ra.');
 
+  // Tối ưu: Memoize với dependency chính xác và cache thông minh
   const sliderStories = useMemo(() => {
     if (!novels || novels.length === 0) return [];
-    // Giả sử có trường createdAtNovel hoặc updatedAtNovel để sắp xếp cho "Truyện Mới Cập Nhật"
-    const sortedNovels = [...novels].sort((a, b) => {
-        const dateA = new Date(a.updatedAtNovel || a.createdAtNovel || 0); // Lấy ngày update hoặc ngày tạo
+    
+    // Cache key dựa trên novel count và timestamp
+    const cacheKey = `slider_stories_${novels.length}_${novels[0]?.updatedAtNovel || novels[0]?.createdAtNovel}`;
+    
+    // Kiểm tra cache trong sessionStorage (cache trong session)
+    const cachedSlider = sessionStorage.getItem(cacheKey);
+    if (cachedSlider) {
+      try {
+        const parsed = JSON.parse(cachedSlider);
+        console.log('✅ [StorySlider] Using cached slider data');
+        return parsed;
+      } catch (e) {
+        console.warn('⚠️ [StorySlider] Invalid cache, rebuilding');
+      }
+    }
+    
+    // Xây dựng lại nếu cache miss
+    console.log('🔄 [StorySlider] Building slider data');
+    const sortedNovels = [...novels]
+      .filter(novel => novel && (novel.nameNovel || novel.title) && novel.imageNovel) // Lọc data hợp lệ
+      .sort((a, b) => {
+        const dateA = new Date(a.updatedAtNovel || a.createdAtNovel || 0);
         const dateB = new Date(b.updatedAtNovel || b.createdAtNovel || 0);
-        return dateB - dateA; // Sắp xếp mới nhất lên đầu
-    });
-    return sortedNovels.slice(0, 10); // Lấy 10 truyện
+        return dateB - dateA;
+      })
+      .slice(0, 10);
+    
+    // Lưu vào cache với expiry
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify(sortedNovels));
+      // Cleanup old cache keys
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('slider_stories_') && key !== cacheKey) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ [StorySlider] Cannot cache slider data');
+    }
+    
+    return sortedNovels;
   }, [novels]);
 
   // Hiển thị loading/error chỉ khi novels thực sự chưa có và đang fetch từ Home
