@@ -150,8 +150,8 @@ public class NotifyUserScheduler {
 	//
 	// }
 
-	@Scheduled(fixedRate = 1000) // every 60 seconds
-	public void testWebsocket() {
+	// @Scheduled(fixedRate = 1000) 
+	// public void testWebsocket() {
 //		logger.info("thông báo nè");
 		// log.info("📤 Sending notify to user {} for new chapter {}", , );
 //     messagingTemplate.convertAndSendToUser("truongthaiduong0808@gmail.com","/queue/notify", "Thấy ko Dương"); // gửi thông báo cụ thể
@@ -159,5 +159,5 @@ public class NotifyUserScheduler {
      
 //		messagingTemplate.convertAndSend("/topic/global", "ok chưa"); //thông báo tổng toàn bộ
 
-	}
+	// }
 }
