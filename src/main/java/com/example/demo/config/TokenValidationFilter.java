@@ -71,10 +71,10 @@ public class TokenValidationFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
 		String endPoint="";
-		logger.info(request.getRequestURI());
+//		logger.info(request.getRequestURI());
 
 		if(isWsEndpoint(request.getRequestURI())) {
-			logger.info("Là web socket");
+//			logger.info("Là web socket");
 			endPoint="/ws/**";
 		}else {
 			endPoint = normalizeEndpoint(request.getRequestURI());
