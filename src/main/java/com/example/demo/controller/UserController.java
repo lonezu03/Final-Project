@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.JsonSchemaValidator;
 import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.HistoryDepositUpdateRequest;
-import com.example.demo.dto.request.RefreshUserRequest;
+import com.example.demo.dto.request.ReportCreationRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
 import com.example.demo.dto.request.UserCreateReportRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
@@ -44,6 +46,7 @@ import com.example.demo.service.HistoryDepositService;
 import com.example.demo.service.HistoryReadService;
 import com.example.demo.service.MailService;
 import com.example.demo.service.RefreshTokenService;
+import com.example.demo.service.ReportService;
 import com.example.demo.service.ReviewNovelService;
 import com.example.demo.service.UserService;
 
@@ -68,9 +71,10 @@ public class UserController {
 	ReviewNovelService reviewNovelService;
 	HistoryDepositService historyDepositService;
 	RefreshTokenService refreshTokenService;
-	
+	ReportService reportService;
+
 	private SimpMessagingTemplate messagingTemplate;
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	/**
@@ -332,15 +336,23 @@ public class UserController {
 
 	@PostMapping("/report")
 	public ResponseEntity<?> remindUsersOfTasks(@RequestBody UserCreateReportRequest request) {
-	    // Send WebSocket notification to user
-		 messagingTemplate.convertAndSend("/topic/globalNotify", request);
-		    return ResponseEntity.ok("Gửi message đến tất cả clients đăng ký topic.");
+		// Send WebSocket notification to user
+		messagingTemplate.convertAndSend("/topic/globalNotify", request);
+		return ResponseEntity.ok("Gửi message đến tất cả clients đăng ký topic.");
 	}
-
 
 	@GetMapping("/getAllHistoryDeposit")
-	public ApiRespone<List<HistoryDepositGetAllRespone>> getAllHistoryDepotis(){
-		return ApiRespone.<List<HistoryDepositGetAllRespone>>builder().result(historyDepositService.getAllHistoryDepositB()).build();
+	public ApiRespone<List<HistoryDepositGetAllRespone>> getAllHistoryDepotis() {
+		return ApiRespone.<List<HistoryDepositGetAllRespone>>builder()
+				.result(historyDepositService.getAllHistoryDepositB()).build();
 	}
-	
+
+	@PostMapping
+	public ResponseEntity<String> submitReport(@RequestBody ReportCreationRequest request, @AuthenticationPrincipal Jwt principal) {
+
+		String email = principal.getClaimAsString("sub"); 
+		reportService.handleReport(request, email);
+		return ResponseEntity.ok("Report submitted successfully.");
+	}
+
 }

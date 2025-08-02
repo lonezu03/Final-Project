@@ -137,10 +137,10 @@ public class TextService {
         }
 
         String cleanedText = sanitizeText(originalText);
-        logger.debug("Văn bản sau khi làm sạch: {}", cleanedText);
+        logger.debug("Văn bản sau khi làm sạch: ");
 
         String safeText = addCommasToLongStrings(cleanedText, maxCharsWithoutBreak);
-        logger.debug("Văn bản sau khi thêm dấu phẩy an toàn: {}", safeText);
+        logger.debug("Văn bản sau khi thêm dấu phẩy an toàn: ");
 
         List<String> chunks = splitIntoChunks(safeText, maxChunkLength);
         logger.info("Hoàn tất việc chia văn bản. Số chunk thu được: {}", chunks.size());
