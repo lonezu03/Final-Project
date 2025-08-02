@@ -26,7 +26,6 @@ import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.HistoryDepositUpdateRequest;
 import com.example.demo.dto.request.ReportCreationRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
-import com.example.demo.dto.request.UserCreateReportRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
 import com.example.demo.dto.request.UserForgotPasswordRequest;
@@ -334,12 +333,12 @@ public class UserController {
 		return ApiRespone.<ReviewNovelId>builder().result(reviewNovelService.deleteReviewNovel(reviewNovelId)).build();
 	}
 
-	@PostMapping("/report")
-	public ResponseEntity<?> remindUsersOfTasks(@RequestBody UserCreateReportRequest request) {
-		// Send WebSocket notification to user
-		messagingTemplate.convertAndSend("/topic/globalNotify", request);
-		return ResponseEntity.ok("Gửi message đến tất cả clients đăng ký topic.");
-	}
+//	@PostMapping("/report")
+//	public ResponseEntity<?> remindUsersOfTasks(@RequestBody UserCreateReportRequest request) {
+//		// Send WebSocket notification to user
+//		messagingTemplate.convertAndSend("/topic/globalNotify", request);
+//		return ResponseEntity.ok("Gửi message đến tất cả clients đăng ký topic.");
+//	}
 
 	@GetMapping("/getAllHistoryDeposit")
 	public ApiRespone<List<HistoryDepositGetAllRespone>> getAllHistoryDepotis() {
@@ -347,7 +346,7 @@ public class UserController {
 				.result(historyDepositService.getAllHistoryDepositB()).build();
 	}
 
-	@PostMapping
+	@PostMapping("/report")
 	public ResponseEntity<String> submitReport(@RequestBody ReportCreationRequest request, @AuthenticationPrincipal Jwt principal) {
 
 		String email = principal.getClaimAsString("sub"); 

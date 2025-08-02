@@ -11,7 +11,6 @@ import com.example.demo.dto.request.ReportCreationRequest;
 import com.example.demo.entity.Report;
 import com.example.demo.entity.User;
 import com.example.demo.enums.Role;
-import com.example.demo.enums.StatusReport;
 import com.example.demo.repository.IUserRepository;
 import com.example.demo.repository.ReportRepository;
 
@@ -37,7 +36,7 @@ public class ReportService {
 		 List<User> admins = userRepository.findAllByRole(Role.ADMIN);
 	        for (User admin : admins) {
 	            String email = admin.getEmailUser();
-	            messagingTemplate.convertAndSendToUser(email, "/queue/notify", report);
+	            messagingTemplate.convertAndSendToUser(email, "/queue/report", report);
 	        }
 	}
 }
