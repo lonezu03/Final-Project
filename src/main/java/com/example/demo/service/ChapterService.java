@@ -122,6 +122,10 @@ public class ChapterService {
 				ChapterRespone chapterRespone = new ChapterRespone();
 				chapterRespone.setIdChapter(t.getIdChapter());
 				chapterRespone.setTitleChapter(t.getTitleChapter());
+				chapterRespone.setCoinPrice(t.getCoinPrice());
+				chapterRespone.setCointRentPrice(t.getCointRentPrice());
+				chapterRespone.setDayRentAmount(t.getDayRentAmount());
+				
 				return chapterRespone;
 			}).collect(Collectors.toList());
 		}
