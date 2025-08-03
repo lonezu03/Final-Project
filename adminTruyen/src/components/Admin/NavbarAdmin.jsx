@@ -456,7 +456,7 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                     <DropdownMenuTrigger className="cursor-pointer">
                         <div className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-orange-100/80 to-red-100/80 p-3 transition-all duration-300 hover:from-orange-200/90 hover:to-red-200/90 hover:shadow-xl hover:scale-105 dark:from-orange-900/30 dark:to-red-900/30 dark:hover:from-orange-800/40 dark:hover:to-red-800/40 border border-orange-200/50 dark:border-orange-700/30">
                             <Avatar className="h-10 w-10 ring-3 ring-orange-300/50 dark:ring-orange-600/50 shadow-lg">
-                                <AvatarImage src={currentUser?.avatarUser || "https://github.com/shadcn.png"} />
+                                <AvatarImage src={currentUser?.avatarUser || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTUspugOXub65sbxVHOEaD-JEKC8NNWgkWhlg&s"} />
                                 <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-600 text-white font-bold text-lg">
                                     {currentUser?.userNameUser?.charAt(0) || "A"}
                                 </AvatarFallback>
@@ -654,7 +654,7 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                        console.log('Navigate to reports management');
+                                        navigate('/admin/reports');
                                         setIsDialogOpen(false);
                                     }}
                                     className="bg-gradient-to-r from-orange-100 to-red-100 hover:from-orange-200 hover:to-red-200 border-orange-200 text-orange-700 dark:from-orange-900/30 dark:to-red-900/30 dark:hover:from-orange-800/40 dark:hover:to-red-800/40 dark:border-orange-700/30 dark:text-orange-300"

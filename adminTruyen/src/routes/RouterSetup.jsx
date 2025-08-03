@@ -23,6 +23,7 @@ import {
   UserManager,
   RolePermissionManager
 } from "../pages";
+import ReportManagement from "@/pages/admin/ReportManagement";
 
 const adminTheme = createTheme({
   palette: {
@@ -116,6 +117,10 @@ const router = createBrowserRouter([
       { 
         path: "role-permission", // Khớp với path: "role-permission" 
         element: <RolePermissionManager />
+      },
+      { 
+        path: "reports", // Khớp với path: "reports" - Quản lý báo cáo
+        element: <ReportManagement />
       },
       // Thêm các route khác của bạn ở đây nếu có
     ],

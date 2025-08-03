@@ -42,6 +42,49 @@ export const getAllReport = createAsyncThunk(
 );
 
 /**
+ * Cập nhật báo cáo
+ */
+export const updateReport = createAsyncThunk(
+  'user/updateReport',
+  async ({ id, content, statusReport, statusProcessingStatus }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put('/user/updateReport', {
+        id,
+        content,
+        statusReport,
+        statusProcessingStatus
+      });
+      
+      if (response.data && response.data.code === 1000 && response.data.result) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data?.message || 'Không thể cập nhật báo cáo.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
+
+/**
+ * Xóa báo cáo (soft delete)
+ */
+export const deleteReport = createAsyncThunk(
+  'user/deleteReport',
+  async (idReport, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.delete(`/user/deleteReport/${idReport}`);
+      
+      if (response.data && response.data.code === 1000 && response.data.result) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data?.message || 'Không thể xóa báo cáo.');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  }
+);
+
+/**
  * Đăng nhập bằng Email và Mật khẩu.
  */
 export const loginUserWithPassword = createAsyncThunk(
@@ -147,6 +190,8 @@ const initialState = {
   allHistoryDeposit: [], // Danh sách lịch sử nạp tiền
   allReports: [], // Danh sách tất cả báo cáo
   reportsLoading: false, // Loading riêng cho việc lấy báo cáo
+  reportUpdateLoading: false, // Loading riêng cho việc cập nhật báo cáo
+  reportDeleteLoading: false, // Loading riêng cho việc xóa báo cáo
   grantRoleLoading: false, // Loading riêng cho việc cấp quyền
   grantRoleError: null,
   grantRoleSuccess: null,
@@ -262,6 +307,43 @@ const userSlice = createSlice({
       .addCase(getAllReport.rejected, (state, action) => {
         state.reportsLoading = false;
         state.error = action.payload; // Gán lỗi để hiển thị trên UI
+      })
+      // ---- Xử lý cho CẬP NHẬT BÁO CÁO ----
+      .addCase(updateReport.pending, (state) => {
+        state.reportUpdateLoading = true;
+        state.error = null;
+      })
+      .addCase(updateReport.fulfilled, (state, action) => {
+        state.reportUpdateLoading = false;
+        // Cập nhật báo cáo trong danh sách
+        const updatedReport = action.payload;
+        const reportIndex = state.allReports.findIndex(report => report.id === updatedReport.id);
+        if (reportIndex !== -1) {
+          state.allReports[reportIndex] = updatedReport;
+        }
+      })
+      .addCase(updateReport.rejected, (state, action) => {
+        state.reportUpdateLoading = false;
+        state.error = action.payload;
+      })
+      // ---- Xử lý cho XÓA BÁO CÁO ----
+      .addCase(deleteReport.pending, (state) => {
+        state.reportDeleteLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteReport.fulfilled, (state, action) => {
+        state.reportDeleteLoading = false;
+        // Xóa báo cáo khỏi danh sách (hoặc đánh dấu đã xóa)
+        const deletedReport = action.payload;
+        const reportIndex = state.allReports.findIndex(report => report.id === deletedReport.id);
+        if (reportIndex !== -1) {
+          // Có thể xóa hoàn toàn khỏi danh sách hoặc cập nhật deleteAt
+          state.allReports.splice(reportIndex, 1); // Xóa khỏi danh sách để UI không hiển thị
+        }
+      })
+      .addCase(deleteReport.rejected, (state, action) => {
+        state.reportDeleteLoading = false;
+        state.error = action.payload;
       })
       // ---- Xử lý cho CẤP QUYỀN MANAGER ----
       .addCase(grantManagerRole.pending, (state) => {

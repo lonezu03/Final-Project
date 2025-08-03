@@ -78,4 +78,14 @@ export const navbarLinks = [
             },
         ],
     },
+    {
+        title: "Báo cáo",
+        links: [
+            {
+                label: "Quản lý báo cáo",
+                icon: Shield,
+                path: "reports",
+            },
+        ],
+    },
 ];
