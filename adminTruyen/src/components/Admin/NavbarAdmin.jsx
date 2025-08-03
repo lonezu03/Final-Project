@@ -68,6 +68,12 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
     const handleNewReport = (report) => {
         console.log('🔔 Received new report in NavbarAdmin:', report);
         
+        // Không hiển thị báo cáo đã bị xóa
+        if (report.deleteAt) {
+            console.log('🗑️ Report is deleted, skipping notification:', report.id);
+            return;
+        }
+        
         const newNotification = {
             id: report.id || Date.now(),
             type: 'report',
@@ -131,7 +137,10 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
     // Chuyển đổi báo cáo từ API thành notifications khi allReports thay đổi
     useEffect(() => {
         if (allReports && allReports.length > 0) {
-            const reportsAsNotifications = allReports.map(report => ({
+            // Lọc bỏ các báo cáo đã bị xóa (có deleteAt)
+            const activeReports = allReports.filter(report => !report.deleteAt);
+            
+            const reportsAsNotifications = activeReports.map(report => ({
                 id: report.id,
                 type: 'report',
                 title: '📋 Báo cáo từ người dùng',
@@ -184,21 +193,54 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
         setIsDialogOpen(true);
     };
 
-    const formatNotificationTime = (timeString) => {
-        if (timeString === 'Vừa xong') return timeString;
+    const formatNotificationTime = (timeInput) => {
+        if (timeInput === 'Vừa xong') return timeInput;
         
-        // Nếu là timestamp thì format lại
         try {
-            const date = new Date(timeString);
+            let date;
+            // Handle array format from Java LocalDateTime
+            if (Array.isArray(timeInput) && timeInput.length >= 3) {
+                // LocalDateTime từ Java: [year, month, day, hour, minute, second, nanosecond]
+                // Month trong JavaScript Date bắt đầu từ 0, nên trừ 1
+                date = new Date(
+                    timeInput[0], 
+                    timeInput[1] - 1, 
+                    timeInput[2], 
+                    timeInput[3] || 0, 
+                    timeInput[4] || 0, 
+                    timeInput[5] || 0
+                );
+                // Cộng thêm 7 giờ để chuyển từ UTC sang UTC+7 (múi giờ Việt Nam)
+                date.setHours(date.getHours() + 7);
+            } else {
+                // Fallback for string/timestamp format
+                date = new Date(timeInput);
+            }
+            
+            // Kiểm tra date hợp lệ
+            if (isNaN(date.getTime())) {
+                console.error('Invalid date:', timeInput);
+                return 'N/A';
+            }
+            
             const now = new Date();
             const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+            
+            // Debug log để kiểm tra
+            console.log('formatNotificationTime:', {
+                input: timeInput,
+                parsedDate: date.toLocaleString('vi-VN'),
+                now: now.toLocaleString('vi-VN'),
+                diffInMinutes
+            });
             
             if (diffInMinutes < 1) return 'Vừa xong';
             if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
             if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} giờ trước`;
             return `${Math.floor(diffInMinutes / 1440)} ngày trước`;
-        } catch {
-            return timeString;
+        } catch (error) {
+            console.error('Error formatting notification time:', timeInput, error);
+            return 'N/A';
         }
     };
 
@@ -638,7 +680,44 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Thời gian tạo:</span>
                                         <span className="text-xs text-slate-600 dark:text-slate-400">
-                                            {new Date(selectedNotification.data.createAt).toLocaleString('vi-VN')}
+                                            {(() => {
+                                                try {
+                                                    const dateInput = selectedNotification.data.createAt;
+                                                    let date;
+                                                    if (Array.isArray(dateInput) && dateInput.length >= 3) {
+                                                        // LocalDateTime từ Java: [year, month, day, hour, minute, second, nanosecond]
+                                                        // Month trong JavaScript Date bắt đầu từ 0, nên trừ 1
+                                                        date = new Date(
+                                                            dateInput[0], 
+                                                            dateInput[1] - 1, 
+                                                            dateInput[2], 
+                                                            dateInput[3] || 0, 
+                                                            dateInput[4] || 0, 
+                                                            dateInput[5] || 0
+                                                        );
+                                                        // Cộng thêm 7 giờ để chuyển từ UTC sang UTC+7 (múi giờ Việt Nam)
+                                                        date.setHours(date.getHours() + 7);
+                                                    } else {
+                                                        date = new Date(dateInput);
+                                                    }
+                                                    
+                                                    if (isNaN(date.getTime())) {
+                                                        return 'N/A';
+                                                    }
+                                                    
+                                                    return date.toLocaleString('vi-VN', {
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit'
+                                                    });
+                                                } catch (error) {
+                                                    console.error('Error formatting createAt:', selectedNotification.data.createAt, error);
+                                                    return 'N/A';
+                                                }
+                                            })()}
                                         </span>
                                     </div>
                                 )}

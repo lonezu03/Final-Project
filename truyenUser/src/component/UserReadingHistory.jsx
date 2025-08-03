@@ -16,7 +16,19 @@ const convertApiTimeToDate = (timeArray) => {
   if (!Array.isArray(timeArray) || timeArray.length < 6) {
     return null;
   }
-  return new Date(timeArray[0], timeArray[1] - 1, timeArray[2], timeArray[3], timeArray[4], timeArray[5]);
+  // LocalDateTime từ Java: [year, month, day, hour, minute, second, nanosecond]
+  // Month trong JavaScript Date bắt đầu từ 0, nên trừ 1
+  const date = new Date(
+    timeArray[0], 
+    timeArray[1] - 1, 
+    timeArray[2], 
+    timeArray[3] || 0, 
+    timeArray[4] || 0, 
+    timeArray[5] || 0
+  );
+  // Cộng thêm 7 giờ để chuyển từ UTC sang UTC+7 (múi giờ Việt Nam)
+  date.setHours(date.getHours() + 7);
+  return date;
 };
 
 // Hàm helper để định dạng "thời gian trước"
@@ -24,22 +36,22 @@ const formatTimeAgo = (dateObject) => {
   if (!dateObject || !(dateObject instanceof Date) || isNaN(dateObject.getTime())) {
       return 'Không rõ';
   }
-  const now = new Date();
-  const seconds = Math.round((now - dateObject) / 1000);
-  const minutes = Math.round(seconds / 60);
-  const hours = Math.round(minutes / 60);
-  const days = Math.round(hours / 24);
   
-  if (seconds < 5) return 'vừa xong';
-  if (seconds < 60) return `${seconds} giây trước`;
-  if (minutes < 60) return `${minutes} phút trước`;
-  if (hours < 24) return `${hours} giờ trước`;
+  const now = new Date();
+  const diffInMinutes = Math.floor((now - dateObject) / (1000 * 60));
+  
+  if (diffInMinutes < 1) return 'vừa xong';
+  if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} giờ trước`;
+  if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} ngày trước`; // 7 ngày
 
-  // Hiển thị ngày cụ thể nếu đã hơn 1 ngày
+  // Hiển thị ngày cụ thể nếu đã hơn 7 ngày
   return dateObject.toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
-    year: 'numeric'
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
 };
 

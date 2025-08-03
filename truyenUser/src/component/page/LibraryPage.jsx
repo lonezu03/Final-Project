@@ -62,21 +62,37 @@ const LibraryPage = () => {
       navigate('/');
       return;
     }
-    // Chỉ fetch truyện theo dõi 1 lần cho user hiện tại
-    if (!fetchedFollowed.current) {
+    
+    // Chỉ fetch truyện theo dõi nếu chưa có data và chưa fetch cho user hiện tại
+    if (!fetchedFollowed.current && !followedNovels.length) {
+      console.log('🔄 [LibraryPage] Fetching followed novels...');
       dispatch(LyberiNovels({ idUser: currentUser.idUser }));
       fetchedFollowed.current = true;
+    } else if (followedNovels.length > 0) {
+      console.log('✅ [LibraryPage] Followed novels already loaded:', followedNovels.length);
+      fetchedFollowed.current = true;
     }
-    // Chỉ fetch truyện đã mua 1 lần cho user hiện tại
-    if (!fetchedPurchased.current) {
+    
+    // Chỉ fetch truyện đã mua nếu chưa có data và chưa fetch cho user hiện tại
+    if (!fetchedPurchased.current && (!transactions?.purchasedChapters?.length)) {
+      console.log('🔄 [LibraryPage] Fetching purchased chapters...');
       dispatch(getTransactions({ idUser: currentUser.idUser }));
       fetchedPurchased.current = true;
+    } else if (transactions?.purchasedChapters?.length > 0) {
+      console.log('✅ [LibraryPage] Purchased chapters already loaded:', transactions.purchasedChapters.length);
+      fetchedPurchased.current = true;
     }
-    // Chỉ fetch truyện đã thuê 1 lần cho user hiện tại
-    if (!fetchedRented.current) {
-      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }));
+    
+    // Chỉ fetch truyện đã thuê nếu chưa có data và chưa fetch cho user hiện tại
+    if (!fetchedRented.current && (!allTransactions?.rentedChapters?.length)) {
+      console.log('🔄 [LibraryPage] Fetching rented chapters...');
+      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser.idUser }));
+      fetchedRented.current = true;
+    } else if (allTransactions?.rentedChapters?.length > 0) {
+      console.log('✅ [LibraryPage] Rented chapters already loaded:', allTransactions.rentedChapters.length);
       fetchedRented.current = true;
     }
+    
     // Reset flag nếu user logout
     return () => {
       if (!currentUser?.idUser) {
@@ -85,7 +101,7 @@ const LibraryPage = () => {
         fetchedRented.current = false;
       }
     };
-  }, [dispatch, currentUser, navigate]);
+  }, [dispatch, currentUser, navigate, followedNovels.length, transactions?.purchasedChapters?.length, allTransactions?.rentedChapters?.length]);
 
   // Logic cho tab "Truyện đã mua"
   const purchasedItems = useMemo(() => {
@@ -203,12 +219,17 @@ const LibraryPage = () => {
     if (!dateArray || !Array.isArray(dateArray)) return 'N/A';
     try {
       const [year, month, day, hour, minute] = dateArray;
-      return new Date(year, month - 1, day, hour, minute).toLocaleDateString('vi-VN', {
+      // Tạo date với UTC và cộng 7 giờ để chuyển sang timezone Việt Nam
+      const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+      const vietnamDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000)); // +7 giờ
+      
+      return vietnamDate.toLocaleDateString('vi-VN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: 'UTC' // Hiển thị theo UTC vì đã adjust rồi
       });
     } catch {
       return 'N/A';
@@ -453,7 +474,7 @@ const LibraryPage = () => {
           <h2 className={`mt-4 text-xl font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Có lỗi xảy ra</h2>
           <p className="mt-2 text-red-500">{allTransactionError}</p>
           <button
-            onClick={() => dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }))}
+            onClick={() => dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser?.idUser }))}
             className="mt-4 bg-sky-600 text-white font-bold py-2 px-5 rounded-md hover:bg-sky-700 transition-colors"
           >
             Thử lại

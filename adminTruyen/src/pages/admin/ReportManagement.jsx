@@ -166,10 +166,48 @@ const ReportManagement = () => {
     }
   };
 
-  // Format date
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString('vi-VN');
+  // Format date - Handle array format from Java LocalDateTime
+  const formatDate = (dateInput) => {
+    if (!dateInput) return 'N/A';
+    try {
+      let date;
+      // If it's an array [year, month, day, hour, minute, second, nanosecond]
+      if (Array.isArray(dateInput) && dateInput.length >= 3) {
+        // LocalDateTime từ Java: [year, month, day, hour, minute, second, nanosecond]
+        // Month trong JavaScript Date bắt đầu từ 0, nên trừ 1
+        date = new Date(
+          dateInput[0], 
+          dateInput[1] - 1, 
+          dateInput[2], 
+          dateInput[3] || 0, 
+          dateInput[4] || 0, 
+          dateInput[5] || 0
+        );
+        // Cộng thêm 7 giờ để chuyển từ UTC sang UTC+7 (múi giờ Việt Nam)
+        date.setHours(date.getHours() + 7);
+      } else {
+        // Fallback for string format
+        date = new Date(dateInput);
+      }
+      
+      // Kiểm tra date hợp lệ
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date in formatDate:', dateInput);
+        return 'Invalid Date';
+      }
+      
+      return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', dateInput, error);
+      return 'Invalid Date';
+    }
   };
 
   // Get status counts for dashboard

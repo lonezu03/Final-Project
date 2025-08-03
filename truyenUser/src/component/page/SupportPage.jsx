@@ -47,10 +47,10 @@ const SupportPage = () => {
   }, [currentUser]);
 
   const categories = [
-    { id: 'general', name: 'Câu hỏi chung', icon: HelpCircle, color: 'blue' },
-    { id: 'account', name: 'Tài khoản', icon: Users, color: 'green' },
-    { id: 'payment', name: 'Thanh toán', icon: Zap, color: 'yellow' },
-    { id: 'technical', name: 'Kỹ thuật', icon: AlertCircle, color: 'red' }
+    { id: 'general', name: 'Đóng góp', icon: HelpCircle, color: 'blue' },
+    { id: 'account', name: 'Báo cáo', icon: Users, color: 'green' },
+    { id: 'payment', name: 'Báo cáo', icon: Zap, color: 'yellow' },
+    { id: 'technical', name: 'Lỗi', icon: AlertCircle, color: 'red' }
   ];
 
   const faqs = [
@@ -113,10 +113,10 @@ ${formData.message}
 
       // Map category to statusReport enum values
       const categoryToStatusMap = {
-        'technical': 'BUG',        // Lỗi kỹ thuật -> BUG
-        'general': 'CONTRIBUTE',   // Câu hỏi chung -> CONTRIBUTE  
-        'account': 'REPORT',       // Tài khoản -> REPORT
-        'payment': 'REPORT'        // Thanh toán -> REPORT
+        'technical': 'BUG',        // Lỗi -> BUG
+        'general': 'CONTRIBUTE',   // Đóng góp -> CONTRIBUTE  
+        'account': 'REPORT',       // Báo cáo -> REPORT
+        'payment': 'REPORT'        // Báo cáo -> REPORT
       };
 
       const statusReport = categoryToStatusMap[formData.category] || 'REPORT';

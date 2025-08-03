@@ -136,28 +136,27 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
                 : 'border-gray-200 bg-gradient-to-br from-white to-gray-50'
             }`}>
               <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                <div className="flex items-center min-w-0 flex-1 mr-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                     <UserCircle2 size={24} className="text-white" />
                   </div>
-                  <div>
-                    <span className={`font-bold block ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  <div className="min-w-0 flex-1">
+                    <span className={`font-bold block truncate ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                       {username || "User Name"}
                     </span>
                     <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       Thành viên
                     </span>
                   </div>
-                  <span className="ml-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full font-semibold animate-pulse">0</span>
+                  <span className="ml-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full font-semibold animate-pulse flex-shrink-0">0</span>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors duration-200 whitespace-nowrap max-w-[90px] overflow-hidden text-ellipsis flex-shrink-0 ${
+                  className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors duration-200 flex-shrink-0 ${
                     isDarkMode 
                       ? 'bg-red-900/30 hover:bg-red-900/50 text-red-400' 
                       : 'bg-red-100 hover:bg-red-200 text-red-600'
                   }`}
-                  style={{ minWidth: '60px' }}
                 >
                   Thoát
                 </button>

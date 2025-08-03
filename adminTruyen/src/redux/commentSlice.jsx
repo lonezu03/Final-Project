@@ -28,25 +28,55 @@ export const getAllCommentsByUser = createAsyncThunk(
 // Tìm kiếm bình luận theo truyện (POST /comment/search)
 export const searchCommentsByNovel = createAsyncThunk(
   'comments/searchByNovel',
-  async ({ idNovel }, { rejectWithValue }) => {
+  async ({ idNovel, page = 0, size = 20 }, { rejectWithValue }) => {
     try {
       const body = {
-        idNovel,
-       
+        idNovel: idNovel,
+        parentOnly: false // Để lấy cả reply comments
       };
-      const response = await apiClient.post(`/comment/search`, body);
-      if (response.data && response.data.content) {
+      
+      const response = await apiClient.post(`/comment/search?page=${page}&size=${size}&sort=idComment,desc`, body);
+      if (response.data) {
         // Trả về mảng bình luận và thông tin phân trang
         return {
-          comments: response.data.content,
-          totalItems: response.data.totalElements,
-          totalPages: response.data.totalPages,
-          currentPage: response.data.pageable?.pageNumber + 1 || page
+          comments: response.data.content || [],
+          totalItems: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 1,
+          currentPage: (response.data.pageable?.pageNumber || 0) + 1
         };
       }
-      return rejectWithValue(response.data?.message || 'Không thể tìm kiếm bình luận của truyện.');
+      return rejectWithValue('Không thể tìm kiếm bình luận của truyện.');
     } catch (error) {
+      console.error('Search comments by novel error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tìm kiếm bình luận theo truyện.');
+    }
+  }
+);
+
+// Tìm kiếm bình luận theo chương (POST /comment/search)
+export const searchCommentsByChapter = createAsyncThunk(
+  'comments/searchByChapter',
+  async ({ idChapter, page = 0, size = 20 }, { rejectWithValue }) => {
+    try {
+      const body = {
+        idChapter: idChapter,
+        parentOnly: false // Để lấy cả reply comments
+      };
+      
+      const response = await apiClient.post(`/comment/search?page=${page}&size=${size}&sort=idComment,desc`, body);
+      if (response.data) {
+        // Trả về mảng bình luận và thông tin phân trang
+        return {
+          comments: response.data.content || [],
+          totalItems: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 1,
+          currentPage: (response.data.pageable?.pageNumber || 0) + 1
+        };
+      }
+      return rejectWithValue('Không thể tìm kiếm bình luận của chương.');
+    } catch (error) {
+      console.error('Search comments by chapter error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tìm kiếm bình luận theo chương.');
     }
   }
 );
@@ -102,17 +132,25 @@ const initialState = {
     itemsPerPage: 20,
   },
   commentsByChapter: [],
+  chapterCommentsPaging: {
+    totalItems: 0,
+    totalPages: 1,
+    currentPage: 1,
+    itemsPerPage: 20,
+  },
   
   // Loading states
   loadingByUser: false,
   loadingByNovel: false,
   loadingByChapter: false,
+  loadingSearchByChapter: false,
   deletingComment: false,
   
   // Error states
   errorByUser: null,
   errorByNovel: null,
   errorByChapter: null,
+  errorSearchByChapter: null,
   deleteError: null,
   
   // Search and filter states
@@ -198,6 +236,25 @@ const commentSlice = createSlice({
       })
       .addCase(searchCommentsByNovel.rejected, (state, action) => {
         handleRejected(state, action, 'loadingByNovel', 'errorByNovel');
+      })
+
+      // SEARCH COMMENTS BY CHAPTER
+      .addCase(searchCommentsByChapter.pending, (state) => {
+        handlePending(state, 'loadingSearchByChapter');
+        state.errorSearchByChapter = null;
+      })
+      .addCase(searchCommentsByChapter.fulfilled, (state, action) => {
+        state.loadingSearchByChapter = false;
+        state.commentsByChapter = action.payload.comments;
+        state.chapterCommentsPaging = {
+          totalItems: action.payload.totalItems,
+          totalPages: action.payload.totalPages,
+          currentPage: action.payload.currentPage,
+          itemsPerPage: 20,
+        };
+      })
+      .addCase(searchCommentsByChapter.rejected, (state, action) => {
+        handleRejected(state, action, 'loadingSearchByChapter', 'errorSearchByChapter');
       })
 
       // GET ALL BY CHAPTER

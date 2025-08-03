@@ -1,7 +1,7 @@
 // src/components/DepositModal.jsx
 
 import React, { useState } from 'react';
-import { X, CreditCard, Gamepad2, ChevronRight, PartyPopper, ArrowLeft } from 'lucide-react';
+import { X, CreditCard, Gamepad2, ChevronRight, PartyPopper, ArrowLeft, Wallet, Smartphone } from 'lucide-react';
 
 // --- Sub-components ---
 
@@ -65,9 +65,11 @@ const DepositModal = ({ isOpen, onClose, onConfirm, loading }) => {
           className="bg-amber-50 hover:bg-amber-100 border border-gray-300 p-6 rounded-lg text-center transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400"
           onClick={() => handleMethodSelect('ZALOPAY')} // Giả sử đây là ZaloPay
         >
-          {/* Icons ví dụ */}
+          {/* Icons với fallback */}
           <div className="flex items-center justify-center space-x-3 mb-3">
-             <img src="https://seeklogo.com/images/Z/zalo-pay-logo-B61CE1F3E3-seeklogo.com.png" alt="ZaloPay" className="h-9"/>
+             <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+               <Wallet className="text-white" size={20} />
+             </div>
              <CreditCard className="text-blue-800" size={36} />
           </div>
           <p className="font-semibold text-gray-800">Thanh toán qua ZaloPay, Thẻ Ngân Hàng</p>
@@ -79,8 +81,9 @@ const DepositModal = ({ isOpen, onClose, onConfirm, loading }) => {
           className="bg-amber-50 hover:bg-amber-100 border border-gray-300 p-6 rounded-lg text-center transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400"
           onClick={() => handleMethodSelect('CARD')} // Tạm thời, sau này có thể dẫn đến trang khác
         >
-          {/* Icons ví dụ */}
-          <div className="flex items-center justify-center space-x-2 mb-3 h-[36px]">
+          {/* Icons với height cố định */}
+          <div className="flex items-center justify-center space-x-3 mb-3 h-[36px]">
+            <Smartphone className="text-green-600" size={36} />
             <Gamepad2 className="text-green-600" size={36} />
           </div>
           <p className="font-semibold text-gray-800">Thanh toán qua thẻ cào điện thoại, thẻ game</p>
@@ -136,7 +139,7 @@ const DepositModal = ({ isOpen, onClose, onConfirm, loading }) => {
 
         <div className="bg-yellow-500 text-white p-3 rounded-md text-center text-sm font-medium flex items-center justify-center mt-6">
           <PartyPopper className="mr-2" size={20} />
-          Lưu ý không đổi ngược lại thành Kẹo được
+          Lưu ý không đổi ngược lại thành Tiền được
         </div>
       </div>
     </div>

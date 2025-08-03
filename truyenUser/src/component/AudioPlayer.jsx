@@ -106,8 +106,8 @@ const position = audioRef.current?.currentTime || 0;
   
   const novelStats = {
     chapters: novel?.totalChapter || 'N/A',
-    reads: formatLargeNumber(novel?.viewNovel || 0),
-    ratings: novel?.ratingCount || 'N/A',
+    reads: formatLargeNumber(novel?.totalView || 0),
+    ratings: novel?.rating || 'N/A',
   };
 
   // Effect chính để quản lý thẻ <audio>
@@ -173,7 +173,7 @@ const position = audioRef.current?.currentTime || 0;
       if (!isManualSeeking) {
         setCurrentTime(audio.currentTime);
         if (duration > 0 && onProgressUpdate) {
-          onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+          onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime, !audio.paused);
         }
       }
     };
@@ -186,12 +186,12 @@ const position = audioRef.current?.currentTime || 0;
     const handlePlay = () => {
       setIsBuffering(false);
       if (onProgressUpdate && duration > 0) {
-        onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+        onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime, true);
       }
     };
     const handlePause = () => {
       if (onProgressUpdate && duration > 0) {
-        onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+        onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime, false);
       }
     };
 
@@ -220,7 +220,7 @@ const position = audioRef.current?.currentTime || 0;
 
     // Gửi thời gian hiện tại khi mount nếu có duration
     if (onProgressUpdate && duration > 0) {
-      onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime);
+      onProgressUpdate((audio.currentTime / duration) * 100, audio.currentTime, !audio.paused);
     }
 
     return () => {
@@ -262,10 +262,40 @@ const position = audioRef.current?.currentTime || 0;
 
   // THÊM EFFECT ĐỂ ĐỒNG BỘ initialTime MỚI KHI optimizedAudioSrc THAY ĐỔI
 useEffect(() => {
-  if (audioRef.current && typeof initialTime === 'number') {
-    audioRef.current.currentTime = initialTime;
+  console.log('[AudioPlayer] initialTime changed to:', initialTime, 'duration:', duration);
+  
+  if (audioRef.current && typeof initialTime === 'number' && duration > 0) {
+    const safeInitialTime = Math.min(Math.max(0, initialTime), duration);
+    
+    if (initialTime > 0) {
+      console.log('[AudioPlayer] Setting currentTime to:', safeInitialTime);
+      
+      const seekToInitialTime = async () => {
+        try {
+          audioRef.current.currentTime = safeInitialTime;
+          setCurrentTime(safeInitialTime);
+          
+          // Cập nhật progress để đồng bộ với UI
+          if (onProgressUpdate && duration > 0) {
+            onProgressUpdate((safeInitialTime / duration) * 100, safeInitialTime, false);
+          }
+        } catch (error) {
+          console.error('[AudioPlayer] Error setting initial time:', error);
+        }
+      };
+      
+      // Delay nhỏ để đảm bảo audio đã load xong
+      setTimeout(seekToInitialTime, 100);
+    } else {
+      // Reset về đầu nếu initialTime = 0
+      audioRef.current.currentTime = 0;
+      setCurrentTime(0);
+      if (onProgressUpdate) {
+        onProgressUpdate(0, 0, false);
+      }
+    }
   }
-}, [initialTime, optimizedAudioSrc]);
+}, [initialTime, duration, onProgressUpdate]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
@@ -363,7 +393,7 @@ useEffect(() => {
       // Gửi progress update
       if (onProgressUpdate) {
         const percentage = (newTime / duration) * 100;
-        onProgressUpdate(percentage, newTime);
+        onProgressUpdate(percentage, newTime, wasPlaying);
       }
       
       // Clear timeout cũ
@@ -397,7 +427,7 @@ useEffect(() => {
       // Gửi progress update
       if (onProgressUpdate) {
         const percentage = (newTime / duration) * 100;
-        onProgressUpdate(percentage, newTime);
+        onProgressUpdate(percentage, newTime, wasPlaying);
       }
       
       // Clear timeout cũ
@@ -438,7 +468,7 @@ useEffect(() => {
           <div className="text-xs leading-tight hidden sm:block">
              <p><span className="font-bold">{novelStats.chapters}</span> Chương</p>
             <p><span className="font-bold">{novelStats.reads}</span> Lượt đọc</p>
-            <p><span className="font-bold">{novelStats.ratings}</span> Đánh giá</p>
+            {/* <p><span className="font-bold">{novelStats.ratings}</span> Đánh giá</p> */}
           </div>
         </div>
 
@@ -529,8 +559,22 @@ useEffect(() => {
           onLoadedMetadata={(e) => {
             const audio = e.target;
             setDuration(audio.duration);
-            if (initialTime > 0) {
-              audio.currentTime = initialTime;
+            console.log('[Audio onLoadedMetadata] Duration:', audio.duration, 'initialTime:', initialTime);
+            
+            // Set initial time nếu có
+            if (initialTime > 0 && audio.duration > 0) {
+              const safeInitialTime = Math.min(Math.max(0, initialTime), audio.duration);
+              console.log('[Audio onLoadedMetadata] Setting currentTime to:', safeInitialTime);
+              
+              setTimeout(() => {
+                audio.currentTime = safeInitialTime;
+                setCurrentTime(safeInitialTime);
+                
+                // Cập nhật progress
+                if (onProgressUpdate) {
+                  onProgressUpdate((safeInitialTime / audio.duration) * 100, safeInitialTime, false);
+                }
+              }, 100);
             }
           }}
           onEnded={() => {

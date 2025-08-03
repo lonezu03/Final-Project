@@ -50,7 +50,42 @@ const TransactionManager = () => {
 
   // Format date
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('vi-VN');
+    try {
+      // Nếu dateString là array (từ API response), chuyển đổi thành Date
+      if (Array.isArray(dateString) && dateString.length >= 6) {
+        // Format: [year, month, day, hour, minute, second, nanosecond]
+        const [year, month, day, hour, minute, second] = dateString;
+        const date = new Date(year, month - 1, day, hour, minute, second);
+        // Cộng thêm 7 giờ cho timezone Việt Nam (UTC+7)
+        date.setHours(date.getHours() + 7);
+        return date.toLocaleString('vi-VN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }
+      // Nếu là string thông thường
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Không rõ';
+      }
+      // Cộng thêm 7 giờ cho timezone Việt Nam (UTC+7)
+      date.setHours(date.getHours() + 7);
+      return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Không rõ';
+    }
   };
 
   if (loading) {

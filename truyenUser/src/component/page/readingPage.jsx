@@ -17,7 +17,7 @@ import { optimizeCloudinaryAudioUrl, optimizeCloudinaryImageUrl } from '../../ut
 
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaCog, FaListUl, FaAngleLeft, FaAngleRight } from 'react-icons/fa';
+import { FaCog, FaListUl, FaAngleLeft, FaAngleRight, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 import AudioPlayer from '../AudioPlayer'; // Đảm bảo đường dẫn này đúng
 import ChapterComments from '../ChapterComments'; // Đảm bảo đường dẫn này đúng
 import CanvasTextRenderer from '../CanvasTextRenderer'; // COMPONENT MỚI ĐỂ VẼ CANVAS
@@ -71,7 +71,10 @@ const { allTransactions } = useSelector((state) => state.transaction);
   const [savedAudioPosition, setSavedAudioPosition] = useState(null);
 
   const mainContentAreaRef = useRef(null);
-  const [showAudioPlayer, setShowAudioPlayer] = useState(true);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(() => {
+    const saved = localStorage.getItem('showAudioPlayer');
+    return saved !== null ? saved === 'true' : true;
+  });
   const urlAudio = currentChapterContent?.urlAudio || null;
 
   const [processedChapterContent, setProcessedChapterContent] = useState(null);
@@ -88,6 +91,7 @@ const { allTransactions } = useSelector((state) => state.transaction);
   const debounceTimerRef = useRef(null);
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const currentAudioTimeRef = useRef(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const getPositionKey = () => `reading_position_${novelId}_${chapterId}`;
 
@@ -96,21 +100,18 @@ const { allTransactions } = useSelector((state) => state.transaction);
     if (!allTransactions?.rentedNovels) return null;
     
     for (const novel of Object.values(allTransactions.rentedNovels)) {
-      if (novel.chapters && Array.isArray(novel.chapters)) {
-        const rentedChapter = novel.chapters.find(ch => String(ch.idChapter) === String(chapterId));
-        if (rentedChapter) {
-          const expirationDate = new Date(rentedChapter.dateEndRent);
-          const now = new Date();
-          const isExpired = now > expirationDate;
-          const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
-          
-          return {
-            isRented: true,
-            isExpired,
-            expirationDate,
-            daysLeft: isExpired ? 0 : daysLeft
-          };
-        }
+      const rentedChapter = novel.chapterBoughtRespone?.find(ch => ch.idChapter === chapterId);
+      if (rentedChapter && rentedChapter.rentExpiration) {
+        const expirationDate = new Date(rentedChapter.rentExpiration);
+        const now = new Date();
+        const isExpired = now > expirationDate;
+        
+        return {
+          isRented: true,
+          expirationDate,
+          isExpired,
+          daysLeft: isExpired ? 0 : Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24))
+        };
       }
     }
     return null;
@@ -156,10 +157,11 @@ const { allTransactions } = useSelector((state) => state.transaction);
   //luu vị trí đọc audio
   const [audioProgress, setAudioProgress] = useState(0);
   const mainContentRef = useRef(null); // Gắn ref này vào thẻ <main>
- const handleAudioProgressUpdate = useCallback((percentage, currentTimeInSeconds) => {
+ const handleAudioProgressUpdate = useCallback((percentage, currentTimeInSeconds, isPlaying = false) => {
    setCurrentAudioTime(currentTimeInSeconds);
    currentAudioTimeRef.current = currentTimeInSeconds;
    setAudioProgress(percentage);
+   setIsAudioPlaying(isPlaying); // Track trạng thái phát
  }, []);
 //  const latestDataRef = useRef({});
 //   useEffect(() => {
@@ -170,40 +172,124 @@ const { allTransactions } = useSelector((state) => state.transaction);
 //       chapterId,
 //     };
 //   }, [currentUser, currentChapterContent, novelId, chapterId]);
-// useEffect theo doi audio
+// useEffect theo doi audio - COMMENT lại vì không cần cuộn theo audio nữa
+ // const isScrollingByAudio = useRef(false);
+ 
+ // useEffect(() => {
+ //   if (mainContentAreaRef.current && audioProgress > 0 && !isScrollingByAudio.current) {
+ //     isScrollingByAudio.current = true;
+ //     
+ //     const contentHeight = mainContentAreaRef.current.scrollHeight;
+ //     const viewportHeight = window.innerHeight;
+ //     const maxScrollableHeight = contentHeight - viewportHeight;
+ //     
+ //     if (maxScrollableHeight > 0) {
+ //       const targetScrollTop = (audioProgress / 100) * maxScrollableHeight;
+ //       
+ //       window.scrollTo({
+ //         top: targetScrollTop,
+ //         behavior: 'smooth'
+ //       });
+ //       
+ //       // Gọi createHistory khi cuộn theo audio
+ //       if (currentUser && currentChapterContent && targetScrollTop > 100) {
+ //         const payload = {
+ //           email: currentUser.emailUser,
+ //           idChapter: currentChapterContent.idChapter,
+ //           readPlace: Math.round(targetScrollTop),
+ //           hearTime: currentAudioTimeRef.current,
+ //         };
+ //         
+ //         console.log('[Audio Scroll] Saving history at position:', Math.round(targetScrollTop));
+ //         dispatch(createHistory(payload)).catch(error => {
+ //           console.error('Error creating history from audio scroll:', error);
+ //         });
+ //       }
+ //     }
+ //     
+ //     // Reset flag sau khi hoàn thành cuộn
+ //     setTimeout(() => {
+ //       isScrollingByAudio.current = false;
+ //     }, 1000); // Tăng thời gian để đảm bảo cuộn hoàn thành
+ //   }
+ // }, [audioProgress, currentUser, currentChapterContent, dispatch]);
+
+ // Effect mới: Tự động lưu lịch sử audio mỗi 5 giây khi ĐANG PHÁT audio
+ // KHÔNG phụ thuộc vào currentAudioTime để tránh tạo interval liên tục
+ const audioSaveIntervalRef = useRef(null);
+ 
  useEffect(() => {
-    // Thêm flag để tránh vòng lặp vô tận
-    let isScrolling = false;
-    
-    if (mainContentAreaRef.current && audioProgress > 0 && !isScrolling) {
-      isScrolling = true;
-      const contentHeight = mainContentAreaRef.current.scrollHeight;
-      const viewportHeight = window.innerHeight;
-      const maxScrollableHeight = contentHeight - viewportHeight;
-      
-      if (maxScrollableHeight > 0) {
-        window.scrollTo({
-          top: (audioProgress / 100) * maxScrollableHeight,
-          behavior: 'smooth'
-        });
-      }
-      
-      setTimeout(() => {
-        isScrolling = false;
-      }, 100);
-    }
-  }, [audioProgress]);
+   // SỬA: Chỉ phụ thuộc vào isAudioPlaying, không phụ thuộc currentAudioTime
+   if (currentUser && currentChapterContent && isAudioPlaying) {
+     console.log('[Audio Auto Save] Starting auto save interval - Playing:', isAudioPlaying);
+     
+     // Clear interval cũ nếu có
+     if (audioSaveIntervalRef.current) {
+       clearInterval(audioSaveIntervalRef.current);
+     }
+     
+     // Tạo interval mới để lưu lịch sử mỗi 5 giây KHI ĐANG PHÁT
+     audioSaveIntervalRef.current = setInterval(() => {
+       // Kiểm tra lại điều kiện trong interval để đảm bảo vẫn có thể lưu
+       if (!currentUser || !currentChapterContent || currentAudioTimeRef.current <= 0) {
+         console.log('[Audio Auto Save] Conditions not met, skipping save');
+         return;
+       }
+       
+       const currentScrollPosition = Math.round(window.pageYOffset || document.documentElement.scrollTop);
+       
+       const payload = {
+         email: currentUser.emailUser,
+         idChapter: currentChapterContent.idChapter,
+         readPlace: currentScrollPosition, // Lấy vị trí scroll hiện tại thay vì tính từ audio
+         hearTime: currentAudioTimeRef.current,
+       };
+       
+       console.log('[Audio Auto Save] Saving history every 5s while playing - Audio time:', currentAudioTimeRef.current, 'Scroll pos:', currentScrollPosition);
+       dispatch(createHistory(payload)).catch(error => {
+         console.error('Error creating history from audio auto save:', error);
+       });
+     }, 5000); // 5 giây
+   } else {
+     // Clear interval khi không đủ điều kiện HOẶC audio không phát
+     if (audioSaveIntervalRef.current) {
+       console.log('[Audio Auto Save] Stopping auto save interval - Playing:', isAudioPlaying);
+       clearInterval(audioSaveIntervalRef.current);
+       audioSaveIntervalRef.current = null;
+     }
+   }
+   
+   // Cleanup khi component unmount hoặc dependencies thay đổi
+   return () => {
+     if (audioSaveIntervalRef.current) {
+       clearInterval(audioSaveIntervalRef.current);
+       audioSaveIntervalRef.current = null;
+     }
+   };
+ }, [currentUser, currentChapterContent, isAudioPlaying, dispatch]); // Loại bỏ currentAudioTime
 
   // Fetch transaction data để kiểm tra chapter thuê
   useEffect(() => {
     if (currentUser?.idUser) {
-      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }));
+      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser.idUser }));
     }
   }, [currentUser?.idUser, dispatch]);
 
+  // Effect kiểm tra quyền truy cập - Thêm ref để tránh toast trùng lặp
+ const permissionCheckedRef = useRef(null);
+ const toastShownRef = useRef(null); // Ref để track toast đã hiển thị
+ 
  useEffect(() => {
     // Kiểm tra quyền truy cập khi có đầy đủ thông tin chapter (không cần currentUser cho chapter miễn phí)
     if (chapterId && novelId && currentChapterContent) {
+      // Tạo key duy nhất để track việc kiểm tra quyền
+      const checkKey = `${chapterId}_${currentUser?.idUser || 'guest'}`;
+      
+      // Nếu đã kiểm tra rồi thì không kiểm tra lại
+      if (permissionCheckedRef.current === checkKey) {
+        return;
+      }
+      
       // Tìm thông tin chapter từ dropdown list để có đầy đủ thông tin về giá
       const chapterFromDropdown = chaptersForReadingPageDropdown?.find(ch => String(ch.idChapter) === String(chapterId));
       const chapterForPermissionCheck = chapterFromDropdown || currentChapterContent;
@@ -211,15 +297,27 @@ const { allTransactions } = useSelector((state) => state.transaction);
       const permission = checkChapterReadPermission(chapterId, chapterForPermissionCheck);
       
       if (!permission.canRead) {
-        // Chỉ chặn nếu thực sự không có quyền đọc
-        if (permission.reason === 'Login required for paid chapter') {
-          toast.info("Vui lòng đăng nhập để đọc chương có phí này.");
-        } else {
-          toast.error("Bạn cần mua chương này để có thể đọc. Vui lòng tìm chương trong danh sách bên dưới.");
+        // Đánh dấu đã kiểm tra
+        permissionCheckedRef.current = checkKey;
+        
+        // Tạo toast key để tránh trùng lặp
+        const toastKey = `${chapterId}_${permission.reason}`;
+        if (toastShownRef.current !== toastKey) {
+          toastShownRef.current = toastKey;
+          
+          // Chỉ chặn nếu thực sự không có quyền đọc
+          if (permission.reason === 'Login required for paid chapter') {
+            toast.info("Vui lòng đăng nhập để đọc chương có phí này.");
+          } else {
+            toast.error("Bạn cần mua chương này để có thể đọc. Vui lòng tìm chương trong danh sách bên dưới.");
+          }
         }
         // Điều hướng người dùng về trang chi tiết của truyện
         navigate(`/novel/${novelId}`, { replace: true });
       } else {
+        // Đánh dấu đã kiểm tra thành công
+        permissionCheckedRef.current = checkKey;
+        
         // Log thông tin để debug
         console.log(`✅ [ReadingPage] Access granted for chapter ${chapterId} - ${permission.reason}`);
         if (permission.rentInfo) {
@@ -227,7 +325,8 @@ const { allTransactions } = useSelector((state) => state.transaction);
         }
       }
     }
-  }, [currentUser, chapterId, novelId, currentChapterContent, navigate, allTransactions, chaptersForReadingPageDropdown]);
+  }, [chapterId, novelId, currentChapterContent, currentUser?.idUser, navigate, chaptersForReadingPageDropdown]);
+  
   useEffect(() => {
     localStorage.setItem('readingFontSize', fontSize.toString());
     localStorage.setItem('readingLineHeight', lineHeight.toString());
@@ -338,12 +437,22 @@ useEffect(() => {
   const loadChapterContent = async () => {
     if (novelId && chapterId) {
       console.log("[Effect #2] Tải nội dung cho chapterId:", chapterId);
+      
+      // SỬA: SCROLL VỀ TOP NGAY LẬP TỨC khi bắt đầu load chương mới
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      console.log("[Effect #2] Reset scroll position to top for new chapter");
+      
       try {
         // Reset states trước khi tải nội dung mới
         if (contentRef.current) contentRef.current.scrollTop = 0;
         setShowContinueDialog(false);
         setSavedScrollPosition(null);
         setProcessedChapterContent(null);
+        
+        // SỬA: Reset trạng thái audio khi chuyển chương
+        setCurrentAudioTime(0);
+        setIsAudioPlaying(false);
+        currentAudioTimeRef.current = 0;
 
         // Tải nội dung chương
         await dispatch(getChapterContentById({ novelId, chapterId }));
@@ -399,7 +508,7 @@ useEffect(() => {
   };
 }, [dispatch, currentUser?.idUser]); // Chỉ phụ thuộc vào user ID
 
-// Effect #4: Hiển thị dialog "ĐỌC TIẾP?" (chạy khi có lịch sử hoặc nội dung chương)
+// Effect #4: Hiển thị dialog "ĐỌC TIẾP?" và set vị trí audio
 // Sử dụng ref để tránh hiển thị dialog nhiều lần cho cùng một chương
 const dialogShownForChapter = useRef(null);
 
@@ -428,24 +537,42 @@ useEffect(() => {
     }
   }
 
-  if (chapterHistoryFound && chapterHistoryFound.readPlace > 50) {
-    setSavedScrollPosition(chapterHistoryFound.readPlace);
-    setShowContinueDialog(true);
-    dialogShownForChapter.current = chapterId; // Đánh dấu đã hiển thị dialog cho chương này
-    // KHÔNG setSavedAudioPosition ở đây, chỉ set khi ấn Đọc tiếp
+  if (chapterHistoryFound) {
+    // Set vị trí audio ngay lập tức nếu có trong lịch sử
+    if (chapterHistoryFound.hearTime && chapterHistoryFound.hearTime > 0) {
+      console.log('[History] Setting audio position to:', chapterHistoryFound.hearTime);
+      setSavedAudioPosition(chapterHistoryFound.hearTime);
+    } else {
+      setSavedAudioPosition(0);
+    }
+    
+    // Chỉ hiển thị dialog nếu có vị trí đọc đáng kể
+    if (chapterHistoryFound.readPlace > 50) {
+      setSavedScrollPosition(chapterHistoryFound.readPlace);
+      setShowContinueDialog(true);
+      dialogShownForChapter.current = chapterId;
+    }
   } else {
     setSavedAudioPosition(0); // reset audio về 0 nếu không có lịch sử
   }
 }, [userHistory, loadingContent, currentChapterContent, chapterId]);
 
 // Effect set lại scroll position khi dialog được xác nhận
-// Khi vào chương mới, luôn scroll về top 0 và reset dialog state
+// Khi vào chương mới, luôn scroll về top 0 và reset dialog state  
 useEffect(() => {
-  window.scrollTo({ top: 0, behavior: 'auto' });
+  // SỬA: Đảm bảo scroll về top khi chuyển chương (backup)
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  if (scrollTop > 0) {
+    console.log("[Chapter Change] Force scroll to top - Current position:", scrollTop);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+  
   // Reset dialog state khi chương thay đổi
   setShowContinueDialog(false);
   setSavedScrollPosition(null);
   dialogShownForChapter.current = null; // Reset flag để có thể hiển thị dialog cho chương mới
+  permissionCheckedRef.current = null; // Reset permission check để có thể kiểm tra lại cho chương mới
+  toastShownRef.current = null; // Reset toast để có thể hiển thị lại cho chương mới
 }, [chapterId]);
 
 // Khi ấn Đọc tiếp mới scroll tới vị trí đã lưu
@@ -471,6 +598,11 @@ useEffect(() => {
   }
   
   const handleScroll = () => {
+    // COMMENT: Không cần kiểm tra isScrollingByAudio nữa vì audio không cuộn
+    // if (isScrollingByAudio.current) {
+    //   return;
+    // }
+    
     // --- THÊM LOG DEBUG ---
     const windowScrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const divScrollTop = scrollContainer.scrollTop;
@@ -482,11 +614,11 @@ useEffect(() => {
       // SỬA Ở ĐÂY: Luôn sử dụng `windowScrollTop` để có giá trị chính xác.
       const readPlace = Math.round(windowScrollTop); 
       
-      // Chỉ lưu nếu vị trí thay đổi đáng kể (ít nhất 200px)
+      // Chỉ lưu nếu vị trí thay đổi đáng kể (ít nhất 200px) và > 50px
       const positionDiff = Math.abs(readPlace - lastSavedPosition.current);
       
-      // Giữ nguyên điều kiện > 100 và thêm điều kiện chống spam
-      if (readPlace > vitrilandau && chapterId && positionDiff >= 200) {
+      // SỬA: Cho phép lưu lịch sử khi cuộn cả lên và xuống, chỉ cần > 50px và có thay đổi đáng kể
+      if (readPlace > 50 && chapterId && positionDiff >= 200) {
         // console.log(currentChapterContent)
         const payload = {
           email: currentUser.emailUser,
@@ -495,22 +627,21 @@ useEffect(() => {
           readPlace,
           hearTime: currentAudioTimeRef.current, // Luôn lấy giá trị mới nhất
         };
-        console.log(`[Effect #5 - Debounced Save] Dispatching createHistory... Position: ${readPlace}`);
+        console.log(`[Manual Scroll] Dispatching createHistory... Position: ${readPlace}, Direction: ${readPlace > lastSavedPosition.current ? 'Down' : 'Up'}`);
         
-        vitrilandau = readPlace + 400; // CẬP NHẬT VỊ TRÍ ĐỌC LẦN ĐẦU
         lastSavedPosition.current = readPlace; // Cập nhật vị trí đã lưu
         
         dispatch(createHistory(payload))
           .unwrap()
           .then(() => {
             // Chỉ refresh history nếu cần thiết (ví dụ: mỗi 5 lần lưu)
-            // dispatch(refreshUserHistory()); // Tạm thời comment để giảm spam API
+             dispatch(refreshUserHistory()); // Tạm thời comment để giảm spam API
           })
           .catch(error => {
             console.error('Error creating history:', error);
           });
       }
-    }, 3000); // Tăng debounce time từ 2s lên 3s
+    }, 2000); // Giảm debounce time xuống 2s để responsive hơn
   };
 
   // console.log(`[Effect #5] Gắn listener cuộn chuột cho chapterId: ${chapterId}`);
@@ -590,7 +721,7 @@ useEffect(() => {
         // Không có quyền: Báo lỗi và thông báo tương ứng
         if (permission.reason === 'Login required for paid chapter') {
           toast.info("Vui lòng đăng nhập để đọc chương có phí này.");
-          navigate('/login');
+          navigate('/');
         } else {
           toast.error("Bạn cần mua hoặc thuê chương này để đọc. Vui lòng kiểm tra trong danh sách chương.");
           navigate(`/novel/${novelId}`); 
@@ -690,7 +821,7 @@ useEffect(() => {
 
 
   const handleConfirmContinue = () => {
-    // Khi ấn Đọc tiếp, set lại audio về vị trí đã lưu
+    // Khi ấn Đọc tiếp, scroll tới vị trí đã lưu
     if (savedScrollPosition !== null) {
       setTimeout(() => {
         window.scrollTo({
@@ -700,20 +831,8 @@ useEffect(() => {
       }, 100);
     }
     
-    // Lấy lại vị trí audio từ lịch sử (nếu có)
-    if (savedAudioPosition === 0 && userHistory && Array.isArray(userHistory)) {
-      for (const novelGroup of userHistory) {
-        if (novelGroup && Array.isArray(novelGroup.historyReadRespones)) {
-          const found = novelGroup.historyReadRespones.find(
-            (chap) => String(chap.id?.idChapter) === String(chapterId)
-          );
-          if (found && found.hearTime) {
-            setSavedAudioPosition(found.hearTime);
-            break;
-          }
-        }
-      }
-    }
+    // Vị trí audio đã được set từ trước trong effect #4, không cần lấy lại
+    console.log('[Continue] Audio position already set to:', savedAudioPosition);
     
     setShowContinueDialog(false);
     // Đánh dấu rằng dialog đã được xử lý cho chương này
@@ -726,6 +845,13 @@ useEffect(() => {
     // Đánh dấu rằng dialog đã được xử lý cho chương này
     dialogShownForChapter.current = chapterId;
     localStorage.removeItem(getPositionKey());
+  };
+
+  // Toggle function for audio player
+  const toggleAudioPlayer = () => {
+    setShowAudioPlayer(prev => !prev);
+    // Lưu trạng thái vào localStorage
+    localStorage.setItem('showAudioPlayer', (!showAudioPlayer).toString());
   };
   
   // ======================= FIX 2: SẮP XẾP LẠI THỨ TỰ KHAI BÁO =======================
@@ -994,20 +1120,65 @@ useEffect(() => {
           </div>
         )}
       </div>
-       {showAudioPlayer && (currentChapterContent?.urlAudio || urlAudio) && (
-  <AudioPlayer 
-    audioSrc={optimizeCloudinaryAudioUrl(currentChapterContent?.urlAudio || urlAudio)} 
-    onPrevChapter={handlePrevChapter} 
-    onNextChapter={handleNextChapter} 
-    isFirstChapter={isFirstChapter} 
-    isLastChapter={isLastChapter} 
-    novel={currentNovel}  // Đảm bảo truyền novel thay vì novelTitle
-    coverImage={optimizeCloudinaryImageUrl(currentNovel?.imageNovel)}
-    onProgressUpdate={handleAudioProgressUpdate}
-    initialTime={savedAudioPosition}
-  />
-)}
-      <div className='h-[62px]'></div>
+
+      {/* Nút Toggle Audio Player - Luôn hiển thị khi có audio */}
+      {(currentChapterContent?.urlAudio || urlAudio) && (
+        <button
+          onClick={toggleAudioPlayer}
+          className={`fixed right-4 w-12 h-12 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 hover:shadow-xl flex items-center justify-center
+            ${showAudioPlayer 
+              ? (theme === 'den' 
+                  ? 'bg-orange-500 hover:bg-orange-600 text-white' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+                ) 
+              : (theme === 'den' 
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                )
+            }`}
+          style={{ 
+            bottom: showAudioPlayer ? '80px' : '20px',
+            zIndex: 60, // Cao hơn header và navbar
+            transition: 'bottom 0.3s ease-in-out, background-color 0.2s, transform 0.2s'
+          }}
+          title={showAudioPlayer ? 'Ẩn trình phát âm thanh' : 'Hiện trình phát âm thanh'}
+        >
+          {showAudioPlayer ? (
+            <FaVolumeUp className="text-lg" />
+          ) : (
+            <FaVolumeMute className="text-lg" />
+          )}
+        </button>
+      )}
+
+      {/* Audio Player với animation slide - Chỉ render khi có audio */}
+      {(currentChapterContent?.urlAudio || urlAudio) && (
+        <div 
+          className={`fixed bottom-0 left-0 right-0 transition-transform duration-300 ease-in-out ${
+            showAudioPlayer ? 'translate-y-0' : 'translate-y-full'
+          }`}
+          style={{ zIndex: 55 }} // Cao hơn header nhưng thấp hơn nút toggle
+        >
+          <AudioPlayer 
+            audioSrc={optimizeCloudinaryAudioUrl(currentChapterContent?.urlAudio || urlAudio)} 
+            onPrevChapter={handlePrevChapter} 
+            onNextChapter={handleNextChapter} 
+            isFirstChapter={isFirstChapter} 
+            isLastChapter={isLastChapter} 
+            novel={currentNovel}  // Đảm bảo truyền novel thay vì novelTitle
+            coverImage={optimizeCloudinaryImageUrl(currentNovel?.imageNovel)}
+            onProgressUpdate={handleAudioProgressUpdate}
+            initialTime={savedAudioPosition}
+          />
+        </div>
+      )}
+
+      {/* Padding bottom để tránh che nội dung khi audio player hiện */}
+      <div 
+        className={`transition-all duration-300 ${
+          showAudioPlayer && (currentChapterContent?.urlAudio || urlAudio) ? 'h-[62px]' : 'h-0'
+        }`}
+      ></div>
     </div>
   );
 };

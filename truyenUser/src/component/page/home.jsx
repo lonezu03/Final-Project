@@ -18,6 +18,7 @@ const Home = () => {
     const novels = useSelector((state) => state.novels.novels);
     const currentUser = useSelector((state) => state.user.currentUser);
     const novelsLoading = useSelector((state) => state.novels.loading);
+    const userLoading = useSelector((state) => state.user.loading); // Thêm userLoading
     
     // Kiểm tra xem có cần hiển thị loading không - chỉ loading novels
     const isLoadingCriticalData = (novelsLoading && (!novels || novels.length === 0));
@@ -122,13 +123,14 @@ const Home = () => {
     }, [dispatch, currentUser?.idUser]); // Chỉ theo dõi idUser
 
     // Tối ưu: Fetch transactions data khi user đăng nhập để tránh phải gọi ở DetailPage
+    // Đợi user loading xong để tránh lỗi 401 khi token chưa được refresh
     const fetchedTransactions = useRef(null);
     useEffect(() => {
-        if (currentUser?.idUser) {
+        if (currentUser?.idUser && !userLoading) { // Đợi userLoading hoàn thành
             if (fetchedTransactions.current !== currentUser.idUser) {
                 console.log('🔄 [Home] Fetching transactions data for user:', currentUser.idUser);
                 fetchedTransactions.current = currentUser.idUser; // Set trước để tránh duplicate calls
-                dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }))
+                dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser.idUser }))
                     .unwrap()
                     .then(() => {
                         console.log('✅ [Home] Transactions loaded successfully');
@@ -143,11 +145,11 @@ const Home = () => {
         } else {
             // Reset khi user logout
             if (fetchedTransactions.current !== null) {
-                console.log('🔄 [Home] User logged out, resetting transactions flag');
+                console.log('🔄 [Home] User logged out or loading, resetting transactions flag');
                 fetchedTransactions.current = null;
             }
         }
-    }, [dispatch, currentUser?.idUser]);
+    }, [dispatch, currentUser?.idUser, userLoading]); // Thêm userLoading vào dependencies
 
     // Effect để reset flags khi component unmount - chỉ khi thực sự cần
     useEffect(() => {

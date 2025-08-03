@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getAllAuthors, deleteAuthor, updateAuthor } from '../../redux/authorSlice';
+import { getAllNovels } from '../../redux/novelSlice'; // Thêm import getAllNovels
 import { PencilLine, Trash, Plus, Users, Calendar, Globe, BookOpen, Camera, X } from 'lucide-react';
 import { createAuthor } from '../../redux/authorSlice';
 import Select from 'react-select';
@@ -12,6 +13,21 @@ const AuthorManager = () => {
   const { authors, loading, error } = useSelector((state) => state.authors);
   const { novels } = useSelector((state) => state.novels);
 
+  // Helper function để tính tuổi chính xác
+  const calculateAge = (birthDate, endDate = new Date()) => {
+    const birth = new Date(birthDate);
+    const end = new Date(endDate);
+    let age = end.getFullYear() - birth.getFullYear();
+    const monthDiff = end.getMonth() - birth.getMonth();
+    const dayDiff = end.getDate() - birth.getDate();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age--;
+    }
+    
+    return age;
+  };
+
   const [showForm, setShowForm] = useState(false);
   const [image, setImage] = useState(null);
   const [newAuthor, setNewAuthor] = useState({
@@ -20,6 +36,7 @@ const AuthorManager = () => {
     descriptionAuthor: '',
     nationalityAuthor: '',
     dobAuthor: '',
+    dodAuthor: '', // Thêm trường ngày mất
     genderAuthor: 'MALE',
     novels: [],
   });
@@ -29,13 +46,24 @@ const AuthorManager = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentAuthor, setCurrentAuthor] = useState(null);
 
-  const novelOptions = novels?.map((novel) => ({
-    value: novel.idNovel,
-    label: novel.nameNovel,
-  }));
+  console.log('danh sách novel', novels);
+  console.log('Array.isArray(novels):', Array.isArray(novels));
+  console.log('novels?.length:', novels?.length);
+  
+  const novelOptions = Array.isArray(novels) && novels.length > 0 
+    ? novels.map((novel) => ({
+        value: novel.idNovel,
+        label: novel.nameNovel,
+        key: novel.idNovel,
+      }))
+    : [];
+
+  console.log('novels.novels:', novels?.novels);
+  console.log('novelOptions:', novelOptions);
 
   useEffect(() => {
     dispatch(getAllAuthors());
+    dispatch(getAllNovels()); // Bỏ comment để load dữ liệu novels
   }, [dispatch]);
 
   useEffect(() => {
@@ -60,8 +88,10 @@ const AuthorManager = () => {
 
     const formData = new FormData();
     const dob = new Date(newAuthor.dobAuthor);
+    const dod = newAuthor.dodAuthor ? new Date(newAuthor.dodAuthor) : null;
     const currentDate = new Date();
     
+    // Validation cho ngày sinh
     if (!newAuthor.dobAuthor) {
       alert("Ngày sinh là bắt buộc.");
       return;
@@ -71,10 +101,29 @@ const AuthorManager = () => {
       return;
     }
     
-    const age = currentDate.getFullYear() - dob.getFullYear();
-    if (age < 18) {
-      alert("Tác giả phải ít nhất 18 tuổi.");
-      return;
+    // Validation cho ngày mất (nếu có)
+    if (dod) {
+      if (dod > currentDate) {
+        alert("Ngày mất không thể là ngày trong tương lai.");
+        return;
+      }
+      if (dod <= dob) {
+        alert("Ngày mất phải sau ngày sinh.");
+        return;
+      }
+      // Kiểm tra tuổi tác giả khi mất (phải >= 18)
+      const ageAtDeath = calculateAge(dob, dod);
+      if (ageAtDeath < 18) {
+        alert("Tác giả phải ít nhất 18 tuổi khi mất.");
+        return;
+      }
+    } else {
+      // Nếu chưa mất, kiểm tra tuổi hiện tại
+      const currentAge = calculateAge(dob, currentDate);
+      if (currentAge < 18) {
+        alert("Tác giả phải ít nhất 18 tuổi.");
+        return;
+      }
     }
     if (!newAuthor.nameAuthor || newAuthor.nameAuthor.length < 3 || newAuthor.nameAuthor.length > 100) {
       alert('Tên tác giả phải có độ dài từ 3 đến 100 ký tự!');
@@ -91,6 +140,7 @@ const AuthorManager = () => {
       descriptionAuthor: newAuthor.descriptionAuthor,
       nationalityAuthor: newAuthor.nationalityAuthor,
       dobAuthor: newAuthor.dobAuthor,
+      dodAuthor: newAuthor.dodAuthor || null, // Thêm trường dodAuthor
       genderAuthor: newAuthor.genderAuthor,
       novels: newAuthor.novels.map(String),
     };
@@ -121,11 +171,11 @@ const AuthorManager = () => {
     
     // Reset
     setNewAuthor({
-
       nameAuthor: '',
       descriptionAuthor: '',
       nationalityAuthor: '',
       dobAuthor: '',
+      dodAuthor: '', // Thêm reset cho dodAuthor
       genderAuthor: 'MALE',
       novels: [],
     });
@@ -145,6 +195,7 @@ const AuthorManager = () => {
       descriptionAuthor: author.descriptionAuthor || '',
       nationalityAuthor: author.nationalityAuthor || '',
       dobAuthor: author.dobAuthor || '',
+      dodAuthor: author.dodAuthor || '', // Thêm dodAuthor cho edit
       genderAuthor: author.genderAuthor || 'MALE',
       novels: Array.isArray(author.novels) ? author.novels.map(n => n.idNovel) : [],
     };
@@ -166,6 +217,7 @@ const AuthorManager = () => {
       descriptionAuthor: '',
       nationalityAuthor: '',
       dobAuthor: '',
+      dodAuthor: '', // Thêm reset dodAuthor
       genderAuthor: 'MALE',
       novels: [],
     });
@@ -413,6 +465,26 @@ const AuthorManager = () => {
                           required
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <label className={`flex items-center text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <Calendar className="w-5 h-5 mr-2" />
+                          Ngày Mất (tùy chọn)
+                        </label>
+                        <input
+                          type="date"
+                          value={newAuthor.dodAuthor}
+                          onChange={(e) => setNewAuthor({ ...newAuthor, dodAuthor: e.target.value })}
+                          className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 ${
+                            isDarkMode 
+                              ? 'bg-slate-700/50 border-slate-600 text-white focus:border-orange-500 focus:bg-slate-700/70' 
+                              : 'bg-white/80 border-orange-200 text-gray-900 focus:border-orange-500 focus:bg-white'
+                          } focus:ring-4 focus:ring-orange-500/20 focus:outline-none shadow-lg`}
+                        />
+                        <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Để trống nếu tác giả còn sống
+                        </p>
+                      </div>
                     </div>
 
                     {/* Gender */}
@@ -442,21 +514,29 @@ const AuthorManager = () => {
                         <BookOpen className="w-5 h-5 mr-2" />
                         Chọn Truyện
                       </label>
-                      <div className={`rounded-2xl border-2 ${isDarkMode ? 'border-slate-600' : 'border-orange-200'} overflow-hidden shadow-lg`}>
-                        <Select
+                      <Select
                           isMulti
+                          isDisabled={false}
                           options={novelOptions}
                           value={novelOptions.filter((opt) => newAuthor.novels.includes(opt.value))}
                           onChange={(selectedOptions) =>
                             setNewAuthor({
                               ...newAuthor,
-                              novels: selectedOptions.map((opt) => opt.value),
+                              novels: selectedOptions ? selectedOptions.map((opt) => opt.value) : [],
                             })
                           }
+                          onMenuOpen={() => console.log('Menu opened, novelOptions:', novelOptions)}
+                          onMenuClose={() => console.log('Menu closed')}
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          placeholder="Chọn các truyện của tác giả"
-                          noOptionsMessage={() => "Không có tùy chọn"}
+                          placeholder={novelOptions.length > 0 ? "Chọn các truyện của tác giả" : "Đang tải danh sách truyện..."}
+                          noOptionsMessage={() => novelOptions.length > 0 ? "Không có tùy chọn" : "Đang tải dữ liệu..."}
+                          isLoading={novelOptions.length === 0}
+                          menuPlacement="auto"
+                          menuShouldBlockScroll={false}
+                          menuShouldScrollIntoView={false}
+                          closeMenuOnScroll={false}
+                          blurInputOnSelect={false}
                           styles={{
                             control: (base, state) => ({
                               ...base,
@@ -467,6 +547,7 @@ const AuthorManager = () => {
                               border: 'none',
                               boxShadow: state.isFocused ? `0 0 0 4px ${isDarkMode ? 'rgb(249 115 22 / 0.2)' : 'rgb(249 115 22 / 0.2)'}` : 'none',
                               padding: '8px 16px',
+                              cursor: 'pointer',
                               '&:hover': {
                                 backgroundColor: isDarkMode ? 'rgb(51 65 85 / 0.7)' : 'rgb(255 255 255)',
                               }
@@ -478,6 +559,16 @@ const AuthorManager = () => {
                               border: `2px solid ${isDarkMode ? 'rgb(71 85 105)' : 'rgb(251 146 60)'}`,
                               boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04)',
                               marginTop: '8px',
+                              zIndex: 99999,
+                              position: 'absolute', // Về lại absolute để đúng vị trí
+                              width: '100%',
+                              pointerEvents: 'auto',
+                            }),
+                            menuList: (base) => ({
+                              ...base,
+                              maxHeight: '200px',
+                              overflowY: 'auto',
+                              padding: '8px',
                             }),
                             option: (base, state) => ({
                               ...base,
@@ -535,7 +626,6 @@ const AuthorManager = () => {
                             })
                           }}
                         />
-                      </div>
                     </div>
 
                     {/* Image Upload */}
@@ -676,10 +766,18 @@ const AuthorManager = () => {
                               <p className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} truncate`}>
                                 {author.nameAuthor}
                               </p>
-                              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} flex items-center mt-1`}>
-                                <Calendar className="w-4 h-4 mr-2" />
-                                {author.dobAuthor ? new Date(author.dobAuthor).toLocaleDateString('vi-VN') : 'Chưa có thông tin'}
-                              </p>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} space-y-1`}>
+                                <p className="flex items-center">
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Sinh: {author.dobAuthor ? new Date(author.dobAuthor).toLocaleDateString('vi-VN') : 'Chưa có thông tin'}
+                                </p>
+                                {author.dodAuthor && (
+                                  <p className="flex items-center">
+                                    <Calendar className="w-4 h-4 mr-2" />
+                                    Mất: {new Date(author.dodAuthor).toLocaleDateString('vi-VN')}
+                                  </p>
+                                )}
+                              </div>
                               {author.novels && author.novels.length > 0 && (
                                 <p className={`text-xs ${isDarkMode ? 'text-orange-400' : 'text-orange-600'} flex items-center mt-1`}>
                                   <BookOpen className="w-3 h-3 mr-1" />

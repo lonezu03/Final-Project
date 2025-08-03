@@ -54,12 +54,15 @@ const { loading, error: reduxError, currentUser } = useSelector((state) => state
 
     try {
       // Đợi cho đến khi đăng nhập hoàn tất
-      await dispatch(loginUserWithPassword(credentials)).unwrap();
+      const user = await dispatch(loginUserWithPassword(credentials)).unwrap();
 
-      // *** CHUYỂN HƯỚNG TRỰC TIẾP TẠI ĐÂY ***
-      // Nếu dòng await ở trên không ném lỗi, nghĩa là đã thành công.
-      // Chúng ta sẽ chuyển hướng ngay lập tức, không cần chờ useEffect.
-      console.log('Đăng nhập thành công từ handleSubmit! Đang chuyển hướng...');
+      // Kiểm tra quyền truy cập
+      if (user?.role !== "ADMIN") {
+        setLocalError('Tài khoản không có quyền truy cập trang quản trị.');
+        return;
+      }
+
+      // Nếu đúng quyền, chuyển hướng
       navigate('/admin', { replace: true });
 
     } catch (rejectedValue) {

@@ -19,10 +19,10 @@ import {
   Dashboard,
   CategoryManagement,
   NovelManagement,
-  CommentManagement,
   UserManager,
   RolePermissionManager
 } from "../pages";
+import CommentManagement from "@/pages/admin/CommentManagement";
 import ReportManagement from "@/pages/admin/ReportManagement";
 
 const adminTheme = createTheme({
@@ -63,9 +63,9 @@ const PreloadDataWrapper = ({ children }) => {
   const dispatch = useDispatch();
   useEffect(() => {
     // Chỉ tải dữ liệu này KHI người dùng đã được xác thực và vào trang admin
-    dispatch(getAllAuthors());
     dispatch(getAllNovels());
     dispatch(getAllCategories());
+    dispatch(getAllAuthors());
   }, [dispatch]);
   return children;
 };

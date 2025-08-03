@@ -111,7 +111,7 @@ export const refreshUserSession = createAsyncThunk(
   async (_, { getState, rejectWithValue }) => {
     const { token } = getState().user; // Lấy token từ Redux state
     if (!token) {
-      return rejectWithValue('Không có token để làm mới phiên.');
+      return rejectWithValue('');
     }
 
     try {
@@ -128,6 +128,7 @@ export const refreshUserSession = createAsyncThunk(
     } catch (error) {
       console.error("Lỗi làm mới phiên:", error.response?.data || error.message);
       return rejectWithValue('Phiên đăng nhập đã hết hạn hoặc không hợp lệ.');
+      
     }
   }
 );

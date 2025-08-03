@@ -74,19 +74,31 @@ export const getTransactions = createAsyncThunk(
 
 export const getAllTransactions = createAsyncThunk(
   'transaction/getAllTransactions',
-  async ({ statusDeposit = 'SUCCESS' }, { rejectWithValue }) => {
+  async ({ statusDeposit = 'SUCCESS', idUser }, { rejectWithValue }) => {
     try {
       const response = await apiClient.get(`/transaction/getAllTransaction?statusDeposit=${statusDeposit}`);
       if (response.data && response.data.code === 1000) {
         // Process all transactions to separate rented and purchased chapters
         const allTransactions = response.data.result || [];
         
+        // Filter transactions by current user if idUser is provided
+        const userTransactions = idUser 
+          ? allTransactions.filter(transaction => transaction.idUser === idUser)
+          : allTransactions;
+        
+        console.log('🔍 [getAllTransactions] Filter info:', {
+          totalTransactions: allTransactions.length,
+          userFilteredTransactions: userTransactions.length,
+          filteringByUserId: idUser,
+          userTransactionIds: userTransactions.map(t => t.idUser)
+        });
+        
         const rentedChapters = [];
         const purchasedChapters = [];
         const rentedNovels = {};
         const purchasedNovels = {};
 
-        allTransactions.forEach(transaction => {
+        userTransactions.forEach(transaction => {
           const novelBought = transaction.novelBought || {};
           
           Object.values(novelBought).forEach(novel => {

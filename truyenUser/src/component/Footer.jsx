@@ -1,4 +1,5 @@
 import React from "react";
+import { Link, useNavigate } from "react-router-dom"; // Thêm import
 import { useTheme } from "../context/ThemeContext"; // Import useTheme
 // Import các icon từ lucide-react
 import {
@@ -20,6 +21,12 @@ import {
 
 const Footer = () => {
   const { isDarkMode } = useTheme(); // Sử dụng theme context
+  const navigate = useNavigate(); // Thêm navigate hook
+  
+  // Hàm cuộn lên đầu trang
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   
   return (
     <footer className={`text-sm ${
@@ -39,8 +46,8 @@ const Footer = () => {
             }`} /> Giới Thiệu
           </h3>
           <p className="mb-4">
-            Đọc truyện online, truyện full, truyện hay được đóng góp bởi cộng đồng thành viên.
-            Web luôn cập nhật những bộ truyện mới thuộc các thể loại ngôn tình, đam mỹ, bách hợp...
+            Đọc truyện online, truyện full, truyện hay được đóng góp bởi cộng đồng thành viên, tác giả .
+            Web luôn cập nhật những bộ truyện mới thuộc các thể loại ngôn tình, tiên hiệp, truyện dịch...
           </p>
           <p>
             Tất cả nội dung tuân thủ luật pháp và bị xóa nếu vi phạm. Bản quyền thuộc về tác giả gốc.
@@ -61,29 +68,44 @@ const Footer = () => {
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
+            }`} onClick={scrollToTop}>
               <Search size={18} className="mr-2" /> Tìm kiếm
             </li>
-            <li className={`flex items-center transition-colors cursor-pointer ${
+            {/* <li className={`flex items-center transition-colors cursor-pointer ${
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
+            }`} onClick={scrollToTop}>
               <Trophy size={18} className="mr-2" /> Bảng xếp hạng
+            </li> */}
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`} onClick={() => navigate('/user/reading-history')}>
+              <PenSquare size={18} className="mr-2" /> Lịch sử đọc
             </li>
             <li className={`flex items-center transition-colors cursor-pointer ${
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
-              <PenSquare size={18} className="mr-2" /> Đăng truyện
+            }`} onClick={() => navigate('/user/my-bookshelf')}>
+              <BookOpen size={18} className="mr-2" /> Tủ truyện
+            </li>
+            
+            <li className={`flex items-center transition-colors cursor-pointer ${
+              isDarkMode 
+                ? 'hover:text-white' 
+                : 'hover:text-gray-800'
+            }`} onClick={() => navigate('/deposit')}>
+              <CreditCard size={18} className="mr-2" /> Nạp tiền
             </li>
             <li className={`flex items-center transition-colors cursor-pointer ${
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
-              <CreditCard size={18} className="mr-2" /> Nạp vàng
+            }`} onClick={() => navigate('/user/profile')}>
+              <Users size={18} className="mr-2" /> Cài đặt cá nhân
             </li>
           </ul>
           <div className="flex space-x-3 mt-6">
@@ -111,28 +133,28 @@ const Footer = () => {
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
+            }`} onClick={scrollToTop}>
               <BookOpen size={18} className="mr-2" /> Hướng dẫn
             </li>
             <li className={`flex items-center transition-colors cursor-pointer ${
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
+            }`} onClick={scrollToTop}>
               <Wrench size={18} className="mr-2" /> Các lỗi thường gặp
             </li>
             <li className={`flex items-center transition-colors cursor-pointer ${
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
+            }`} onClick={scrollToTop}>
               <MessageSquare size={18} className="mr-2" /> Chat với chúng tôi
             </li>
             <li className={`flex items-center transition-colors cursor-pointer ${
               isDarkMode 
                 ? 'hover:text-white' 
                 : 'hover:text-gray-800'
-            }`}>
+            }`} onClick={scrollToTop}>
               <Users size={18} className="mr-2" /> Nhóm thảo luận
             </li>
           </ul>

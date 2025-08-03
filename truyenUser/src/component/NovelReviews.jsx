@@ -1,6 +1,6 @@
 // src/components/NovelReviews.jsx
 
-import React from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { FaStar, FaUserCircle, FaTrash } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react';
@@ -103,22 +103,45 @@ const NovelReviews = () => {
     const { novelId } = useParams();
     const { isDarkMode } = useTheme();
     
+    // Debounce ref để tránh gọi API liên tục
+    const refreshTimeoutRef = useRef(null);
+    
     // Lấy dữ liệu reviews từ novelSlice
     const { reviews, loadingReviews, errorReviews } = useSelector((state) => state.novels);
     const { currentUser, loading: userLoading } = useSelector((state) => state.user);
+
+    // Debounced refresh function
+    const debouncedRefreshReviews = useCallback(() => {
+        if (refreshTimeoutRef.current) {
+            clearTimeout(refreshTimeoutRef.current);
+        }
+        refreshTimeoutRef.current = setTimeout(() => {
+            console.log('🔄 [NovelReviews] Refreshing reviews after delete');
+            dispatch(getAllReviews(novelId));
+        }, 1000); // 1 giây delay
+    }, [dispatch, novelId]);
 
     const handleDeleteReview = async (idUser, idNovel) => {
         if (window.confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) {
             try {
                 await dispatch(deleteReview({ idUser, idNovel })).unwrap();
                 toast.success('Xóa đánh giá thành công!');
-                // Reload reviews để cập nhật giao diện
-                dispatch(getAllReviews(novelId));
+                // Sử dụng debounced refresh để tránh spam API
+                debouncedRefreshReviews();
             } catch (error) {
                 toast.error(`Lỗi khi xóa đánh giá: ${error}`);
             }
         }
     };
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (refreshTimeoutRef.current) {
+                clearTimeout(refreshTimeoutRef.current);
+            }
+        };
+    }, []);
 
     if (loadingReviews) {
         return (

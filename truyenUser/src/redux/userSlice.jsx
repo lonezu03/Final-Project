@@ -780,7 +780,7 @@ const userSlice = createSlice({
       })
       .addCase(createHistory.fulfilled, (state, action) => {
         state.historyLoading = false;
-        state.historyActionStatus = action.payload.message || 'Lịch sử đọc đã được cập nhật.';
+        state.historyActionStatus = action.payload.message || '';
         // Không cần cập nhật userHistory ở đây vì đã được fetch từ App.jsx
         // và sẽ được refresh khi cần thiết
       })

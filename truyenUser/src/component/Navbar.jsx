@@ -236,7 +236,7 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
   };
 
   return (
-    <div className={`transition-colors duration-300 ${
+    <div className={` top-0 left-0 right-0 z-50 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-gray-900 text-white border-b border-gray-700' 
         : 'bg-blue-900 text-white'

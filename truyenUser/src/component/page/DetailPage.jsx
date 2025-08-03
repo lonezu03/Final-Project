@@ -22,7 +22,7 @@ const DetailPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme(); // Sử dụng theme context
-  const { currentNovel: novelDetailData, loading: novelLoading, error: novelError } = useSelector((state) => state.novels);
+  const { currentNovel: novelDetailData, loading: novelLoading, error: novelError, reviews, loadingReviews } = useSelector((state) => state.novels);
   const { chapters: chaptersFromApiForDetailPage, currentNovelId, loading: chaptersLoading, error: chaptersError } = useSelector((state) => {
     console.log('🔍 [DetailPage] Full Redux state.chapters:', JSON.stringify(state.chapters, null, 2));
     return state.chapters;
@@ -31,9 +31,9 @@ const DetailPage = () => {
   const [showReviewDialog, setShowReviewDialog] = useState(false); // THÊM: State để quản lý dialog
   const [activeTab, setActiveTab] = useState('summary');
   const [currentChapterListPage, setCurrentChapterListPage] = useState(1); // Đổi tên để rõ ràng
-  const chaptersPerPageInList = 50;
-  const { currentUser, followedNovels, userHistory } = useSelector((state) => state.user);
-  const { allTransactions } = useSelector((state) => state.transaction);
+  const chaptersPerPageInList = 5; // Giảm xuống 5 như ReadingPage để khớp với UI
+  const { currentUser, followedNovels, userHistory, loading: userLoading } = useSelector((state) => state.user);
+  const { allTransactions, error: transactionError } = useSelector((state) => state.transaction);
 
   // Utility function để kiểm tra loại page load
   const getPageLoadType = () => {
@@ -56,21 +56,18 @@ const DetailPage = () => {
     if (!allTransactions?.rentedNovels) return null;
     
     for (const novel of Object.values(allTransactions.rentedNovels)) {
-      if (novel.chapters && Array.isArray(novel.chapters)) {
-        const rentedChapter = novel.chapters.find(ch => String(ch.idChapter) === String(chapterId));
-        if (rentedChapter) {
-          const expirationDate = new Date(rentedChapter.dateEndRent);
-          const now = new Date();
-          const isExpired = now > expirationDate;
-          const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
-          
-          return {
-            isRented: true,
-            isExpired,
-            expirationDate,
-            daysLeft: isExpired ? 0 : daysLeft
-          };
-        }
+      const rentedChapter = novel.chapterBoughtRespone?.find(ch => ch.idChapter === chapterId);
+      if (rentedChapter && rentedChapter.rentExpiration) {
+        const expirationDate = new Date(rentedChapter.rentExpiration);
+        const now = new Date();
+        const isExpired = now > expirationDate;
+        
+        return {
+          isRented: true,
+          expirationDate,
+          isExpired,
+          daysLeft: isExpired ? 0 : Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24))
+        };
       }
     }
     return null;
@@ -80,6 +77,8 @@ const DetailPage = () => {
   const fetchedNovel = React.useRef({});
   const lastFetchedNovelId = React.useRef(null);
   const lastFetchedReviews = React.useRef(null); // Thêm ref cho reviews
+  const lastFetchedTransactionsUserId = React.useRef(null); // Track transaction fetch cho user
+  const reviewsTimeoutRef = React.useRef(null); // Debounce reviews API calls
   
   // Initialize refs safely - tránh undefined errors khi reload
   React.useEffect(() => {
@@ -118,24 +117,28 @@ const DetailPage = () => {
         fetchedLibrary.current = null;
       }
       
-      // Chỉ clear chapters data khi navigate between different novels
-      if (!pageLoadInfo.isReload && !pageLoadInfo.isFirstLoad && 
-          currentNovelId && currentNovelId !== novelId) {
-        console.log('🧹 [DetailPage] Clearing chapters for different novel:', currentNovelId, '->', novelId);
-        dispatch(clearChapterState());
-      }
+      // BỎ phần clear chapters - giờ luôn fetch mới mỗi lần
       
       setActiveTab('summary');
       setCurrentChapterListPage(1);
       
-      // Cache configuration với logic thông minh hơn
+      // Cache configuration với production safety
       const novelCacheKey = `novel_${novelId}`;
       const chaptersCacheKey = `chapters_${novelId}`;
       const reviewsCacheKey = `reviews_${novelId}`;
-      const cachedNovel = sessionStorage.getItem(novelCacheKey);
-      const cachedChapters = sessionStorage.getItem(chaptersCacheKey);
-      const cachedReviews = sessionStorage.getItem(reviewsCacheKey);
-      const cacheTimestamp = sessionStorage.getItem(`${novelCacheKey}_timestamp`);
+      
+      // Safe sessionStorage access với error handling
+      let cachedNovel, cachedChapters, cachedReviews, cacheTimestamp;
+      try {
+        cachedNovel = sessionStorage.getItem(novelCacheKey);
+        cachedChapters = sessionStorage.getItem(chaptersCacheKey);
+        cachedReviews = sessionStorage.getItem(reviewsCacheKey);
+        cacheTimestamp = sessionStorage.getItem(`${novelCacheKey}_timestamp`);
+      } catch (error) {
+        console.warn('⚠️ [DetailPage] SessionStorage access failed:', error);
+        // Fallback - force API calls when sessionStorage fails
+        cachedNovel = cachedChapters = cachedReviews = cacheTimestamp = null;
+      }
       
       // Dynamic cache duration based on load type
       let CACHE_DURATION;
@@ -149,93 +152,114 @@ const DetailPage = () => {
       
       const isCacheValid = cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < CACHE_DURATION;
       
-      // Smart store checking - avoid checking store on reload
-      const hasNovelInStore = !pageLoadInfo.isReload && novelDetailData && 
-                             String(novelDetailData.idNovel) === String(novelId);
-      const hasChaptersInStore = !pageLoadInfo.isReload && chaptersFromApiForDetailPage && 
-                                chaptersFromApiForDetailPage.length > 0 && 
-                                String(currentNovelId) === String(novelId);
+      // Smart store checking với fallback cho production  
+      // BỎ hasNovelInStore - novel luôn được fetch mới
+      // BỎ hasChaptersInStore - chapters luôn được fetch mới
+      
+      // BỎ Production safety checks - luôn fetch mới
       
       const apiPromises = [];
       
-      // Smart novel data fetching
-      if (!hasNovelInStore && (!cachedNovel || !isCacheValid)) {
-        console.log('🔄 [DetailPage] Fetching novel data for:', novelId);
-        apiPromises.push(
-          dispatch(getNovelById(novelId)).then((result) => {
-            if (result.payload) {
+      // SIMPLE novel data fetching - LUÔN GỌI MỖI LẦN VÀO COMPONENT
+      console.log('🔄 [DetailPage] Fetching novel data for:', novelId, '(always fetch)');
+      apiPromises.push(
+        dispatch(getNovelById(novelId)).then((result) => {
+          if (result.payload) {
+            try {
               sessionStorage.setItem(novelCacheKey, JSON.stringify(result.payload));
               sessionStorage.setItem(`${novelCacheKey}_timestamp`, Date.now().toString());
+            } catch (error) {
+              console.warn('⚠️ [DetailPage] Failed to save novel cache:', error);
             }
-            return result;
-          })
-        );
-      } else {
-        console.log('✅ [DetailPage] Using existing/cached novel data');
-      }
+          }
+          return result;
+        })
+      );
       
-      // Smart chapters data fetching
-      if (!hasChaptersInStore && (!cachedChapters || !isCacheValid)) {
-        console.log('🔄 [DetailPage] Fetching chapters data for:', novelId);
-        apiPromises.push(
-          dispatch(getAllChapters(novelId)).then((result) => {
-            if (result.payload) {
+      // SIMPLE chapters fetching - LUÔN GỌI MỖI LẦN VÀO COMPONENT
+      console.log('🔄 [DetailPage] Fetching chapters data for:', novelId, '(always fetch)');
+      apiPromises.push(
+        dispatch(getAllChapters(novelId)).then((result) => {
+          if (result.payload) {
+            try {
               sessionStorage.setItem(chaptersCacheKey, JSON.stringify(result.payload));
+            } catch (error) {
+              console.warn('⚠️ [DetailPage] Failed to save chapters cache:', error);
             }
-            return result;
-          })
-        );
-      } else {
-        console.log('✅ [DetailPage] Using existing/cached chapters data');
-      }
+          }
+          return result;
+        })
+      );
 
-      // Smart reviews fetching với optimized delay
-      if (String(lastFetchedReviews.current) !== String(novelId) && 
-          (!cachedReviews || !isCacheValid)) {
+      // Smart reviews fetching với optimized delay và better caching
+      const hasReviewsInStore = reviews && Array.isArray(reviews) && reviews.length >= 0; // Có thể là array rỗng
+      const shouldFetchReviews = String(lastFetchedReviews.current) !== String(novelId) && 
+                                (!cachedReviews || !isCacheValid) && 
+                                !loadingReviews; // Không fetch nếu đang loading
+      
+      if (shouldFetchReviews) {
         console.log('🔄 [DetailPage] Fetching reviews data for:', novelId);
-        lastFetchedReviews.current = novelId;
+        lastFetchedReviews.current = novelId; // Set ngay để tránh gọi lại
+        
+        // Clear existing timeout
+        if (reviewsTimeoutRef.current) {
+          clearTimeout(reviewsTimeoutRef.current);
+        }
         
         // Optimized delay based on load type
         const reviewDelay = pageLoadInfo.isReload ? 100 : 
                            pageLoadInfo.isBackForward ? 200 : 500;
         
-        setTimeout(() => {
-          dispatch(getAllReviews(novelId)).then((result) => {
-            if (result.payload) {
-              sessionStorage.setItem(reviewsCacheKey, JSON.stringify(result.payload));
-            }
-          });
+        reviewsTimeoutRef.current = setTimeout(() => {
+          // Double check trước khi gọi API
+          if (String(lastFetchedReviews.current) === String(novelId) && !loadingReviews) {
+            console.log('🔄 [DetailPage] Actually calling getAllReviews for:', novelId);
+            dispatch(getAllReviews(novelId)).then((result) => {
+              if (result.payload) {
+                try {
+                  sessionStorage.setItem(reviewsCacheKey, JSON.stringify(result.payload));
+                } catch (error) {
+                  console.warn('⚠️ [DetailPage] Failed to save reviews cache:', error);
+                }
+              }
+            }).catch((error) => {
+              console.error('❌ [DetailPage] Failed to fetch reviews:', error);
+              // Reset để có thể retry
+              if (String(lastFetchedReviews.current) === String(novelId)) {
+                lastFetchedReviews.current = null;
+              }
+            });
+          }
         }, reviewDelay);
+      } else if (hasReviewsInStore) {
+        console.log('✅ [DetailPage] Using existing reviews data');
       } else {
         console.log('✅ [DetailPage] Using existing/cached reviews data');
       }
       
-      // Execute API calls with comprehensive error handling
-      if (apiPromises.length > 0) {
-        console.log(`🔄 [DetailPage] Executing ${apiPromises.length} API calls...`);
-        Promise.allSettled(apiPromises).then((results) => {
-          const failures = results.filter(result => result.status === 'rejected');
-          if (failures.length > 0) {
-            console.warn('⚠️ [DetailPage] Some API calls failed:', failures);
-            // Retry failed calls after delay
-            setTimeout(() => {
-              failures.forEach((failure, index) => {
-                console.warn(`🔄 [DetailPage] Retrying failed API call ${index + 1}...`);
-              });
-            }, 2000);
-          } else {
-            console.log('✅ [DetailPage] All critical data loaded successfully');
-          }
-        });
-      } else {
-        console.log('✅ [DetailPage] No API calls needed - using cached/existing data');
-      }
+      // Execute API calls - LUÔN CÓ ÍT NHẤT 2 CALLS: novel + chapters
+      console.log(`🔄 [DetailPage] Executing ${apiPromises.length} API calls (novel + chapters always)...`);
+      Promise.allSettled(apiPromises).then((results) => {
+        const failures = results.filter(result => result.status === 'rejected');
+        if (failures.length > 0) {
+          console.warn('⚠️ [DetailPage] Some API calls failed:', failures);
+          // Retry failed calls after delay
+          setTimeout(() => {
+            failures.forEach((failure, index) => {
+              console.warn(`🔄 [DetailPage] Retrying failed API call ${index + 1}...`);
+            });
+          }, 2000);
+        } else {
+          console.log('✅ [DetailPage] All critical data loaded successfully');
+        }
+      });
       
       lastFetchedNovelId.current = novelId;
     } else {
       console.log('✅ [DetailPage] Data already available for novelId:', novelId);
     }
-  }, [dispatch, novelId, currentNovelId, novelDetailData, chaptersFromApiForDetailPage]);
+  }, [dispatch, novelId]); // ĐƠN GIẢN HÓA dependencies - chỉ cần dispatch và novelId
+  // NOTE: Bỏ hết dependencies phức tạp để tránh lỗi khi chuyển truyện
  // Tối ưu việc fetch danh sách theo dõi
  const fetchedLibrary = React.useRef(null);
  const previousUser = React.useRef(null);
@@ -254,13 +278,67 @@ const DetailPage = () => {
     }
   }, [currentUser?.idUser, dispatch]); // Chỉ theo dõi idUser
 
-  // Tối ưu: Không cần fetch transactions nữa vì đã có từ Home
-  // useEffect(() => {
-  //   if (currentUser?.idUser) {
-  //     console.log('🔄 [DetailPage] Fetching transactions for user:', currentUser.idUser);
-  //     dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }));
-  //   }
-  // }, [currentUser?.idUser, dispatch]);
+  // Fetch all transactions để kiểm tra chapter thuê - chỉ gọi 1 lần ở DetailPage
+  // Đợi user loading xong để tránh lỗi 401 khi token chưa được refresh
+  useEffect(() => {
+    // Chỉ gọi khi:
+    // 1. Có currentUser với idUser
+    // 2. User không đang loading (đã refresh xong)
+    // 3. Chưa fetch cho user này
+    if (currentUser?.idUser && !userLoading && 
+        lastFetchedTransactionsUserId.current !== currentUser.idUser) {
+      
+      // Thêm delay nhỏ để đảm bảo token đã được refresh (đặc biệt khi reload)
+      const delay = performance.getEntriesByType('navigation')[0]?.type === 'reload' ? 1000 : 500;
+      
+      console.log('🔄 [DetailPage] User ready, will fetch transactions for user:', currentUser.idUser, `in ${delay}ms`);
+      
+      const timeoutId = setTimeout(() => {
+        if (currentUser?.idUser && !userLoading) { // Double check
+          dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser.idUser }))
+            .unwrap()
+            .then(() => {
+              console.log('✅ [DetailPage] Transactions fetched successfully');
+              lastFetchedTransactionsUserId.current = currentUser.idUser;
+            })
+            .catch((error) => {
+              console.error('❌ [DetailPage] Failed to fetch transactions:', error);
+              // Nếu lỗi 401, có thể retry sau 1 giây (token có thể đang được refresh)
+              if (error?.status === 401 || error?.code === 401) {
+                console.log('🔄 [DetailPage] Got 401, will retry transactions in 2 seconds...');
+                setTimeout(() => {
+                  if (currentUser?.idUser && !userLoading) {
+                    console.log('🔄 [DetailPage] Retrying transactions fetch...');
+                    dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser.idUser }))
+                      .unwrap()
+                      .then(() => {
+                        console.log('✅ [DetailPage] Transactions retry successful');
+                        lastFetchedTransactionsUserId.current = currentUser.idUser;
+                      })
+                      .catch((retryError) => {
+                        console.error('❌ [DetailPage] Transactions retry failed:', retryError);
+                      });
+                  }
+                }, 2000);
+              }
+            });
+        }
+      }, delay);
+      
+      // Cleanup timeout if component unmounts or dependencies change
+      return () => clearTimeout(timeoutId);
+        
+    } else if (currentUser?.idUser && userLoading) {
+      console.log('⏳ [DetailPage] User still loading, waiting for refresh to complete...');
+    } else if (currentUser?.idUser && lastFetchedTransactionsUserId.current === currentUser.idUser) {
+      console.log('✅ [DetailPage] Transactions already fetched for user:', currentUser.idUser);
+    }
+    
+    // Reset khi user logout
+    if (!currentUser?.idUser && lastFetchedTransactionsUserId.current !== null) {
+      lastFetchedTransactionsUserId.current = null;
+    }
+  }, [currentUser?.idUser, userLoading, dispatch]);
 
   // Tối ưu: Chỉ track user login status change mà không clear toàn bộ cache
   useEffect(() => {
@@ -289,6 +367,12 @@ const DetailPage = () => {
         lastFetchedNovelId.current = null;
         lastFetchedReviews.current = null;
         fetchedLibrary.current = null;
+        lastFetchedTransactionsUserId.current = null;
+        
+        // Clear timeouts
+        if (reviewsTimeoutRef.current) {
+          clearTimeout(reviewsTimeoutRef.current);
+        }
       } else {
         console.log('🔄 [DetailPage] Page reload/hot reload detected, preserving data...');
       }
@@ -356,7 +440,7 @@ const DetailPage = () => {
 
     // Nếu chapter không miễn phí, yêu cầu đăng nhập
     if (!currentUser) {
-        toast.info("Vui lòng đăng nhập để đọc chương có phí này.");
+        toast.info("");
         navigate('/');
         return;
     } 
@@ -412,8 +496,21 @@ const DetailPage = () => {
       console.log('✅ [DetailPage] Using chapters for novel:', novelId, 'Total:', chaptersFromApiForDetailPage.length);
       console.log('📋 [DetailPage] Raw chapters data:', chaptersFromApiForDetailPage);
       
-      // Không sort gì cả, giữ nguyên thứ tự từ API để debug
-      return [...chaptersFromApiForDetailPage];
+      // Sắp xếp theo indexChapter tăng dần như ReadingPage (0-based)
+      const sorted = [...chaptersFromApiForDetailPage].sort((a, b) => {
+        const aIndex = a.indexChapter !== null && a.indexChapter !== undefined ? Number(a.indexChapter) : 999999;
+        const bIndex = b.indexChapter !== null && b.indexChapter !== undefined ? Number(b.indexChapter) : 999999;
+        return aIndex - bIndex;
+      });
+      
+      console.log('📋 [DetailPage] Sorted chapters by indexChapter:', sorted.map(ch => ({ 
+        id: ch.idChapter, 
+        indexChapter: ch.indexChapter,
+        displayNumber: ch.indexChapter !== null && ch.indexChapter !== undefined ? Number(ch.indexChapter) + 1 : 'N/A',
+        title: ch.titleChapter 
+      })));
+      
+      return sorted;
     }
     
     // Nếu chapters không thuộc về novel hiện tại hoặc chưa có data
@@ -542,7 +639,7 @@ const DetailPage = () => {
     ads: novelDetailData.ads || [{ id: 1, image: "https://tpc.googlesyndication.com/simgad/12350005988817403671" }],
   };
 
-  const totalChapterListPages = Math.ceil((storyDetails.chapters || 0) / chaptersPerPageInList) || 1;
+  const totalChapterListPages = Math.ceil(sortedChaptersForDetailPage.length / chaptersPerPageInList) || 1;
   const currentChaptersForTabDisplay = sortedChaptersForDetailPage.slice(
     (currentChapterListPage - 1) * chaptersPerPageInList,
     currentChapterListPage * chaptersPerPageInList
@@ -557,20 +654,31 @@ const DetailPage = () => {
   });
 
   const handleGoToChapterInTab = (chapterNum) => {
-    console.log('🔍 [DetailPage] Going to chapter number:', chapterNum);
-    const targetChapter = sortedChaptersForDetailPage.find(chap => chap.chapterNumber === chapterNum);
-    if (targetChapter?.idChapter) {
-      console.log('✅ [DetailPage] Found chapter, navigating to:', targetChapter.idChapter);
-      navigate(`/novel/${novelId}/chapter/${targetChapter.idChapter}`);
+    console.log('🔍 [DetailPage] Going to chapter display number:', chapterNum);
+    
+    // Chuyển sang tab chapters nếu chưa active
+    if (activeTab !== 'chapters') {
+      setActiveTab('chapters');
+    }
+    
+    // Tính toán page chứa chapter này
+    const targetPage = Math.ceil(chapterNum / chaptersPerPageInList);
+    
+    if (targetPage >= 1 && targetPage <= totalChapterListPages) {
+      console.log('📄 [DetailPage] Switching to page containing chapter:', chapterNum, 'on page:', targetPage);
+      setCurrentChapterListPage(targetPage);
+      
+      // Optional: Scroll to top of chapter list để user dễ thấy
+      setTimeout(() => {
+        const chapterListElement = document.querySelector('[data-chapter-list]');
+        if (chapterListElement) {
+          chapterListElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+      
     } else {
-      const targetPage = Math.ceil(chapterNum / chaptersPerPageInList);
-      if (targetPage >= 1 && targetPage <= totalChapterListPages) {
-        console.log('📄 [DetailPage] Chapter not in current page, switching to page:', targetPage);
-        setCurrentChapterListPage(targetPage);
-      } else {
-        console.warn('⚠️ [DetailPage] Invalid chapter number:', chapterNum);
-        alert("Số chương không hợp lệ.");
-      }
+      console.warn('⚠️ [DetailPage] Invalid chapter number:', chapterNum);
+      alert(`Số chương không hợp lệ. Vui lòng nhập số từ 1 đến ${sortedChaptersForDetailPage.length}.`);
     }
   };
 
@@ -767,12 +875,14 @@ const DetailPage = () => {
                 }`}>Đang tải danh sách chương...</p>}
                 {chaptersError && !currentChaptersForTabDisplay.length && <p className="text-red-500 text-center py-4">Lỗi tải chương. Phiên đăng nhập của bạn có thể đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.</p>}
                 {!chaptersLoading && !chaptersError && currentChaptersForTabDisplay.length > 0 && (
-                  <ChapterListDisplay
-                    chapters={currentChaptersForTabDisplay}
-                    novelId={novelId} // Truyền novelId xuống
-                    currentPage={currentChapterListPage}
-                    chaptersPerPage={chaptersPerPageInList}
-                  />
+                  <div data-chapter-list>
+                    <ChapterListDisplay
+                      chapters={currentChaptersForTabDisplay}
+                      novelId={novelId} // Truyền novelId xuống
+                      currentPage={currentChapterListPage}
+                      chaptersPerPage={chaptersPerPageInList}
+                    />
+                  </div>
                 )}
                 {!chaptersLoading && !chaptersError && sortedChaptersForDetailPage.length === 0 && (
                   <p className={`text-center py-4 ${

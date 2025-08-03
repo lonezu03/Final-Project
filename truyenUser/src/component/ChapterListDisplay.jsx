@@ -1,5 +1,5 @@
 
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -8,8 +8,8 @@ import { getChapterContentById } from '../redux/chapterSlice';
 import { useTheme } from '../context/ThemeContext'; // Import useTheme 
 
 // Import các action từ transactionSlice và userSlice
-import { createTransaction, confirmTransactions, resetTransactionState, getAllTransactions } from '../redux/transactionSlice';
-import { logoutUser, loginUserWithPassword } from '../redux/userSlice'; // Giả sử bạn có thông tin để login lại
+import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
+import { logoutUser, loginUserWithPassword, refreshUser } from '../redux/userSlice';
 
 // Utility functions cho giỏ hàng
 const getCartFromStorage = () => {
@@ -63,10 +63,17 @@ const RentDialog = ({ chapter, onConfirm, onCancel, loading, isDarkMode }) => {
   const finalDays = useCustomDays ? parseInt(customDays) || 1 : selectedDays;
   const totalPrice = calculateRentPrice(finalDays);
   
-  // Tính ngày hết hạn
+  // Tính ngày hết hạn với timezone +7 giờ (Việt Nam)
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + finalDays);
-  const endDateString = endDate.toLocaleDateString('vi-VN');
+  // Cộng 7 giờ để chuyển sang timezone Việt Nam
+  const vietnamEndDate = new Date(endDate.getTime() + (7 * 60 * 60 * 1000));
+  const endDateString = vietnamEndDate.toLocaleDateString('vi-VN', {
+    timeZone: 'UTC', // Hiển thị theo UTC vì đã adjust rồi
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
   
   const handleConfirm = () => {
     onConfirm(finalDays, totalPrice);
@@ -513,6 +520,9 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       // Refresh dữ liệu người dùng
       await dispatch(refreshUser()).unwrap();
       
+      // Không cần gọi getAllTransactions nữa vì đã được gọi ở Home
+      // và refreshUser sẽ cập nhật user data
+      
       toast.success("Đã thuê chương thành công!");
 
       // Điều hướng đến chương đã thuê
@@ -540,15 +550,20 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Fetch all transactions để kiểm tra chapter thuê
-  useEffect(() => {
-    if (currentUser?.idUser) {
-      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS' }));
-    }
-  }, [currentUser, dispatch]);
+  // Helper function để kiểm tra chapter có được mua không (memoized)
+  const isChapterPurchased = useCallback((chapterId) => {
+    // Kiểm tra trong currentUser.chapterBought (primary source)
+    const inUserData = currentUser?.chapterBought?.includes(chapterId);
+    
+    // Kiểm tra trong allTransactions.purchasedChapters (secondary source)
+    const inTransactionData = allTransactions?.purchasedChapters?.includes(chapterId);
+    
+    // Trả về true nếu có ít nhất 1 source confirm đã mua
+    return inUserData || inTransactionData;
+  }, [currentUser?.chapterBought, allTransactions?.purchasedChapters]);
 
-  // Helper function để kiểm tra chapter có được thuê không và còn hạn không
-  const getChapterRentInfo = (chapterId) => {
+  // Helper function để kiểm tra chapter có được thuê không và còn hạn không (memoized)
+  const getChapterRentInfo = useCallback((chapterId) => {
     if (!allTransactions?.rentedNovels) return null;
     
     for (const novel of Object.values(allTransactions.rentedNovels)) {
@@ -567,7 +582,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       }
     }
     return null;
-  };
+  }, [allTransactions?.rentedNovels]);
 
   const handleChapterClick = (chapter) => {
     // Kiểm tra nếu chapter yêu cầu đăng nhập
@@ -583,7 +598,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
     }
     
     // Kiểm tra nếu đã mua chapter
-    const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+    const isPurchased = isChapterPurchased(chapter.idChapter);
     if (isPurchased) {
       navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
       return;
@@ -600,7 +615,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
     toast.info("Bạn cần mua hoặc thuê chương này để đọc.");
   };
 
-  const handleAddToCart = (chapter) => {
+  const handleAddToCart = useCallback((chapter) => {
     if (!currentUser) {
       toast.info("Vui lòng đăng nhập để thêm vào giỏ hàng.");
       return;
@@ -619,7 +634,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
-    const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+    const isPurchased = isChapterPurchased(chapter.idChapter);
     if (isPurchased) {
       toast.info("Bạn đã sở hữu chương này.");
       return;
@@ -639,7 +654,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
     } else {
       toast.info("Chương này đã có trong giỏ hàng.");
     }
-  };
+  }, [currentUser, navigate, novelId, isChapterPurchased, getChapterRentInfo]);
 
   const handlePurchaseCart = () => {
     if (!currentUser) {
@@ -694,7 +709,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
     }
 
     // Kiểm tra nếu đã mua
-    const isPurchased = currentUser?.chapterBought?.includes(chapterToBuy.idChapter);
+    const isPurchased = isChapterPurchased(chapterToBuy.idChapter);
     if (isPurchased) {
       toast.info("Bạn đã sở hữu chương này.");
       navigate(`/novel/${novelId}/chapter/${chapterToBuy.idChapter}`);
@@ -745,6 +760,9 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
 
       // BƯỚC 2: Chờ refresh dữ liệu người dùng thành công
       await dispatch(refreshUser()).unwrap();
+      
+      // Không cần gọi getAllTransactions nữa vì đã được gọi ở Home
+      // và refreshUser sẽ cập nhật user data với chương đã mua
       
       // BƯỚC 3: Xóa các chương đã mua khỏi giỏ hàng
       const purchasedChapterIds = pendingTransaction.idChapters;
@@ -799,7 +817,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
-    const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+    const isPurchased = isChapterPurchased(chapter.idChapter);
     if (isPurchased) {
       toast.info("Bạn đã sở hữu chương này, không cần thuê.");
       return;
@@ -898,12 +916,14 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       )}
 
       <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 text-sm">
-        {chapters.map((chapter, index) => {
-          // Tính số chương hiển thị dựa trên index và trang hiện tại
-          const calculatedChapterNumber = (currentPage - 1) * chaptersPerPage + index + 1;
-          const chapterNumberDisplay = `Chương ${chapter.chapterNumber || calculatedChapterNumber}`;
+        {useMemo(() => chapters.map((chapter, index) => {
+          // Tính số chương hiển thị dựa trên indexChapter (giống ReadingPage)
+          const displayChapterNumber = chapter.indexChapter !== null && chapter.indexChapter !== undefined 
+            ? Number(chapter.indexChapter) 
+            : ((currentPage - 1) * chaptersPerPage + index + 1); // Fallback
+          const chapterNumberDisplay = `Chương ${displayChapterNumber}`;
           const chapterTitle = chapter.titleChapter || "Chưa có tiêu đề";
-          const isPurchased = currentUser?.chapterBought?.includes(chapter.idChapter);
+          const isPurchased = isChapterPurchased(chapter.idChapter);
           // Kiểm tra xem có đang tải chương này không
           const isDownloading = downloadingChapterId === chapter.idChapter;
           const coinPrice = chapter.coinPrice || 0; // Lấy giá từ API
@@ -1073,7 +1093,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
               </div>
             </li>
           );
-        })}
+        }), [chapters, currentPage, chaptersPerPage, isChapterPurchased, getChapterRentInfo, downloadingChapterId, cart, createStatus, confirmStatus, isDarkMode, currentNovel?.nameNovel])}
       </ul>
 
       {showConfirmDialog && pendingTransaction && (

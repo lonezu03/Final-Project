@@ -3,8 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { FaCalendarAlt, FaFilter, FaCheckCircle, FaTimesCircle, FaHourglassHalf } from 'react-icons/fa';
-import { Loader2 } from 'lucide-react';
+import { FaCalendarAlt, FaFilter, FaCheckCircle, FaTimesCircle, FaHourglassHalf, FaInfoCircle } from 'react-icons/fa';
+import { Loader2, BookX } from 'lucide-react';
 import Footer from "./Footer";
 import Pagination from './paginationHistorydeposit'; // <<--- THÊM: Import component Pagination
 
@@ -13,7 +13,10 @@ import Pagination from './paginationHistorydeposit'; // <<--- THÊM: Import comp
 
 const convertApiTimeToDate = (timeArray) => {
   if (!Array.isArray(timeArray) || timeArray.length < 3) return null;
-  return new Date(timeArray[0], timeArray[1] - 1, timeArray[2], timeArray[3] || 0, timeArray[4] || 0, timeArray[5] || 0);
+  const date = new Date(timeArray[0], timeArray[1] - 1, timeArray[2], timeArray[3] || 0, timeArray[4] || 0, timeArray[5] || 0);
+  // Cộng thêm 7 giờ để chuyển từ UTC sang UTC+7 (múi giờ Việt Nam)
+  date.setHours(date.getHours() + 7);
+  return date;
 };
 
 const formatDate = (date) => {
