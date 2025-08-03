@@ -74,7 +74,7 @@ public class ZaloPayController {
 		log.info("✅ Redirect sau thanh toán từ ZaloPay. ID lịch sử: {}", idHistoryDeposit);
 		historyDepositService.updateHistoryDeposit(idHistoryDeposit, StatusDeposit.SUCCESS);
 		// Redirect đến trang thành công của frontend
-		URI redirectUri = URI.create("https://webtruyen-git-fontend-phan-thanh-vus-projects.vercel.app/payment/callback-success");
+		URI redirectUri = URI.create("https://webtruyen-nu.vercel.app/payment/callback-success");
 		HttpHeaders headers = new HttpHeaders();
 		headers.setLocation(redirectUri);
 
