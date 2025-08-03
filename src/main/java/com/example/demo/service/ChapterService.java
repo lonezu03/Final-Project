@@ -122,6 +122,7 @@ public class ChapterService {
 				ChapterRespone chapterRespone = new ChapterRespone();
 				chapterRespone.setIdChapter(t.getIdChapter());
 				chapterRespone.setTitleChapter(t.getTitleChapter());
+				chapterRespone.setIndexChapter(t.getIndexChapter());
 				chapterRespone.setCoinPrice(t.getCoinPrice());
 				chapterRespone.setCointRentPrice(t.getCointRentPrice());
 				chapterRespone.setDayRentAmount(t.getDayRentAmount());
