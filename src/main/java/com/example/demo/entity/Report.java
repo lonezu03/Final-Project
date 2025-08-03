@@ -2,6 +2,7 @@ package com.example.demo.entity;
 
 import java.time.LocalDateTime;
 
+import com.example.demo.enums.StatusProcessingStatus;
 import com.example.demo.enums.StatusReport;
 
 import jakarta.persistence.Column;
@@ -30,5 +31,13 @@ public class Report {
 	@Enumerated(EnumType.STRING)
     private StatusReport statusReport;
 
+	@Enumerated(EnumType.STRING)
+    private StatusProcessingStatus statusProcessingStatus;
+	
     private LocalDateTime createdAt;
+    
+    private LocalDateTime updateAt;
+    
+    private LocalDateTime deleteAt;
+
 }

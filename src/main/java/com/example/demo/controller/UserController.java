@@ -25,6 +25,7 @@ import com.example.demo.JsonSchemaValidator;
 import com.example.demo.dto.request.CreateHistoryReadRequest;
 import com.example.demo.dto.request.HistoryDepositUpdateRequest;
 import com.example.demo.dto.request.ReportCreationRequest;
+import com.example.demo.dto.request.ReportUpdateRequest;
 import com.example.demo.dto.request.ReviewNovelCreationRequest;
 import com.example.demo.dto.request.UserCreationByEmailRequest;
 import com.example.demo.dto.request.UserCreationRequest;
@@ -360,4 +361,13 @@ public class UserController {
 		return ApiRespone.<List<Report>>builder().result(reportService.getReports()).build() ;
 	}
 	
+	@PutMapping("/updateReport")
+	public ApiRespone<Report> updateReport(@RequestBody ReportUpdateRequest request) {
+		return ApiRespone.<Report>builder().result(reportService.updateReport(request)).build() ;
+	}
+	
+	@DeleteMapping(value = "/deleteReport/{idReport}")
+	public ApiRespone<Report> deleteReport(@PathVariable Long idReport) {
+		return ApiRespone.<Report>builder().result(reportService.deleteReport(idReport)).build() ;
+	}
 }
