@@ -24,13 +24,11 @@ import com.example.demo.repository.IHistoryNotifyRepository;
 import com.example.demo.repository.INovelRepository;
 import com.example.demo.repository.ITransactionRepository;
 import com.example.demo.service.HistoryDepositService;
-import com.example.demo.service.NovelService;
 
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
@@ -45,7 +43,7 @@ public class NotifyUserScheduler {
 	IHistoryDepositRepository historyDepositRepository;
 	HistoryDepositService historyDepositService;
 	INovelRepository novelRepository;
-	NovelService novelService;
+//	NovelService novelService;
 	ICategoryRepository categoryRepository;
 	private static final Logger logger = LoggerFactory.getLogger(NotifyUserScheduler.class);
 

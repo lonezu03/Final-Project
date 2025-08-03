@@ -27,7 +27,7 @@ public interface ICommentMapper {
 	@Mapping(source = "replies", target = "replyComments")
 	@Mapping(source = "likes", target = "likes") // Mapping cho danh sách like
 	CommentRespone toCommentRespone(Comment comment);
-
+ 
 	@Mapping(target = "titleChapter", source = "chapter.titleChapter")
 	@Mapping(source = "user.userNameUser", target = "userName")
 	CommentNovelRespone toCommentNovelRespone(Comment comment);

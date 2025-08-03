@@ -37,7 +37,10 @@ public enum ErrorCode {
 	,NOVEL_CONVERT_CANNOT_HAVE_PRICE(1045,"Novel convert category cannot have price"),
 	PERMISSION_NOT_EXISTS(1046,"Permission not exists"),
 	ROLE_USER_NOT_EXISTS(1047,"Role user not exists"),
-	REPORT_NOT_EXISTS(1048,"Report not exists"),UNKNOW_ERROR(9999, "Unknow error");
+	REPORT_NOT_EXISTS(1048,"Report not exists")
+	,DISLIKE_COMMENT_VALUE_NULL(1048,"Dislike comment value null")
+	,LIKE_COMMENT_VALUE_NULL(1048,"Like comment value null")
+	,UNKNOW_ERROR(9999, "Unknow error");
 
 	private int code;
 	private String message;

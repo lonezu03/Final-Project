@@ -162,7 +162,13 @@ public class CommentService {
 	        comment.getLikes().remove(commentLike);
 	    } else {
 	        // Nếu chưa like => thêm like
-	        comment.setLikeComment(comment.getLikeComment() + 1);
+	    	if (comment.getLikeComment()==null) {
+		        comment.setLikeComment( 1);
+
+			}else {
+		        comment.setLikeComment(comment.getLikeComment() + 1);
+
+			}
 	        comment.getLikes().add(CommentLike.builder().comment(comment).user(user).build());
 	    }
 
@@ -202,7 +208,12 @@ public class CommentService {
 	        comment.getDislikes().remove(commentDislike);
 	    } else {
 	        // Nếu chưa dislike => thêm dislike
-	        comment.setDislikeComment(comment.getDislikeComment() + 1);
+	    	if (comment.getDislikeComment()==null) {
+		        comment.setDislikeComment(1);
+			}else {
+		        comment.setDislikeComment(comment.getDislikeComment() + 1);
+
+			}
 	        comment.getDislikes().add(CommentDislike.builder().comment(comment).user(user).build());
 	    }
 
