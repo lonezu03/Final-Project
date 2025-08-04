@@ -127,7 +127,7 @@ public class ChapterService {
 				chapterRespone.setCoinPrice(t.getCoinPrice());
 				chapterRespone.setCointRentPrice(t.getCointRentPrice());
 				chapterRespone.setDayRentAmount(t.getDayRentAmount());
-
+				chapterRespone.setViewChapter(t.getViewChapter());
 				return chapterRespone;
 			}).collect(Collectors.toList());
 		}
