@@ -74,7 +74,7 @@ public class NotifyUserScheduler {
 	}
 
 	@Transactional
-	@Scheduled(fixedRate = 60000)
+	@Scheduled(fixedRate = 10000)
 	public void updateNovel() {
 //    	logger.info("Start updateNovel scheduled task");
 
@@ -85,7 +85,7 @@ public class NotifyUserScheduler {
 		Category category2 = categoryRepository.findByNameCategory("Truyện Dịch");
 
 		if (category == null || category2 == null) {
-			logger.warn("One or both categories not found: Truyện Convert={}, Truyện Dịch={}", category != null,
+			logger.info("One or both categories not found: Truyện Convert={}, Truyện Dịch={}", category != null,
 					category2 != null);
 			return;
 		}
@@ -97,7 +97,7 @@ public class NotifyUserScheduler {
 				boolean hasConvert = novel.getCategories().contains(category);
 				boolean hasDich = novel.getCategories().contains(category2);
 
-				logger.debug("Novel ID={} - hasConvert={}, hasDich={}", novel.getIdNovel(), hasConvert, hasDich);
+//				logger.info("Novel ID={} - hasConvert={}, hasDich={}", novel.getIdNovel(), hasConvert, hasDich);
 
 				if (!hasConvert && !hasDich) {
 					novel.getCategories().add(category);
@@ -105,7 +105,9 @@ public class NotifyUserScheduler {
 					logger.info("Added 'Truyện Convert' to novel ID={}", novel.getIdNovel());
 				}
 			} else {
-				logger.debug("Novel ID={} has null or empty categories", novel.getIdNovel());
+				logger.info("Novel ID={} has null or empty categories", novel.getIdNovel());
+				novel.getCategories().add(category);
+				novelsToUpdate.add(novel);
 			}
 		}
 
@@ -113,10 +115,10 @@ public class NotifyUserScheduler {
 			novelRepository.saveAll(novelsToUpdate);
 			logger.info("Updated {} novels with new category", novelsToUpdate.size());
 		} else {
-//        	logger.info("No novels needed updating");
+        	logger.info("No novels needed updating");
 		}
 
-//        logger.info("Finished updateNovel scheduled task");
+        logger.info("Finished updateNovel scheduled task");
 	}
 
 	@Scheduled(fixedRate = 60000) // every 60 seconds

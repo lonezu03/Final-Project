@@ -49,6 +49,7 @@ public class User {
 
 	String emailUser;
 
+	@Column(name = "avatarUser",length =  500)
 	String avatarUser;
 
     @Column(name = "role",nullable = false)

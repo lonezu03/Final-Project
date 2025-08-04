@@ -93,8 +93,9 @@ public class ChapterService {
 								TtsJob latestJob = ttsJobs.stream().max(Comparator.comparing(TtsJob::getCreatedAt))
 										.orElse(null);
 
-								if (latestJob != null ) {
-									if (latestJob.getFinalAudioUrl()!= null && !latestJob.getFinalAudioUrl().isEmpty()) {
+								if (latestJob != null) {
+									if (latestJob.getFinalAudioUrl() != null
+											&& !latestJob.getFinalAudioUrl().isEmpty()) {
 										chapterRespone.setUrlAudio(latestJob.getFinalAudioUrl());
 
 									}
@@ -126,7 +127,7 @@ public class ChapterService {
 				chapterRespone.setCoinPrice(t.getCoinPrice());
 				chapterRespone.setCointRentPrice(t.getCointRentPrice());
 				chapterRespone.setDayRentAmount(t.getDayRentAmount());
-				
+
 				return chapterRespone;
 			}).collect(Collectors.toList());
 		}
@@ -183,20 +184,18 @@ public class ChapterService {
 		}
 
 		Chapter chapter = chapterMapper.toChapter(request);
-		
-		
+
 		Category category = categoryRepository.findByNameCategory("Truyện Convert");
 		Category category2 = categoryRepository.findByNameCategory("Truyện Dịch");
 
 		Novel novel = novelRepository.findById(request.getNovel()).get();
 
-		
 		chapter.setNovel(novel);
-		if (chapter.getNovel().getCategories()!=null && !chapter.getNovel().getCategories().isEmpty() ) {
-			if (chapter.getNovel().getCategories().contains(category) && chapter.getCoinPrice()!=0) {
-					throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
+		if (chapter.getNovel().getCategories() != null && !chapter.getNovel().getCategories().isEmpty()) {
+			if (chapter.getNovel().getCategories().contains(category) && (request.getCoinPrice() != 0 || request.getCointRentPrice()!=0)) {
+				throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
 			}
-			if (!chapter.getNovel().getCategories().contains(category2)&& chapter.getCoinPrice()!=0 ) {
+			if (!chapter.getNovel().getCategories().contains(category2) && (request.getCoinPrice() != 0 || request.getCointRentPrice()!=0)) {
 				throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
 			}
 		}
@@ -299,92 +298,88 @@ public class ChapterService {
 	 * @throws IOException nếu xảy ra lỗi khi đọc file
 	 */
 	public ChapterRespone updateChapter(ChapterUpdateRequest request, MultipartFile textFile) throws IOException {
-		try {
 
-			List<Chapter> chapters = chapterRepository.findByTitleChapter(request.getTitleChapter()).get();
-			boolean isDuplicate = chapters.stream()
-					.filter(chapter -> chapter.getNovel().getIdNovel().equals(request.getNovel()) && !chapter.getIdChapter().equals(request.getIdChapter())).findAny()
-					.isPresent();
+		List<Chapter> chapters = chapterRepository.findByTitleChapter(request.getTitleChapter()).get();
+		boolean isDuplicate = chapters.stream()
+				.filter(chapter -> chapter.getNovel().getIdNovel().equals(request.getNovel())
+						&& !chapter.getIdChapter().equals(request.getIdChapter()))
+				.findAny().isPresent();
 
-			if (isDuplicate) {
-				throw new AppException(ErrorCode.CHAPTER_EXISTSED);
+		if (isDuplicate) {
+			throw new AppException(ErrorCode.CHAPTER_EXISTSED);
+		}
+
+		logger.info("Bắt đầu updateChapter với idChapter = {}", request.getIdChapter());
+
+		// Bước 1: Tìm chapter gốc
+		Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter()).orElseThrow(() -> {
+			logger.warn("Không tìm thấy chapter với id = {}", request.getIdChapter());
+			return new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
+		});
+		logger.info("Đã tìm thấy chapter gốc: {}", chapterOgirin.getIdChapter());
+
+		Category category = categoryRepository.findByNameCategory("Truyện Convert");
+		Category category2 = categoryRepository.findByNameCategory("Truyện Dịch");
+
+		if (chapterOgirin.getNovel().getCategories() != null && !chapterOgirin.getNovel().getCategories().isEmpty()) {
+			if (chapterOgirin.getNovel().getCategories().contains(category) && (request.getCoinPrice() != 0 || request.getCointRentPrice()!=0)) {
+				throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
 			}
-
-			
-		
-			
-			
-			logger.info("Bắt đầu updateChapter với idChapter = {}", request.getIdChapter());
-
-			// Bước 1: Tìm chapter gốc
-			Chapter chapterOgirin = chapterRepository.findById(request.getIdChapter()).orElseThrow(() -> {
-				logger.warn("Không tìm thấy chapter với id = {}", request.getIdChapter());
-				return new AppException(ErrorCode.CHAPTER_NOT_EXISTED);
-			});
-			logger.info("Đã tìm thấy chapter gốc: {}", chapterOgirin.getIdChapter());
-
-			Category category = categoryRepository.findByNameCategory("Truyện Convert");
-			Category category2 = categoryRepository.findByNameCategory("Truyện Dịch");
-
-			if (chapterOgirin.getNovel().getCategories()!=null && !chapterOgirin.getNovel().getCategories().isEmpty() ) {
-				if (chapterOgirin.getNovel().getCategories().contains(category) && chapterOgirin.getCoinPrice()!=null) {
-						throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
-				}
-				if (!chapterOgirin.getNovel().getCategories().contains(category2)&& chapterOgirin.getCoinPrice()!=null) {
-					throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
-				}
+			if (!chapterOgirin.getNovel().getCategories().contains(category2) && (request.getCoinPrice() != 0 || request.getCointRentPrice()!=0)) {
+				throw new AppException(ErrorCode.NOVEL_CONVERT_CANNOT_HAVE_PRICE);
 			}
-			
-			// Bước 2: Map thông tin update vào entity
-			chapterMapper.updateChapter(request, chapterOgirin);
-			logger.info("Đã cập nhật thông tin từ request vào chapter");
+		}
 
-			// Bước 3: Tìm novel
-			Novel novel = novelRepository.findById(request.getNovel()).orElseThrow(() -> {
-				logger.warn("Không tìm thấy novel với id = {}", request.getNovel());
-				return new AppException(ErrorCode.NOVEL_NOT_EXISTED);
-			});
-			logger.info("Đã tìm thấy novel: {}", novel.getIdNovel());
+		// Bước 2: Map thông tin update vào entity
+		chapterMapper.updateChapter(request, chapterOgirin);
+		logger.info("Đã cập nhật thông tin từ request vào chapter");
 
-			// Bước 4: Kiểm tra chapter có thuộc novel không
-			if (!novel.getIdNovel().equals(chapterOgirin.getNovel().getIdNovel())) {
-				logger.warn("Novel không chứa chapter này: novelId={}, chapterNovelId={}", novel.getIdNovel(),
-						chapterOgirin.getNovel().getIdNovel());
-				throw new AppException(ErrorCode.NOVEL_NOT_CONTAIN_CHAPTER);
+		// Bước 3: Tìm novel
+		Novel novel = novelRepository.findById(request.getNovel()).orElseThrow(() -> {
+			logger.warn("Không tìm thấy novel với id = {}", request.getNovel());
+			return new AppException(ErrorCode.NOVEL_NOT_EXISTED);
+		});
+		logger.info("Đã tìm thấy novel: {}", novel.getIdNovel());
+
+		// Bước 4: Kiểm tra chapter có thuộc novel không
+		if (!novel.getIdNovel().equals(chapterOgirin.getNovel().getIdNovel())) {
+			logger.warn("Novel không chứa chapter này: novelId={}, chapterNovelId={}", novel.getIdNovel(),
+					chapterOgirin.getNovel().getIdNovel());
+			throw new AppException(ErrorCode.NOVEL_NOT_CONTAIN_CHAPTER);
+		}
+		logger.info("Novel chứa chapter hợp lệ");
+
+		// Bước 5: Nếu indexChapter chưa có thì gán index mới
+		if (chapterOgirin.getIndexChapter() == null) {
+			Long lastChapterNumber = chapterRepository.findTopByNovelOrderByIndexChapterDesc(novel)
+					.map(Chapter::getIndexChapter).orElse(0L);
+			chapterOgirin.setIndexChapter(lastChapterNumber + 1);
+			logger.info("Gán indexChapter mới: {}", chapterOgirin.getIndexChapter());
+		}
+
+		// Bước 6: Kiểm tra file txt
+		Boolean isHaveFile = false;
+		if (textFile != null && !textFile.isEmpty()) {
+			logger.info("File được gửi lên: {}", textFile.getOriginalFilename());
+
+			String originalFilename = textFile.getOriginalFilename();
+			if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
+				String cotent = new String(textFile.getBytes(), StandardCharsets.UTF_8);
+				isHaveFile = true;
+				chapterOgirin.setContentChapter(cotent);
+				logger.info("Nội dung chương đã được cập nhật từ file .txt");
+			} else {
+				logger.warn("File không đúng định dạng .txt");
+				throw new AppException(ErrorCode.FILE_MUST_TXT);
 			}
-			logger.info("Novel chứa chapter hợp lệ");
+		}
 
-			// Bước 5: Nếu indexChapter chưa có thì gán index mới
-			if (chapterOgirin.getIndexChapter() == null) {
-				Long lastChapterNumber = chapterRepository.findTopByNovelOrderByIndexChapterDesc(novel)
-						.map(Chapter::getIndexChapter).orElse(0L);
-				chapterOgirin.setIndexChapter(lastChapterNumber + 1);
-				logger.info("Gán indexChapter mới: {}", chapterOgirin.getIndexChapter());
-			}
+		// Bước 7: Lưu chapter
+		chapterOgirin = chapterRepository.save(chapterOgirin);
+		logger.info("Đã lưu chapter thành công: {}", chapterOgirin.getIdChapter());
 
-			// Bước 6: Kiểm tra file txt
-			Boolean isHaveFile = false;
-			if (textFile != null && !textFile.isEmpty()) {
-				logger.info("File được gửi lên: {}", textFile.getOriginalFilename());
-
-				String originalFilename = textFile.getOriginalFilename();
-				if (originalFilename != null && originalFilename.toLowerCase().endsWith(".txt")) {
-					String cotent = new String(textFile.getBytes(), StandardCharsets.UTF_8);
-					isHaveFile = true;
-					chapterOgirin.setContentChapter(cotent);
-					logger.info("Nội dung chương đã được cập nhật từ file .txt");
-				} else {
-					logger.warn("File không đúng định dạng .txt");
-					throw new AppException(ErrorCode.FILE_MUST_TXT);
-				}
-			}
-
-			// Bước 7: Lưu chapter
-			chapterOgirin = chapterRepository.save(chapterOgirin);
-			logger.info("Đã lưu chapter thành công: {}", chapterOgirin.getIdChapter());
-
-			// Bước 8: Nếu có file thì cập nhật job TTS
-			if (isHaveFile) {
+		// Bước 8: Nếu có file thì cập nhật job TTS
+		if (isHaveFile) {
 //				logger.info("Đang xử lý TTS job cho chapterId = {}", chapterOgirin.getIdChapter());
 //				
 //				TtsJob ttsJob = ttsJobRepository.findByIdChapter(chapterOgirin.getIdChapter())
@@ -402,36 +397,31 @@ public class ChapterService {
 //				    throw new AppException(ErrorCode.TTJOB_NOT_FOUND);
 //				}
 
-				ttsJobAsyncService.speakLongTextAsync(chapterOgirin.getContentChapter(), chapterOgirin.getIdChapter());
-				logger.info("TTS job đã được cập nhật lại");
-			}
-
-			// Bước 9: Gửi thông báo cho follower
-			List<FollowNovel> followNovels = followNovelRepository
-					.findByNovel_IdNovel(chapterOgirin.getNovel().getIdNovel());
-			logger.info("Có {} follower sẽ nhận thông báo", followNovels.size());
-
-			for (FollowNovel followNovel : followNovels) {
-				try {
-					HistoryNotityCreationRequest historyNotityCreationRequest = HistoryNotityCreationRequest.builder()
-							.user(followNovel.getUser()).nameNovel(followNovel.getNovel().getNameNovel())
-							.titleChapter(chapterOgirin.getTitleChapter()).build();
-					createHistoryNotify(historyNotityCreationRequest);
-					logger.info("Đã gửi thông báo tới user: {}", followNovel.getUser().getIdUser());
-				} catch (Exception e) {
-					logger.warn("Lỗi khi gửi thông báo tới follower: {}", followNovel.getUser().getIdUser());
-//					e.printStackTrace();
-				}
-			}
-
-			logger.info("Hoàn tất updateChapter");
-			return chapterMapper.toChapterRespone(chapterOgirin);
-
-		} catch (Exception e) {
-			logger.error("update chapter> try catch final - Lỗi xảy ra: {}", e.getMessage());
-//			e.printStackTrace();
-			throw new AppException(ErrorCode.UNKNOW_ERROR);
+			ttsJobAsyncService.speakLongTextAsync(chapterOgirin.getContentChapter(), chapterOgirin.getIdChapter());
+			logger.info("TTS job đã được cập nhật lại");
 		}
+
+		// Bước 9: Gửi thông báo cho follower
+		List<FollowNovel> followNovels = followNovelRepository
+				.findByNovel_IdNovel(chapterOgirin.getNovel().getIdNovel());
+		logger.info("Có {} follower sẽ nhận thông báo", followNovels.size());
+
+		for (FollowNovel followNovel : followNovels) {
+			try {
+				HistoryNotityCreationRequest historyNotityCreationRequest = HistoryNotityCreationRequest.builder()
+						.user(followNovel.getUser()).nameNovel(followNovel.getNovel().getNameNovel())
+						.titleChapter(chapterOgirin.getTitleChapter()).build();
+				createHistoryNotify(historyNotityCreationRequest);
+				logger.info("Đã gửi thông báo tới user: {}", followNovel.getUser().getIdUser());
+			} catch (Exception e) {
+				logger.warn("Lỗi khi gửi thông báo tới follower: {}", followNovel.getUser().getIdUser());
+//					e.printStackTrace();
+			}
+		}
+
+		logger.info("Hoàn tất updateChapter");
+		return chapterMapper.toChapterRespone(chapterOgirin);
+
 	}
 
 	/**

@@ -1,6 +1,8 @@
 package com.example.demo.dto.respone;
 
 
+import java.time.LocalDateTime;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +21,7 @@ public class NovelResponeForAuthor {
 	String nameNovel;
 	String descriptionNovel;
 	Integer totalChapter;
+	LocalDateTime delete_at;
 	String rating;
 	String statusNovel;
 	String imageNovel;
