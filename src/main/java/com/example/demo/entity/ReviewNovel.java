@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.example.demo.enums.Role;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
@@ -39,12 +40,16 @@ public class ReviewNovel {
 
 	private Short rating;
 	
+	@Column(name = "reviewMC",length = 500)
 	private String reviewMC;
-
+	
+	@Column(name = "reviewSC",length = 500)
 	private String reviewSC;
 	
+	@Column(name = "reviewWorld",length = 500)
 	private String reviewWorld;
 	
+	@Column(name = "reviewPersonal",length = 500)
 	private String reviewPersonal;
 	
 	private LocalDateTime reviewTime;

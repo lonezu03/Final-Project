@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -48,6 +50,8 @@ public class CommentService {
 	IChapterRepository chapterRepository;
 	ICommentLikeRepository commentLikeRepository;
 	ICommentDislikeRepository commentDislikeRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(CommentService.class);
 
 /**
  * Lấy danh sách tất cả comment theo ID chương.
@@ -124,8 +128,10 @@ public class CommentService {
 		User user = userRepository.findByIdUser(request.getUser())
 				.orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 		Chapter chapter = chapterRepository.findById(request.getIdchapter()).orElseThrow(() -> new AppException(ErrorCode.CHAPTER_NOT_EXISTED));
-
-		Comment comment = commentMapper.toCommentUpdate(request);
+		
+		Comment comment =commentRepository.findById(request.getIdComment()).orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_EXISTED));
+		logger.info("Like: "+comment.getLikeComment());
+		comment.setContentComment(request.getContentComment());
 		comment.setUser(user);
 		comment.setChapter(chapter);
 

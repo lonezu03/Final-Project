@@ -2,12 +2,15 @@ package com.example.demo.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
+import com.example.demo.dto.request.AuthorUpdateRequest;
 import com.example.demo.dto.request.CommentCreationRequest;
 import com.example.demo.dto.request.CommentUpdateRequest;
 import com.example.demo.dto.respone.CommentNovelRespone;
 import com.example.demo.dto.respone.CommentRespone;
 import com.example.demo.dto.respone.CommetLikeRespone;
+import com.example.demo.entity.Author;
 import com.example.demo.entity.Comment;
 import com.example.demo.entity.CommentLike;
 
@@ -21,7 +24,7 @@ public interface ICommentMapper {
 	@Mapping(target = "chapter", ignore = true)
 	@Mapping(target = "user", ignore = true)
 	Comment toCommentUpdate(CommentUpdateRequest request);
-
+	
 	@Mapping(source = "user.userNameUser", target = "userName")
 	@Mapping(source = "user.idUser", target = "idUser")
 	@Mapping(source = "replies", target = "replyComments")

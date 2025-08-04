@@ -48,6 +48,8 @@ public class Novel {
 	String idNovel;
 	String publicIDNovel;
 	String nameNovel;
+	
+	@Column(name = "descriptionNovel",length = 2048)
 	String descriptionNovel;
 	Integer totalChapter;
 

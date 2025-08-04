@@ -132,7 +132,7 @@ public class NovelService {
 		Novel novel = novelMapper.toNovel(request);
 		novel.setAuthors(new HashSet<>());
 		novel.setCategories(new HashSet<>());
-
+		novel.setTotalChapter(0);
 		if (request.getAuthors()!=null && !request.getAuthors().isEmpty()) {
 			List<Author> authors = authorRepository.findAllById(request.getAuthors());
 			for (Author author : authors) {
@@ -204,9 +204,12 @@ public class NovelService {
 			novel.setImageNovel(uploadFileRespone.getUrl());
 			novel.setPublicIDNovel(uploadFileRespone.getPublic_id());
 		}
-
-		return novelMapper.toNovelRespone(novelRepository.save(novel));
-//		return novelMapper.toNovelRespone(novel);
+	
+		NovelRespone respone= novelMapper.toNovelRespone(novelRepository.save(novel));
+		Double avg = reviewNovelRepository.findAverageRatingByNovelId(novel.getIdNovel());
+		respone.setRating(avg != null ? String.format("%.1f", avg) : "0");
+		return respone;
+		
 	}
 
 	/**

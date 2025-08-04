@@ -34,8 +34,8 @@ public class NovelSearchCriteriaRequest {
     //Dùng để kiểm tra người dùng đang follow truyện nào
     private String idUser;
     
-    private Boolean isDelete;
-    
+    private Boolean isDelete; 
+     
     // Tương ứng với byAuthorIds (đã sửa thành lọc theo tên)
     // Tên trường nên là nameAuthors hoặc authorNames để rõ nghĩa
     private List<String> authorNames;
