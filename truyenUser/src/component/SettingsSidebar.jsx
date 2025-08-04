@@ -71,7 +71,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black z-30 transition-opacity duration-300 ease-in-out ${
+        className={`fixed inset-0 bg-black z-50 transition-opacity duration-300 ease-in-out ${
           isOpen ? 'bg-opacity-50' : 'bg-opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -82,7 +82,7 @@ const SettingsSidebar = ({ isOpen, onClose, username, userLoggedIn = false }) =>
           isDarkMode 
             ? 'bg-gradient-to-br from-slate-900 via-gray-900 to-black text-white border-gray-600' 
             : 'bg-gradient-to-br from-white via-gray-50 to-gray-100 text-gray-800 border-gray-200'
-        } shadow-2xl z-40 transform transition-all duration-500 ease-in-out ${
+        } shadow-2xl z-50 transform transition-all duration-500 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         } flex flex-col border-l`}
       >

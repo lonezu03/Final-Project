@@ -44,12 +44,14 @@ const UserProfilePage = () => {
   const { isDarkMode } = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { currentUser, loading } = useSelector((state) => state.user);
+  const { currentUser } = useSelector((state) => state.user);
 
   // State cục bộ của component
   const [formData, setFormData] = useState({ userNameUser: '', dobUser: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const fileInputRef = useRef(null);
 
   // Hàm helper để chuyển đổi ngày tháng từ nhiều định dạng
@@ -104,6 +106,7 @@ const UserProfilePage = () => {
         dobUser: formData.dobUser // Gửi đi dưới dạng 'YYYY-MM-DD'
     };
 
+    setIsUpdatingProfile(true);
     dispatch(updateUserProfile(payload))
       .unwrap()
       .then(() => {
@@ -113,6 +116,9 @@ const UserProfilePage = () => {
       })
       .catch((err) => {
         toast.error(`Cập nhật thất bại: ${err.message || err}`);
+      })
+      .finally(() => {
+        setIsUpdatingProfile(false);
       });
   };
 
@@ -130,6 +136,19 @@ const UserProfilePage = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Kiểm tra kích thước file (tối đa 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Kích thước file không được vượt quá 5MB');
+        return;
+      }
+
+      // Kiểm tra định dạng file
+      if (!file.type.startsWith('image/')) {
+        toast.error('Vui lòng chọn file hình ảnh');
+        return;
+      }
+
+      setIsUploadingAvatar(true);
       // Action updateUserAvatar đã được sửa để chỉ cần file
       dispatch(uploadAvatar(file))
         .unwrap()
@@ -138,6 +157,13 @@ const UserProfilePage = () => {
         })
         .catch((err) => {
           toast.error(`Tải ảnh lên thất bại: ${err.message || err}`);
+        })
+        .finally(() => {
+          setIsUploadingAvatar(false);
+          // Reset input file để có thể chọn lại cùng file nếu cần
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
         });
     }
   };
@@ -159,12 +185,29 @@ const UserProfilePage = () => {
                 <img
                   src={currentUser.avatarUser || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.userNameUser || currentUser.emailUser[0])}&background=random&color=fff`}
                   alt="Avatar"
-                  className={`w-32 h-32 rounded-full object-cover border-4 shadow-md ${isDarkMode ? 'border-gray-900' : 'border-white'}`}
+                  className={`w-32 h-32 rounded-full object-cover border-4 shadow-md ${isDarkMode ? 'border-gray-900' : 'border-white'} ${isUploadingAvatar ? 'opacity-50' : ''}`}
                 />
-                <button onClick={() => fileInputRef.current.click()} className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center rounded-full transition-opacity cursor-pointer">
-                  <Camera className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={32} />
-                </button>
-                <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" className="hidden" />
+                {isUploadingAvatar ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black bg-opacity-50">
+                    <LucideSpinner className="text-white animate-spin" size={32} />
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => fileInputRef.current.click()} 
+                    disabled={isUploadingAvatar}
+                    className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center rounded-full transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <Camera className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={32} />
+                  </button>
+                )}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarChange} 
+                  accept="image/*" 
+                  className="hidden"
+                  disabled={isUploadingAvatar}
+                />
               </div>
               <h2 className={`mt-4 text-xl font-semibold break-words ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{currentUser.userNameUser}</h2>
               <p className={`text-sm break-all ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{currentUser.emailUser}</p>
@@ -183,9 +226,26 @@ const UserProfilePage = () => {
                 
                 {isEditing && (
                   <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                    <button type="submit" disabled={loading} className={`w-full sm:w-auto flex items-center justify-center px-4 py-2 rounded-md disabled:opacity-60 disabled:cursor-wait ${isDarkMode ? 'bg-blue-700 text-white hover:bg-blue-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}> 
-                      {loading ? <LucideSpinner className="animate-spin mr-2" size={18} /> : <Save className="mr-2" size={16} />}
-                      Lưu thay đổi
+                    <button 
+                      type="submit" 
+                      disabled={isUpdatingProfile} 
+                      className={`w-full sm:w-auto flex items-center justify-center px-4 py-2 rounded-md disabled:opacity-60 disabled:cursor-not-allowed ${
+                        isDarkMode 
+                          ? 'bg-blue-700 text-white hover:bg-blue-600' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    > 
+                      {isUpdatingProfile ? (
+                        <>
+                          <LucideSpinner className="animate-spin mr-2" size={18} />
+                          Đang cập nhật...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2" size={16} />
+                          Lưu thay đổi
+                        </>
+                      )}
                     </button>
                     <button type="button" onClick={handleCancelEdit} className={`w-full sm:w-auto px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>Hủy</button>
                   </div>

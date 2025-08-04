@@ -253,7 +253,7 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
         </Link>
 
         {/* Menu */}
-        <div className="hidden md:flex space-x-8">
+        {/* <div className="hidden md:flex space-x-8">
           {menuItems.map((menu, index) => (
             <div
               key={index}
@@ -292,7 +292,7 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
               )}
             </div>
           ))}
-        </div>
+        </div> */}
 
         {/* Search Bar & Icons */}
         <div className="flex space-x-3 sm:space-x-4 items-center">

@@ -76,25 +76,12 @@ const UserReadingHistory = () => {
   const [expandedNovelId, setExpandedNovelId] = useState(null);
   const [disableLinks, setDisableLinks] = useState(false); // Thêm trạng thái disable link
 
-  // Chỉ fetch lịch sử khi user đổi hoặc tab chuyển sang 'dangDoc', tránh spam API
-  // Bỏ việc fetch vì đã được fetch từ App.jsx
-  const fetchedHistory = React.useRef({});
+  // Luôn fetch lịch sử mỗi lần vào component này hoặc khi user đổi
   useEffect(() => {
-    // Không cần fetch nữa vì dữ liệu đã được load từ App.jsx
-    // Chỉ cần kiểm tra nếu chưa có dữ liệu và user đã đăng nhập thì mới fetch
-    if (currentUser?.idUser && activeTab === 'dangDoc' && (!userHistory || userHistory.length === 0)) {
-      if (!fetchedHistory.current[currentUser.idUser]) {
-        dispatch(getAllHistoryByUser(currentUser.idUser));
-        fetchedHistory.current[currentUser.idUser] = true;
-      }
+    if (currentUser?.idUser) {
+      dispatch(getAllHistoryByUser(currentUser.idUser));
     }
-    // Reset flag nếu user logout
-    return () => {
-      if (!currentUser?.idUser) {
-        fetchedHistory.current = {};
-      }
-    };
-  }, [dispatch, currentUser, activeTab, userHistory]);
+  }, [dispatch]);
 
   useEffect(() => {
     if (historyActionStatus) {

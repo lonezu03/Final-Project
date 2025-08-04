@@ -480,7 +480,8 @@ ${categoriesData.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join('
         onClick={() => {
           setIsChatting(true);
         }}
-        className="fixed bottom-4 right-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-full shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-110 z-50 animate-bounce"
+        className="fixed right-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-full shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-110 z-50 animate-bounce"
+        style={{ bottom: '70px' }}
         aria-label="Mở hộp thoại chat"
       >
         <Bot size={24} />
@@ -489,7 +490,7 @@ ${categoriesData.slice(0, 5).map(c => `"Thể loại ${c.nameCategory}"`).join('
   }
 
   return (
-    <div className={`fixed bottom-[50px] bottom-4 right-4 w-80 max-w-[calc(100vw-2rem)] ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl shadow-2xl z-50 border flex flex-col overflow-hidden max-h-[calc(100vh-2rem)]`}>
+    <div className={`fixed right-4 w-80 max-w-[calc(100vw-2rem)] ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl shadow-2xl z-50 border flex flex-col overflow-hidden max-h-[calc(100vh-2rem)]`} style={{ bottom: '70px' }}>
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex justify-between items-center flex-shrink-0">
         <div className="flex items-center gap-1">
           <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">

@@ -51,11 +51,6 @@ const LibraryPage = () => {
     allTransactionError
   } = useSelector((state) => state.transaction);
 
-  // Chỉ fetch khi user đổi hoặc khi chuyển tab, tránh spam API
-  const fetchedFollowed = React.useRef(false);
-  const fetchedPurchased = React.useRef(false);
-  const fetchedRented = React.useRef(false);
-
   useEffect(() => {
     if (!currentUser) {
       toast.info('Vui lòng đăng nhập để xem thư viện.');
@@ -63,45 +58,12 @@ const LibraryPage = () => {
       return;
     }
     
-    // Chỉ fetch truyện theo dõi nếu chưa có data và chưa fetch cho user hiện tại
-    if (!fetchedFollowed.current && !followedNovels.length) {
-      console.log('🔄 [LibraryPage] Fetching followed novels...');
-      dispatch(LyberiNovels({ idUser: currentUser.idUser }));
-      fetchedFollowed.current = true;
-    } else if (followedNovels.length > 0) {
-      console.log('✅ [LibraryPage] Followed novels already loaded:', followedNovels.length);
-      fetchedFollowed.current = true;
-    }
-    
-    // Chỉ fetch truyện đã mua nếu chưa có data và chưa fetch cho user hiện tại
-    if (!fetchedPurchased.current && (!transactions?.purchasedChapters?.length)) {
-      console.log('🔄 [LibraryPage] Fetching purchased chapters...');
-      dispatch(getTransactions({ idUser: currentUser.idUser }));
-      fetchedPurchased.current = true;
-    } else if (transactions?.purchasedChapters?.length > 0) {
-      console.log('✅ [LibraryPage] Purchased chapters already loaded:', transactions.purchasedChapters.length);
-      fetchedPurchased.current = true;
-    }
-    
-    // Chỉ fetch truyện đã thuê nếu chưa có data và chưa fetch cho user hiện tại
-    if (!fetchedRented.current && (!allTransactions?.rentedChapters?.length)) {
-      console.log('🔄 [LibraryPage] Fetching rented chapters...');
-      dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser.idUser }));
-      fetchedRented.current = true;
-    } else if (allTransactions?.rentedChapters?.length > 0) {
-      console.log('✅ [LibraryPage] Rented chapters already loaded:', allTransactions.rentedChapters.length);
-      fetchedRented.current = true;
-    }
-    
-    // Reset flag nếu user logout
-    return () => {
-      if (!currentUser?.idUser) {
-        fetchedFollowed.current = false;
-        fetchedPurchased.current = false;
-        fetchedRented.current = false;
-      }
-    };
-  }, [dispatch, currentUser, navigate, followedNovels.length, transactions?.purchasedChapters?.length, allTransactions?.rentedChapters?.length]);
+    // Gọi API mỗi khi vào trang thư viện
+    console.log('🔄 [LibraryPage] Fetching library data...');
+    dispatch(LyberiNovels({ idUser: currentUser.idUser }));
+    dispatch(getTransactions({ idUser: currentUser.idUser }));
+    dispatch(getAllTransactions({ statusDeposit: 'SUCCESS', idUser: currentUser.idUser }));
+  }, [dispatch, currentUser, navigate]);
 
   // Logic cho tab "Truyện đã mua"
   const purchasedItems = useMemo(() => {

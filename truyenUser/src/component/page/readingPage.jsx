@@ -544,7 +544,21 @@ useEffect(() => {
   let isActive = true;
 
   const loadUserHistory = async () => {
-    if (currentUser?.idUser && currentUser.idUser !== historyLoadedForUser.current) {
+    if (currentUser?.idUser) {
+      console.log("[Effect #3] Processing history for user:", currentUser.idUser, "chapterId:", chapterId);
+      
+      // Nếu đã load history cho user này rồi và chỉ thay đổi chương, không cần gọi API lại
+      if (historyLoadedForUser.current === currentUser.idUser) {
+        console.log("[Effect #3] Lịch sử đã có sẵn cho user này, chỉ cần refresh UI");
+        // Thêm small delay để đảm bảo không bị race condition với Effect chuyển chương
+        setTimeout(() => {
+          if (isActive) {
+            setHistoryLoadCompleted(true);
+          }
+        }, 10);
+        return;
+      }
+      
       console.log("[Effect #3] Tải lịch sử cho user:", currentUser.idUser);
       
       // Đánh dấu bắt đầu tải history
@@ -566,13 +580,9 @@ useEffect(() => {
           setHistoryLoadCompleted(true); // Vẫn đánh dấu completed dù có lỗi
         }
       }
-    } else if (!currentUser?.idUser) {
+    } else {
       // Không có user (chưa đăng nhập), coi như hoàn thành ngay lập tức
       console.log("[Effect #3] User chưa đăng nhập, bỏ qua việc tải lịch sử");
-      setHistoryLoadCompleted(true);
-    } else {
-      // User đã được tải rồi, coi như hoàn thành
-      console.log("[Effect #3] Lịch sử đã được tải cho user này");
       setHistoryLoadCompleted(true);
     }
   };
@@ -582,7 +592,7 @@ useEffect(() => {
   return () => {
     isActive = false;
   };
-}, [dispatch, currentUser?.idUser]); // Chỉ phụ thuộc vào user ID
+}, [dispatch, currentUser?.idUser, chapterId]); // Theo dõi cả user và chapter để refresh history UI
 
 // Effect để kiểm tra khi cả history và content đã load xong
 useEffect(() => {
@@ -597,6 +607,17 @@ useEffect(() => {
   } else {
     setIsInitialDataLoading(true);
     console.log("[Data Loading] ⏳ Still waiting for data...");
+    
+    // Thêm fallback timeout để tránh stuck loading - đặc biệt cho history
+    const fallbackTimeout = setTimeout(() => {
+      console.log("[Data Loading] Fallback timeout - forcing history completion if content is ready");
+      if (chapterContentLoadCompleted && !historyLoadCompleted) {
+        console.log("[Data Loading] Content ready but history stuck, forcing history completion");
+        setHistoryLoadCompleted(true);
+      }
+    }, 3000); // 3 giây timeout cho history
+    
+    return () => clearTimeout(fallbackTimeout);
   }
 }, [historyLoadCompleted, chapterContentLoadCompleted, currentUser?.idUser, novelId, chapterId]);
 
@@ -699,6 +720,8 @@ useEffect(() => {
   setIsInitialDataLoading(true);
   setHistoryLoadCompleted(false);
   setChapterContentLoadCompleted(false);
+  
+  // Không cần reset historyLoadedForUser.current vì chúng ta muốn tái sử dụng history đã load
 }, [chapterId]);
 
 // Khi ấn Đọc tiếp mới scroll tới vị trí đã lưu
@@ -769,7 +792,7 @@ useEffect(() => {
           .unwrap()
           .then(() => {
             // Chỉ refresh history nếu cần thiết (ví dụ: mỗi 5 lần lưu)
-             dispatch(refreshUserHistory()); // Tạm thời comment để giảm spam API
+            //  dispatch(refreshUserHistory()); // Tạm thời comment để giảm spam API
           })
           .catch(error => {
             console.error('Error creating history:', error);
@@ -1023,7 +1046,7 @@ useEffect(() => {
     if (currentChapterIndex !== -1 && chaptersForReadingPageDropdown?.[currentChapterIndex]) {
       const chap = chaptersForReadingPageDropdown[currentChapterIndex];
       if (chap.indexChapter !== null && chap.indexChapter !== undefined && !isNaN(chap.indexChapter)) {
-        return Number(chap.indexChapter) + 1; // Hiển thị từ 1
+        return Number(chap.indexChapter) ; // Hiển thị từ 1
       }
       if (chap.chapterNumber !== null && chap.chapterNumber !== undefined && chap.chapterNumber !== 'N/A' && !isNaN(Number(chap.chapterNumber))) {
         return Number(chap.chapterNumber);
@@ -1187,9 +1210,9 @@ useEffect(() => {
                     // Logic này giờ đã an toàn vì `indexChapter` được đảm bảo có trong `chap`
                     let displayindexChapter;
                     if (chap.indexChapter !== null && chap.indexChapter !== undefined && !isNaN(chap.indexChapter)) {
-                      displayindexChapter = Number(chap.indexChapter) + 1; // Hiển thị cho người dùng (từ 1)
+                      displayindexChapter = Number(chap.indexChapter) ; // Hiển thị cho người dùng (từ 1)
                     } else {
-                      displayindexChapter = index + 1;
+                      displayindexChapter = index ;
                     }
                     const chapterTitleText = chap.titleChapter || 'Chưa có tiêu đề';
                     const fullTitle = `Chương ${displayindexChapter}: ${chapterTitleText}`;
