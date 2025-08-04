@@ -250,7 +250,7 @@ const AuthorManager = () => {
       descriptionAuthor: '',
       nationalityAuthor: '',
       dobAuthor: '',
-      dodAuthor: '', // Thêm reset cho dodAuthor
+      dodAuthor: '', 
       genderAuthor: 'MALE',
       novels: [],
     });

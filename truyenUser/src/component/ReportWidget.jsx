@@ -66,7 +66,7 @@ const ReportWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 z-50">
+    <div className="fixed bottom-[50px] left-4 z-50 ">
       {/* Tooltip */}
       <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none ${
         isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-900 text-white'

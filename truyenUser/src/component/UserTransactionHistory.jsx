@@ -60,7 +60,7 @@ const getTransactionInfo = (txn) => {
                 typeText: 'Thuê truyện',
                 amount: txn.amountDeposit || txn.coinDeposit || 0,
                 currency: '',
-                isPositive: true,
+                isPositive: false,
             };
     }
 };

@@ -354,7 +354,13 @@ const handleAddCategorySubmit = (categoryId) => {
     if (image) {
       formData.append("image", image);
     }
-
+    if (!image&& !isEditing) {
+      // Nếu không có ảnh, fetch ảnh mặc định và append dưới dạng file
+      const response = await fetch(defaultNovelImage);
+      const blob = await response.blob();
+      const file = new File([blob], "default-image.png", { type: blob.type });
+      formData.append("image", file);
+    }
     try {
       if (isEditing) {
         // Thêm idNovel vào payload khi cập nhật

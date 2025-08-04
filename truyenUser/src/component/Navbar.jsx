@@ -304,7 +304,7 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="px-3 sm:px-4 py-2 w-full bg-blue-800 text-white rounded-md placeholder-gray-300 text-sm"
-                placeholder="Tên truyện, author:tác giả, category:thể loại"
+                placeholder="Tên truyện"
               />
             )}
             

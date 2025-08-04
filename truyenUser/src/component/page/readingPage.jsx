@@ -75,6 +75,26 @@ const { allTransactions } = useSelector((state) => state.transaction);
   const [historyLoadCompleted, setHistoryLoadCompleted] = useState(false);
   const [chapterContentLoadCompleted, setChapterContentLoadCompleted] = useState(false);
 
+  // Effect khởi tạo để xử lý trạng thái ban đầu
+  useEffect(() => {
+    // Nếu không có user khi component mount, ngay lập tức đánh dấu history load completed
+    if (!currentUser?.idUser) {
+      console.log("[Init] No user found, marking history as completed");
+      setHistoryLoadCompleted(true);
+    }
+
+    // Thêm timeout để đảm bảo không bị stuck loading mãi mãi
+    const loadingTimeout = setTimeout(() => {
+      console.log("[Init] Loading timeout reached, forcing completion");
+      setHistoryLoadCompleted(true);
+      setChapterContentLoadCompleted(true);
+    }, 5000); // Giảm xuống 5 giây timeout
+
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
+  }, []); // Chỉ chạy một lần khi mount
+
   const mainContentAreaRef = useRef(null);
   const [showAudioPlayer, setShowAudioPlayer] = useState(() => {
     const saved = localStorage.getItem('showAudioPlayer');
@@ -473,9 +493,10 @@ useEffect(() => {
         const result = await dispatch(getChapterContentById({ novelId, chapterId }));
         // Nếu lỗi (ví dụ: admin đã xóa chapter), điều hướng về trang truyện
         if (result?.error) {
+          console.error("[Effect #2] Error loading chapter content:", result.error);
           if (isCurrentRequest) {
             setChapterContentLoadCompleted(true);
-            navigate(`/novel/${novelId}`, { replace: true });
+            // navigate(`/novel/${novelId}`, { replace: true });
           }
           return;
         }
@@ -483,6 +504,7 @@ useEffect(() => {
         // Đánh dấu hoàn thành tải content
         if (isCurrentRequest) {
           setChapterContentLoadCompleted(true);
+          console.log("[Effect #2] Chapter content loaded successfully");
         }
 
         // TĂNG VIEW: chỉ gọi nếu chưa tăng view cho chương này trong session
@@ -501,6 +523,10 @@ useEffect(() => {
           setChapterContentLoadCompleted(true); // Vẫn đánh dấu completed dù có lỗi
         }
       }
+    } else {
+      // Nếu không có novelId hoặc chapterId, cũng đánh dấu completed
+      console.log("[Effect #2] Missing novelId or chapterId, marking content as completed");
+      setChapterContentLoadCompleted(true);
     }
   };
 
@@ -541,10 +567,12 @@ useEffect(() => {
         }
       }
     } else if (!currentUser?.idUser) {
-      // Không có user, coi như hoàn thành
+      // Không có user (chưa đăng nhập), coi như hoàn thành ngay lập tức
+      console.log("[Effect #3] User chưa đăng nhập, bỏ qua việc tải lịch sử");
       setHistoryLoadCompleted(true);
     } else {
       // User đã được tải rồi, coi như hoàn thành
+      console.log("[Effect #3] Lịch sử đã được tải cho user này");
       setHistoryLoadCompleted(true);
     }
   };
@@ -561,14 +589,16 @@ useEffect(() => {
   const bothCompleted = historyLoadCompleted && chapterContentLoadCompleted;
   
   console.log(`[Data Loading Status] History: ${historyLoadCompleted}, Content: ${chapterContentLoadCompleted}, Both: ${bothCompleted}`);
+  console.log(`[Data Loading Status] Current User: ${currentUser?.idUser || 'none'}, Novel: ${novelId}, Chapter: ${chapterId}`);
   
   if (bothCompleted) {
     setIsInitialDataLoading(false);
-    console.log("[Data Loading] All initial data loaded, ready for interactions");
+    console.log("[Data Loading] ✅ All initial data loaded, ready for interactions");
   } else {
     setIsInitialDataLoading(true);
+    console.log("[Data Loading] ⏳ Still waiting for data...");
   }
-}, [historyLoadCompleted, chapterContentLoadCompleted]);
+}, [historyLoadCompleted, chapterContentLoadCompleted, currentUser?.idUser, novelId, chapterId]);
 
 // Effect #4: Hiển thị dialog "ĐỌC TIẾP?" và set vị trí audio - CHỈ KHI ĐÃ LOAD XONG
 // Sử dụng ref để tránh hiển thị dialog nhiều lần cho cùng một chương
@@ -1053,7 +1083,7 @@ useEffect(() => {
   const renderErrorText = (err, type = "Nội dung") => (
     <div className="text-center py-10 text-red-500">Lỗi tải {type}: {typeof err === 'string' ? err : (err?.message || 'Đã có lỗi không xác định.')}</div>
   );
- // Kiểm tra quyền truy cập trước khi render để tránh flash content
+ // Kiểm tra quyền truy cập trước khi render để tránh flash content - chỉ khi có user
   if (currentUser && currentChapterContent) {
     // Sử dụng cùng logic như useEffect
     const chapterFromDropdown = chaptersForReadingPageDropdown?.find(ch => String(ch.idChapter) === String(chapterId));
@@ -1065,8 +1095,11 @@ useEffect(() => {
     }
   }
 
+  // Nếu không có user (chưa đăng nhập), bỏ qua việc check permission và cho phép đọc chapter miễn phí
+
   // Hiển thị loading khi đang tải dữ liệu ban đầu
   if (isInitialDataLoading) {
+    console.log("[Render] Showing loading screen - History:", historyLoadCompleted, "Content:", chapterContentLoadCompleted);
     return (
       <div className="flex flex-col justify-center items-center min-h-screen text-xl">
         <div className="mb-4">
@@ -1077,6 +1110,9 @@ useEffect(() => {
           <p className="text-sm text-gray-600">
             {!historyLoadCompleted && "⏳ Đang tải lịch sử đọc..."}
             {!chapterContentLoadCompleted && "⏳ Đang tải nội dung chương..."}
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            User: {currentUser?.idUser || 'Not logged in'} | Novel: {novelId} | Chapter: {chapterId}
           </p>
         </div>
       </div>
