@@ -125,7 +125,7 @@ public class NotifyUserScheduler {
 	public void deletePending() {
 		List<Transaction> transactions = transactionRepository.findAll();
 		for (Transaction transaction : transactions) {
-			long daysBetween = ChronoUnit.DAYS.between(transaction.getDateBuy(), LocalDateTime.now());
+			long daysBetween = ChronoUnit.MINUTES.between(transaction.getDateBuy(), LocalDateTime.now());
 			if (transaction.getStatusDeposit() == StatusDeposit.PENDING && daysBetween > 3) {
 				logger.info("Find transaction start delete: " + transaction.getIdTransaction());
 				transactionRepository.deleteById(transaction.getIdTransaction());
@@ -133,7 +133,7 @@ public class NotifyUserScheduler {
 		}
 		List<HistoryDeposit> historyDeposits = historyDepositRepository.findAll();
 		for (HistoryDeposit historyDeposit : historyDeposits) {
-			long daysBetween = ChronoUnit.DAYS.between(historyDeposit.getDateCreate(), LocalDateTime.now());
+			long daysBetween = ChronoUnit.MINUTES.between(historyDeposit.getDateCreate(), LocalDateTime.now());
 			if (historyDeposit.getStatusDeposit() == StatusDeposit.PENDING && daysBetween > 3) {
 				logger.info("Find history deposit start delete: " + historyDeposit.getIdHistoryDeposit());
 				historyDepositService.updateHistoryDeposit(historyDeposit.getIdHistoryDeposit(), StatusDeposit.FAILED);

@@ -44,7 +44,7 @@ public class ReportService {
 	            messagingTemplate.convertAndSendToUser(email, "/queue/report", report);
 	        }
 	}
-	
+	 
 	public List<Report> getReports(){
 		return reportRepository.findAll();
 	}

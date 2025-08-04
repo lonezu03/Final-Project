@@ -118,8 +118,8 @@ public class TransactionService {
 							.dateBuy(LocalDateTime.now()).dateEndRent(request.getDateEndRent())
 							.amountCoin(chap.getCoin()).statusDeposit(StatusDeposit.PENDING)
 							.typeTransaction(request.getTypeTransaction()).build();
-
-					transactions.add(transaction);
+//			LocalDateTime.now().plusMinutes(1)		
+					transactions.add(transaction); 
 
 					TypeDeposit typeDeposit;
 					if (request.getTypeTransaction() == TypeTransaction.BUY) {

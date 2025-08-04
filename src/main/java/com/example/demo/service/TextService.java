@@ -34,8 +34,8 @@ public class TextService {
     private final ITtsSubJobRepository ttsSubJobRepository;
 
 //    private static final String API_KEY = "Ox5oXSQpCVEATs6QYrTnLzrbodnM9qGN"; //email dh5211
-//    private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj";// eduongcoder
-    private static final String API_KEY ="DrbUov7PPQqKMtgWKkF77WEk8nrdKsVC"; //Email duongtuongdruong
+    private static final String API_KEY = "FN1fx4E5lEd5Qt5FHr0RmT5xE3GHXzuj";// eduongcoder
+//    private static final String API_KEY ="DrbUov7PPQqKMtgWKkF77WEk8nrdKsVC"; //Email duongtuongdruong
     private static final String API_URL = "https://api.fpt.ai/hmi/tts/v5";
 
     /**
