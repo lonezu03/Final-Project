@@ -34,10 +34,10 @@ const StorySlider = () => {
     if (cachedSlider) {
       try {
         const parsed = JSON.parse(cachedSlider);
-        console.log('✅ [StorySlider] Using cached slider data');
+        // console.log('✅ [StorySlider] Using cached slider data');
         return parsed;
       } catch (e) {
-        console.warn('⚠️ [StorySlider] Invalid cache, rebuilding');
+        // console.warn('⚠️ [StorySlider] Invalid cache, rebuilding');
       }
     }
     
@@ -48,8 +48,9 @@ const StorySlider = () => {
       .sort((a, b) => {
         const dateA = new Date(a.updatedAtNovel || a.createdAtNovel || 0);
         const dateB = new Date(b.updatedAtNovel || b.createdAtNovel || 0);
-        return dateB - dateA;
+        return dateA - dateB; // Đảo ngược: truyện cũ nhất lên đầu, mới nhất xuống cuối
       })
+      .reverse() // Đảo ngược toàn bộ danh sách để mới nhất lên đầu
       .slice(0, 10);
     
     // Lưu vào cache với expiry

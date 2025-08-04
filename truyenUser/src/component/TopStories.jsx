@@ -65,8 +65,15 @@ const TopStories = () => {
     };
 
     // Sắp xếp và lọc truyện (logic này có thể giữ nguyên)
-    const sortedByViews = [...novels].sort((a, b) => (b.viewNovel || 0) - (a.viewNovel || 0));
+    const sortedByViews = [...novels].sort((a, b) => (b.totalView || 0) - (a.totalView || 0));
     const sortedByRating = [...novels].sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+
+    // 🔍 DEBUG: Kiểm tra top 5 truyện có lượt view cao nhất
+    console.log('📊 [TopStories] Top 5 by views:', sortedByViews.slice(0, 5).map(n => ({
+      name: n.nameNovel,
+      totalView: n.totalView,
+      viewNovel: n.viewNovel // Kiểm tra xem có field này không
+    })));
 
     // Lọc ra các truyện không nằm trong top 1 của sortedByViews để tránh trùng lặp
     const topViewId = sortedByViews.length > 0 ? sortedByViews[0].idNovel : null;
