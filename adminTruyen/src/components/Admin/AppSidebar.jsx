@@ -19,7 +19,7 @@ const AppSidebar = forwardRef(({ collapsed }, ref) => {
             <div className="flex items-center gap-x-3 p-4 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
                     <img
-                        src={"/letter-t.png"}
+                        src={"/image.png"}
                         className="h-6 w-6"
                         alt={"Main-Logo"}
                     />

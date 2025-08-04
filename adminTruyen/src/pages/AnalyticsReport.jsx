@@ -29,7 +29,7 @@ const AnalyticsReport = () => {
     // Sử dụng state để lưu ngày tháng đầy đủ (YYYY-MM-DD)
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
 
-    // useEffect gọi API doanh thu (logic này của bạn đã đúng)
+    // useEffect gọi API doanh thu 
     useEffect(() => {
             const sortByForAPI = novelSortBy.replace(/([A-Z])/g, '_$1').toUpperCase();
 

@@ -508,144 +508,146 @@ const handleAddCategorySubmit = (categoryId) => {
         {showForm && (
           <>
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={cancelForm}></div>
-            <div className="fixed inset-0 flex justify-center items-center z-50 overflow-y-auto py-10">
-              <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-slate-700/50 w-full max-w-2xl p-8">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 text-center bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  {isEditing ? 'Chỉnh Sửa Truyện' : 'Tạo Truyện Mới'}
-                </h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label htmlFor="nameNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tên Truyện</label>
-                    <input 
-                      id="nameNovel" 
-                      name="nameNovel" 
-                      type="text" 
-                      required 
-                      defaultValue={isEditing ? currentNovel?.nameNovel : ''} 
-                      className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="descriptionNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Mô Tả</label>
-                    <textarea 
-                      id="descriptionNovel" 
-                      name="descriptionNovel" 
-                      rows="4" 
-                      defaultValue={isEditing ? currentNovel?.descriptionNovel : ''} 
-                      className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="statusNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Trạng Thái</label>
-                    <select 
-                      id="statusNovel" 
-                      name="statusNovel" 
-                      defaultValue={isEditing ? currentNovel?.statusNovel : 'CONTINUE'} 
-                      className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="CONTINUE">Đang tiến hành</option>
-                      <option value="COMPLETED">Hoàn thành</option>
-                      <option value="DROP">Tạm ngưng</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tác Giả</label>
-                    <Select
-                      isMulti
-                      options={authorOptions}
-                      className="basic-multi-select"
-                      classNamePrefix="select"
-                      defaultValue={authorOptions.filter(option => selectedAuthorIds.includes(option.value))}
-                      onChange={(selected) => setSelectedAuthorIds(selected.map(opt => opt.value))}
-                      placeholder="Chọn tác giả..."
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: theme === 'dark' ? 'rgb(51 65 85 / 0.7)' : 'rgb(255 255 255 / 0.7)',
-                          borderColor: theme === 'dark' ? 'rgb(71 85 105)' : 'rgb(199 210 254)',
-                          borderRadius: '0.75rem',
-                          padding: '0.5rem',
-                          backdropFilter: 'blur(4px)',
-                          '&:hover': {
-                            borderColor: 'rgb(99 102 241)'
-                          }
-                        }),
-                        multiValue: (base) => ({
-                          ...base,
-                          backgroundColor: 'rgb(99 102 241)',
-                          borderRadius: '0.5rem'
-                        }),
-                        multiValueLabel: (base) => ({
-                          ...base,
-                          color: 'white'
-                        })
-                      }}
-                    />
-                  </div> 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Thể Loại</label>
-                    <Select
-                      isMulti
-                      options={categoryOptions}
-                      className="basic-multi-select"
-                      classNamePrefix="select"
-                      defaultValue={categoryOptions.filter(option => selectedCategoryIds.includes(option.value))}
-                      onChange={(selected) => setSelectedCategoryIds(selected.map(opt => opt.value))}
-                      placeholder="Chọn thể loại..."
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: theme === 'dark' ? 'rgb(51 65 85 / 0.7)' : 'rgb(255 255 255 / 0.7)',
-                          borderColor: theme === 'dark' ? 'rgb(71 85 105)' : 'rgb(199 210 254)',
-                          borderRadius: '0.75rem',
-                          padding: '0.5rem',
-                          backdropFilter: 'blur(4px)',
-                          '&:hover': {
-                            borderColor: 'rgb(99 102 241)'
-                          }
-                        }),
-                        multiValue: (base) => ({
-                          ...base,
-                          backgroundColor: 'rgb(147 51 234)',
-                          borderRadius: '0.5rem'
-                        }),
-                        multiValueLabel: (base) => ({
-                          ...base,
-                          color: 'white'
-                        })
-                      }}
-                    />
-                  </div> 
-                  <div>
-                    <label htmlFor="image" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ảnh Bìa</label>
-                    <input 
-                      id="image" 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e) => setImage(e.target.files[0])} 
-                      className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      Nếu không chọn ảnh, hệ thống sẽ sử dụng ảnh mặc định
-                    </p>
-                  </div>
-                  <div className="flex gap-4 pt-4">
-                    <button 
-                      type="button" 
-                      onClick={cancelForm} 
-                      className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-all duration-200"
-                    >
-                      Hủy
-                    </button>
-                    <button 
-                      type="submit" 
-                      className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
-                      disabled={loading}
-                    >
-                      {loading ? 'Đang xử lý...' : isEditing ? 'Lưu Thay Đổi' : 'Tạo Truyện'}
-                    </button>
-                  </div>
-                </form>
+            <div className="fixed inset-0 flex justify-center items-center z-50 p-4">
+              <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-slate-700/50 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="p-8">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 text-center bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    {isEditing ? 'Chỉnh Sửa Truyện' : 'Tạo Truyện Mới'}
+                  </h2>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <label htmlFor="nameNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tên Truyện</label>
+                      <input 
+                        id="nameNovel" 
+                        name="nameNovel" 
+                        type="text" 
+                        required 
+                        defaultValue={isEditing ? currentNovel?.nameNovel : ''} 
+                        className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="descriptionNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Mô Tả</label>
+                      <textarea 
+                        id="descriptionNovel" 
+                        name="descriptionNovel" 
+                        rows="4" 
+                        defaultValue={isEditing ? currentNovel?.descriptionNovel : ''} 
+                        className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="statusNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Trạng Thái</label>
+                      <select 
+                        id="statusNovel" 
+                        name="statusNovel" 
+                        defaultValue={isEditing ? currentNovel?.statusNovel : 'CONTINUE'} 
+                        className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                      >
+                        <option value="CONTINUE">Đang tiến hành</option>
+                        <option value="COMPLETED">Hoàn thành</option>
+                        <option value="DROP">Tạm ngưng</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tác Giả</label>
+                      <Select
+                        isMulti
+                        options={authorOptions}
+                        className="basic-multi-select"
+                        classNamePrefix="select"
+                        defaultValue={authorOptions.filter(option => selectedAuthorIds.includes(option.value))}
+                        onChange={(selected) => setSelectedAuthorIds(selected.map(opt => opt.value))}
+                        placeholder="Chọn tác giả..."
+                        styles={{
+                          control: (base) => ({
+                            ...base,
+                            backgroundColor: theme === 'dark' ? 'rgb(51 65 85 / 0.7)' : 'rgb(255 255 255 / 0.7)',
+                            borderColor: theme === 'dark' ? 'rgb(71 85 105)' : 'rgb(199 210 254)',
+                            borderRadius: '0.75rem',
+                            padding: '0.5rem',
+                            backdropFilter: 'blur(4px)',
+                            '&:hover': {
+                              borderColor: 'rgb(99 102 241)'
+                            }
+                          }),
+                          multiValue: (base) => ({
+                            ...base,
+                            backgroundColor: 'rgb(99 102 241)',
+                            borderRadius: '0.5rem'
+                          }),
+                          multiValueLabel: (base) => ({
+                            ...base,
+                            color: 'white'
+                          })
+                        }}
+                      />
+                    </div> 
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Thể Loại</label>
+                      <Select
+                        isMulti
+                        options={categoryOptions}
+                        className="basic-multi-select"
+                        classNamePrefix="select"
+                        defaultValue={categoryOptions.filter(option => selectedCategoryIds.includes(option.value))}
+                        onChange={(selected) => setSelectedCategoryIds(selected.map(opt => opt.value))}
+                        placeholder="Chọn thể loại..."
+                        styles={{
+                          control: (base) => ({
+                            ...base,
+                            backgroundColor: theme === 'dark' ? 'rgb(51 65 85 / 0.7)' : 'rgb(255 255 255 / 0.7)',
+                            borderColor: theme === 'dark' ? 'rgb(71 85 105)' : 'rgb(199 210 254)',
+                            borderRadius: '0.75rem',
+                            padding: '0.5rem',
+                            backdropFilter: 'blur(4px)',
+                            '&:hover': {
+                              borderColor: 'rgb(99 102 241)'
+                            }
+                          }),
+                          multiValue: (base) => ({
+                            ...base,
+                            backgroundColor: 'rgb(147 51 234)',
+                            borderRadius: '0.5rem'
+                          }),
+                          multiValueLabel: (base) => ({
+                            ...base,
+                            color: 'white'
+                          })
+                        }}
+                      />
+                    </div> 
+                    <div>
+                      <label htmlFor="image" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ảnh Bìa</label>
+                      <input 
+                        id="image" 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => setImage(e.target.files[0])} 
+                        className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Nếu không chọn ảnh, hệ thống sẽ sử dụng ảnh mặc định
+                      </p>
+                    </div>
+                    <div className="flex gap-4 pt-4">
+                      <button 
+                        type="button" 
+                        onClick={cancelForm} 
+                        className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-all duration-200"
+                      >
+                        Hủy
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                        disabled={loading}
+                      >
+                        {loading ? 'Đang xử lý...' : isEditing ? 'Lưu Thay Đổi' : 'Tạo Truyện'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
           </>

@@ -38,19 +38,19 @@ function AdminReportListener({ onNewReport }) {
 
         // Connect callbacks
         stompClient.onConnect = (frame) => {
-          console.log('✅ Connected to STOMP WebSocket:', frame);
+          // console.log('✅ Connected to STOMP WebSocket:', frame);
           isReconnecting = false;
           
           // Subscribe to admin report topic
           stompClient.subscribe('/topic/admin/reports', (message) => {
             try {
               const reportData = JSON.parse(message.body);
-              console.log('📩 New report received from topic:', reportData);
+              // console.log('📩 New report received from topic:', reportData);
               if (onNewReport) {
                 onNewReport(reportData);
               }
             } catch (error) {
-              console.error('❌ Error parsing report message:', error);
+              // console.error('❌ Error parsing report message:', error);
             }
           });
 
@@ -58,12 +58,12 @@ function AdminReportListener({ onNewReport }) {
           stompClient.subscribe('/user/queue/report', (message) => {
             try {
               const reportData = JSON.parse(message.body);
-              console.log('📩 Personal report received from queue:', reportData);
+              // console.log('📩 Personal report received from queue:', reportData);
               if (onNewReport) {
                 onNewReport(reportData);
               }
             } catch (error) {
-              console.error('❌ Error parsing personal report message:', error);
+              // console.error('❌ Error parsing personal report message:', error);
             }
           });
 
@@ -71,7 +71,7 @@ function AdminReportListener({ onNewReport }) {
           stompClient.subscribe('/topic/admin/notifications', (message) => {
             try {
               const notificationData = JSON.parse(message.body);
-              console.log('🔔 New notification received:', notificationData);
+              // console.log('🔔 New notification received:', notificationData);
               if (onNewReport) {
                 onNewReport(notificationData);
               }
@@ -89,21 +89,21 @@ function AdminReportListener({ onNewReport }) {
         };
 
         stompClient.onWebSocketClose = () => {
-          console.log('👋 WebSocket connection closed');
+          // console.log('👋 WebSocket connection closed');
           if (!isReconnecting) {
             scheduleReconnect();
           }
         };
 
         stompClient.onWebSocketError = (error) => {
-          console.error('❌ WebSocket error:', error);
+          // console.error('❌ WebSocket error:', error);
         };
 
         // Activate the STOMP client
         stompClient.activate();
 
       } catch (error) {
-        console.error('❌ Failed to create STOMP connection:', error);
+        // console.error('❌ Failed to create STOMP connection:', error);
         scheduleReconnect();
       }
     };
@@ -115,7 +115,7 @@ function AdminReportListener({ onNewReport }) {
       
       if (!isReconnecting) {
         isReconnecting = true;
-        console.log('🔄 Scheduling reconnect in 5 seconds...');
+        // console.log('🔄 Scheduling reconnect in 5 seconds...');
         reconnectTimeout = setTimeout(() => {
           isReconnecting = false;
           connect();
@@ -128,13 +128,13 @@ function AdminReportListener({ onNewReport }) {
 
     // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up WebSocket connection...');
+      // console.log('🧹 Cleaning up WebSocket connection...');
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
       if (stompClient && stompClient.connected) {
         stompClient.deactivate();
-        console.log('👋 STOMP disconnected cleanly');
+        // console.log('👋 STOMP disconnected cleanly');
       }
     };
   }, [onNewReport]);

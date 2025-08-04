@@ -32,30 +32,7 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
 
     // State để quản lý thông báo real-time
     const [notifications, setNotifications] = useState([
-        // {
-        //     id: 1,
-        //     type: 'story',
-        //     title: '✨ Truyện mới được thêm',
-        //     message: 'Tác giả Nguyễn Văn An đã thêm truyện "Kiếm Đạo Độc Tôn"',
-        //     time: '2 phút trước',
-        //     isNew: true
-        // },
-        // {
-        //     id: 2,
-        //     type: 'comment',
-        //     title: '💬 Bình luận mới',
-        //     message: 'Người dùng reader123 đã bình luận truyện "Ma Đạo Tổ Sư"',
-        //     time: '5 phút trước',
-        //     isNew: true
-        // },
-        // {
-        //     id: 3,
-        //     type: 'review',
-        //     title: '⭐ Đánh giá mới',
-        //     message: 'Truyện "Douluo Đại Lục" nhận được đánh giá 5 sao',
-        //     time: '10 phút trước',
-        //     isNew: false
-        // }
+        
     ]);
 
     const [notificationCount, setNotificationCount] = useState(0);
@@ -308,14 +285,12 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
             <div className="flex items-center gap-4">
                 {/* Home Page Link */}
                 <a
-                    href="/"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="/admin"
                     className="group flex items-center gap-3 rounded-2xl bg-gradient-to-r from-orange-100 to-red-100 px-6 py-3 font-semibold text-orange-700 transition-all duration-300 hover:from-orange-200 hover:to-red-200 hover:shadow-xl hover:scale-105 dark:from-orange-900/30 dark:to-red-900/30 dark:text-orange-300 dark:hover:from-orange-800/40 dark:hover:to-red-800/40 border border-orange-200/50 dark:border-orange-700/30"
                 >
                     <img
                         className="h-6 w-6 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12"
-                        src="/letter-t.png"
+                        src="/image.png"
                         alt="Home"
                     />
                     <span className={cn(
@@ -370,7 +345,7 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                             <Moon className="h-5 w-5" />
                             Tối
                         </DropdownMenuItem>
-                        <DropdownMenuItem
+                        {/* <DropdownMenuItem
                             onClick={() => setTheme("system")}
                             className={cn(
                                 "flex items-center gap-3 rounded-xl m-2 p-3 transition-all duration-200 font-medium",
@@ -381,7 +356,7 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                         >
                             <Settings className="h-5 w-5" />
                             Hệ thống
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                     </DropdownMenuContent>
                 </DropdownMenu>
 
