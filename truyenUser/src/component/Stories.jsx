@@ -20,40 +20,22 @@ const Stories = () => {
   const [pendingPage, setPendingPage] = useState(null);
   const debounceTimeoutRef = useRef(null);
 
-  // Tối ưu: Cache pages đã load để tránh re-fetch
-  const loadedPagesRef = useRef(new Set([0])); // Page 0 đã load lần đầu
-
-  // Gọi API khi component mount với cache check
+  // Gọi API khi component mount - KHÔNG dùng cache
   useEffect(() => {
-    const cacheKey = `hot_novels_page_0_${PAGE_SIZE}`;
-    const cachedData = sessionStorage.getItem(cacheKey);
-    const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
-    const CACHE_DURATION = 10 * 60 * 1000; // 10 phút
-    
-    const isCacheValid = cachedData && cacheTimestamp && 
-                        (Date.now() - parseInt(cacheTimestamp)) < CACHE_DURATION;
-    
     if (hotNovelsData.length === 0) {
-      if (isCacheValid) {
-        console.log('✅ [Stories] Using cached hot novels data');
-        // Load từ cache nếu cần thiết (Redux store sẽ handle)
-      } else {
-        console.log('🔄 [Stories] Fetching hot novels (cache miss)');
-        dispatch(fetchHotNovels({ page: 0, size: PAGE_SIZE }))
-          .unwrap()
-          .then(() => {
-            sessionStorage.setItem(cacheKey, 'loaded');
-            sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-            loadedPagesRef.current.add(0);
-          })
-          .catch((error) => {
-            console.error('❌ [Stories] Failed to load hot novels:', error);
-          });
-      }
+      console.log('🔄 [Stories] Fetching hot novels (initial load)');
+      dispatch(fetchHotNovels({ page: 0, size: PAGE_SIZE }))
+        .unwrap()
+        .then(() => {
+          console.log('✅ [Stories] Initial load completed');
+        })
+        .catch((error) => {
+          console.error('❌ [Stories] Failed to load hot novels:', error);
+        });
     }
   }, [dispatch, hotNovelsData.length]);
 
-  // Tối ưu: Debounced page change với intelligent preloading
+  // Tối ưu: Debounced page change - KHÔNG dùng cache
   const handlePageChange = (page) => {
     if (page === currentPage || loading) return;
     
@@ -64,40 +46,17 @@ const Stories = () => {
     
     setPendingPage(page);
     
-    // Debounce API call
+    // Debounce API call - LUÔN gọi API mới
     debounceTimeoutRef.current = setTimeout(() => {
-      const cacheKey = `hot_novels_page_${page}_${PAGE_SIZE}`;
-      const hasCache = loadedPagesRef.current.has(page);
-      
-      if (!hasCache) {
-        console.log(`🔄 [Stories] Loading page ${page}`);
-        dispatch(fetchHotNovels({ page, size: PAGE_SIZE }))
-          .unwrap()
-          .then(() => {
-            loadedPagesRef.current.add(page);
-            // Preload adjacent pages intelligently
-            const preloadPages = [page - 1, page + 1].filter(p => 
-              p >= 0 && p < totalPages && !loadedPagesRef.current.has(p)
-            );
-            
-            preloadPages.forEach(preloadPage => {
-              setTimeout(() => {
-                if (!loadedPagesRef.current.has(preloadPage)) {
-                  console.log(`🔄 [Stories] Preloading page ${preloadPage}`);
-                  dispatch(fetchHotNovels({ page: preloadPage, size: PAGE_SIZE }))
-                    .unwrap()
-                    .then(() => loadedPagesRef.current.add(preloadPage))
-                    .catch(() => {}); // Silent fail for preload
-                }
-              }, 1000); // Delay preload
-            });
-          })
-          .catch((error) => {
-            console.error(`❌ [Stories] Failed to load page ${page}:`, error);
-          });
-      } else {
-        console.log(`✅ [Stories] Using cached page ${page}`);
-      }
+      console.log(`🔄 [Stories] Loading page ${page}`);
+      dispatch(fetchHotNovels({ page, size: PAGE_SIZE }))
+        .unwrap()
+        .then(() => {
+          console.log(`✅ [Stories] Page ${page} loaded successfully`);
+        })
+        .catch((error) => {
+          console.error(`❌ [Stories] Failed to load page ${page}:`, error);
+        });
       
       setPendingPage(null);
       
@@ -127,22 +86,42 @@ const Stories = () => {
   // Tối ưu: Show pending state during debounce
   const isActuallyLoading = loading || pendingPage !== null;
 
-  // Giao diện loading với improved UX
+  // Component Skeleton Loading
+  const SkeletonCard = () => (
+    <div className={`rounded-lg overflow-hidden shadow-md animate-pulse ${
+      isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
+    }`}>
+      <div className={`h-64 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+      <div className="p-3 space-y-2">
+        <div className={`h-4 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+        <div className={`h-3 rounded w-3/4 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+        <div className="flex justify-between items-center pt-2">
+          <div className={`h-3 rounded w-1/4 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+          <div className={`h-3 rounded w-1/3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Giao diện loading với improved UX - chỉ cho lần đầu load
   if (isActuallyLoading && hotNovelsData.length === 0) {
     return (
       <div id="hot-stories-section" className="container mx-auto p-4 sm:p-6">
         <h2 className={`text-2xl font-semibold mb-6 flex items-center ${
           isDarkMode ? 'text-gray-200' : 'text-gray-800'
         }`}>
-          Danh sách truyện <Flame size={28} className="ml-2 text-red-500" />
+          DANH SÁCH TRUYỆN <Flame size={28} className="ml-2 text-red-500" />
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-          {/* Skeleton loader */}
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className={`rounded-lg h-80 animate-pulse ${
-              isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
-            }`}></div>
+            <SkeletonCard key={index} />
           ))}
+        </div>
+        {/* Fake pagination để giữ layout */}
+        <div className="flex justify-center items-center mt-8 space-x-2">
+          <div className={`w-8 h-8 rounded animate-pulse ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+          <div className={`w-8 h-8 rounded animate-pulse ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+          <div className={`w-8 h-8 rounded animate-pulse ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
         </div>
       </div>
     );
@@ -174,20 +153,47 @@ const Stories = () => {
           DANH SÁCH TRUYỆN
           <Flame size={28} className="ml-2 text-red-500" />
         </h2>
+        {/* Loading indicator khi đang load page mới */}
+        {isActuallyLoading && (
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full animate-bounce ${isDarkMode ? 'bg-sky-400' : 'bg-sky-500'}`} style={{animationDelay: '0ms'}}></div>
+            <div className={`w-2 h-2 rounded-full animate-bounce ${isDarkMode ? 'bg-sky-400' : 'bg-sky-500'}`} style={{animationDelay: '150ms'}}></div>
+            <div className={`w-2 h-2 rounded-full animate-bounce ${isDarkMode ? 'bg-sky-400' : 'bg-sky-500'}`} style={{animationDelay: '300ms'}}></div>
+            <span className={`text-sm ml-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Đang tải...
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-        {hotNovelsData.map((novel) => (
-          <NovelCard key={novel.idNovel} novel={novel} />
-        ))}
+      {/* Overlay skeleton khi đang load để "đánh lừa" user */}
+      <div className="relative">
+        <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6 transition-opacity duration-300 ${
+          isActuallyLoading ? 'opacity-50' : 'opacity-100'
+        }`}>
+          {hotNovelsData.map((novel) => (
+            <NovelCard key={novel.idNovel} novel={novel} />
+          ))}
+        </div>
+        
+        {/* Skeleton overlay khi đang load page mới */}
+        {isActuallyLoading && hotNovelsData.length > 0 && (
+          <div className="absolute inset-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <SkeletonCard key={`skeleton-${index}`} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Render component phân trang */}
-      <Pagination 
-        currentPage={currentPage} 
-        totalPages={totalPages} 
-        onPageChange={handlePageChange}
-      />
+      <div className={`transition-opacity duration-300 ${isActuallyLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+        <Pagination 
+          currentPage={currentPage} 
+          totalPages={totalPages} 
+          onPageChange={handlePageChange}
+        />
+      </div>
     </div>
   );
 };

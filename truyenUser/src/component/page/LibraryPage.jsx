@@ -221,7 +221,7 @@ const LibraryPage = () => {
       const [year, month, day, hour, minute] = dateArray;
       // Tạo date với UTC và cộng 7 giờ để chuyển sang timezone Việt Nam
       const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      const vietnamDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000)); // +7 giờ
+      const vietnamDate = new Date(utcDate.getTime() + (0 * 60 * 60 * 1000)); // +8 giờ
       
       return vietnamDate.toLocaleDateString('vi-VN', {
         year: 'numeric',

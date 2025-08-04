@@ -323,8 +323,8 @@ const handleAddCategorySubmit = (categoryId) => {
       alert('Tên truyện phải có độ dài từ 3 đến 100 ký tự!');
       return;
     }
-    if (e.target.descriptionNovel.value.length > 200) {
-      alert('Mô tả có độ dài tối đa 200 ký tự!');
+    if (e.target.descriptionNovel.value.length > 2000) {
+      alert('Mô tả có độ dài tối đa 2000 ký tự!');
       return;
     }
     // Tạo payload từ các input của form
@@ -387,10 +387,10 @@ const handleAddCategorySubmit = (categoryId) => {
         <div className="mb-8 text-center">
           <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 bg-clip-text text-transparent mb-3">
-              Novel Management
+              Quản Lý Truyện
             </h1>
             <p className="text-slate-600 dark:text-slate-300 text-lg">
-              Manage your novel collection with ease
+              Quản lý bộ sưu tập truyện của bạn một cách dễ dàng
             </p>
           </div>
         </div>
@@ -400,7 +400,7 @@ const handleAddCategorySubmit = (categoryId) => {
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Novels</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tổng Truyện</p>
                 <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{novels.length}</p>
               </div>
               <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl">
@@ -412,7 +412,7 @@ const handleAddCategorySubmit = (categoryId) => {
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Ongoing</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Đang Tiến Hành</p>
                 <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                   {novels.filter(novel => novel.statusNovel === 'CONTINUE').length}
                 </p>
@@ -426,7 +426,7 @@ const handleAddCategorySubmit = (categoryId) => {
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Completed</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Hoàn Thành</p>
                 <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
                   {novels.filter(novel => novel.statusNovel === 'COMPLETED').length}
                 </p>
@@ -440,7 +440,7 @@ const handleAddCategorySubmit = (categoryId) => {
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Authors</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tác Giả</p>
                 <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{authors.length}</p>
               </div>
               <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
@@ -457,7 +457,7 @@ const handleAddCategorySubmit = (categoryId) => {
             className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
           >
             <Plus className="h-5 w-5" />
-            Add New Novel
+            Thêm Truyện Mới
           </button>
         </div>
 
@@ -468,11 +468,11 @@ const handleAddCategorySubmit = (categoryId) => {
             <div className="fixed inset-0 flex justify-center items-center z-50 overflow-y-auto py-10">
               <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-slate-700/50 w-full max-w-2xl p-8">
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 text-center bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  {isEditing ? 'Edit Novel' : 'Create New Novel'}
+                  {isEditing ? 'Chỉnh Sửa Truyện' : 'Tạo Truyện Mới'}
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label htmlFor="nameNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Novel Name</label>
+                    <label htmlFor="nameNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tên Truyện</label>
                     <input 
                       id="nameNovel" 
                       name="nameNovel" 
@@ -483,7 +483,7 @@ const handleAddCategorySubmit = (categoryId) => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="descriptionNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Description</label>
+                    <label htmlFor="descriptionNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Mô Tả</label>
                     <textarea 
                       id="descriptionNovel" 
                       name="descriptionNovel" 
@@ -493,20 +493,20 @@ const handleAddCategorySubmit = (categoryId) => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="statusNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Status</label>
+                    <label htmlFor="statusNovel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Trạng Thái</label>
                     <select 
                       id="statusNovel" 
                       name="statusNovel" 
                       defaultValue={isEditing ? currentNovel?.statusNovel : 'CONTINUE'} 
                       className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
                     >
-                      <option value="CONTINUE">Ongoing</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="DROP">Dropped</option>
+                      <option value="CONTINUE">Đang tiến hành</option>
+                      <option value="COMPLETED">Hoàn thành</option>
+                      <option value="DROP">Tạm ngưng</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Authors</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tác Giả</label>
                     <Select
                       isMulti
                       options={authorOptions}
@@ -514,7 +514,7 @@ const handleAddCategorySubmit = (categoryId) => {
                       classNamePrefix="select"
                       defaultValue={authorOptions.filter(option => selectedAuthorIds.includes(option.value))}
                       onChange={(selected) => setSelectedAuthorIds(selected.map(opt => opt.value))}
-                      placeholder="Select authors..."
+                      placeholder="Chọn tác giả..."
                       styles={{
                         control: (base) => ({
                           ...base,
@@ -540,7 +540,7 @@ const handleAddCategorySubmit = (categoryId) => {
                     />
                   </div> 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categories</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Thể Loại</label>
                     <Select
                       isMulti
                       options={categoryOptions}
@@ -548,7 +548,7 @@ const handleAddCategorySubmit = (categoryId) => {
                       classNamePrefix="select"
                       defaultValue={categoryOptions.filter(option => selectedCategoryIds.includes(option.value))}
                       onChange={(selected) => setSelectedCategoryIds(selected.map(opt => opt.value))}
-                      placeholder="Select categories..."
+                      placeholder="Chọn thể loại..."
                       styles={{
                         control: (base) => ({
                           ...base,
@@ -574,7 +574,7 @@ const handleAddCategorySubmit = (categoryId) => {
                     />
                   </div> 
                   <div>
-                    <label htmlFor="image" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Cover Image</label>
+                    <label htmlFor="image" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ảnh Bìa</label>
                     <input 
                       id="image" 
                       type="file" 
@@ -589,14 +589,14 @@ const handleAddCategorySubmit = (categoryId) => {
                       onClick={cancelForm} 
                       className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-all duration-200"
                     >
-                      Cancel
+                      Hủy
                     </button>
                     <button 
                       type="submit" 
                       className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
                       disabled={loading}
                     >
-                      {loading ? 'Processing...' : isEditing ? 'Save Changes' : 'Create Novel'}
+                      {loading ? 'Đang xử lý...' : isEditing ? 'Lưu Thay Đổi' : 'Tạo Truyện'}
                     </button>
                   </div>
                 </form>
@@ -609,14 +609,14 @@ const handleAddCategorySubmit = (categoryId) => {
         {loading && novels.length === 0 && (
           <div className="text-center mt-6">
             <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-8">
-              <p className="text-slate-600 dark:text-slate-300">Loading novels...</p>
+              <p className="text-slate-600 dark:text-slate-300">Đang tải truyện...</p>
             </div>
           </div>
         )}
         {error && (
           <div className="text-center mt-6">
             <div className="bg-red-50/80 dark:bg-red-900/20 backdrop-blur-xl rounded-2xl p-8 border border-red-200 dark:border-red-800">
-              <p className="text-red-600 dark:text-red-400">Error: {error}</p>
+              <p className="text-red-600 dark:text-red-400">Lỗi: {error}</p>
             </div>
           </div>
         )}
@@ -628,11 +628,11 @@ const handleAddCategorySubmit = (categoryId) => {
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-b border-indigo-200/50 dark:border-slate-700">
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">#</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Novel Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Status</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Chapters</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Rating</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Tên Truyện</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng Thái</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Chương</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Đánh Giá</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">Thao Tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -672,21 +672,21 @@ const handleAddCategorySubmit = (categoryId) => {
                     <td className="px-6 py-4">
                       <div className="flex justify-center items-center gap-x-2">
                         <button 
-                          title="Manage Chapters" 
+                          title="Quản lý Chương" 
                           className="p-2 text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all duration-200" 
                           onClick={(e) => { e.stopPropagation(); handleViewChapters(novel); }}
                         >
                           <BookOpen size={18} />
                         </button>
                         <button 
-                          title="Edit Novel" 
+                          title="Chỉnh sửa Truyện" 
                           className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200" 
                           onClick={(e) => { e.stopPropagation(); handleEditClick(novel); }}
                         >
                           <PencilLine size={18} />
                         </button>
                         <button 
-                          title="Delete Novel" 
+                          title="Xóa Truyện" 
                           className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200" 
                           onClick={(e) => { e.stopPropagation(); handleDeleteNovel(novel.idNovel); }}
                         >
@@ -694,7 +694,7 @@ const handleAddCategorySubmit = (categoryId) => {
                         </button>
                         <div className="relative">
                           <button 
-                            title="Preview" 
+                            title="Xem trước" 
                             className="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-all duration-200"
                             onClick={(e) => { e.stopPropagation(); setPreviewNovel(novel); }}
                           >
@@ -708,13 +708,13 @@ const handleAddCategorySubmit = (categoryId) => {
                                 onClick={() => { setNovelToUpdate(novel); setShowAddAuthorModal(true); setOpenDropdownId(null); }} 
                                 className="w-full text-left flex items-center gap-2 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-700/50 rounded-t-xl transition-colors duration-200"
                               >
-                                <UserPlus size={16} /> Add Author
+                                <UserPlus size={16} /> Thêm Tác Giả
                               </button>
                               <button 
                                 onClick={() => { setNovelToUpdate(novel); setShowAddCategoryModal(true); setOpenDropdownId(null); }} 
                                 className="w-full text-left flex items-center gap-2 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-700/50 rounded-b-xl transition-colors duration-200"
                               >
-                                <Tag size={16} /> Add Category
+                                <Tag size={16} /> Thêm Thể Loại
                               </button>
                             </div>
                           )}
@@ -736,17 +736,17 @@ const handleAddCategorySubmit = (categoryId) => {
               disabled={currentPage === 1} 
               className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              Previous
+              Trước
             </button>
             <span className="px-6 py-2 text-slate-700 dark:text-slate-300 font-medium">
-              Page {currentPage} / {Math.ceil(totalNovels / novelsPerPage) || 1}
+              Trang {currentPage} / {Math.ceil(totalNovels / novelsPerPage) || 1}
             </span>
             <button 
               onClick={() => paginate(currentPage + 1)} 
               disabled={currentPage === Math.ceil(totalNovels / novelsPerPage)} 
               className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              Next
+              Sau
             </button>
           </div>
         </div>
@@ -770,7 +770,7 @@ const handleAddCategorySubmit = (categoryId) => {
         <AddToNovelModal 
           show={showAddAuthorModal}
           onClose={() => setShowAddAuthorModal(false)}
-          title={`Add Author to: ${novelToUpdate?.nameNovel}`}
+          title={`Thêm Tác Giả cho: ${novelToUpdate?.nameNovel}`}
           options={authorOptions}
           onSubmit={handleAddAuthorSubmit}
           isLoading={loading}
@@ -778,7 +778,7 @@ const handleAddCategorySubmit = (categoryId) => {
         <AddToNovelModal 
           show={showAddCategoryModal}
           onClose={() => setShowAddCategoryModal(false)}
-          title={`Add Category to: ${novelToUpdate?.nameNovel}`}
+          title={`Thêm Thể Loại cho: ${novelToUpdate?.nameNovel}`}
           options={categoryOptions}
           onSubmit={handleAddCategorySubmit}
           isLoading={loading}

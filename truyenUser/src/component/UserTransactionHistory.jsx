@@ -15,7 +15,7 @@ const convertApiTimeToDate = (timeArray) => {
   if (!Array.isArray(timeArray) || timeArray.length < 3) return null;
   const date = new Date(timeArray[0], timeArray[1] - 1, timeArray[2], timeArray[3] || 0, timeArray[4] || 0, timeArray[5] || 0);
   // Cộng thêm 7 giờ để chuyển từ UTC sang UTC+7 (múi giờ Việt Nam)
-  date.setHours(date.getHours() + 7);
+  date.setHours(date.getHours() );
   return date;
 };
 
@@ -47,10 +47,17 @@ const getTransactionInfo = (txn) => {
                 currency: 'Coins',
                 isPositive: false,
             };
+            case 'RENT':
+            return {
+                typeText: 'Thuê truyện',
+                amount: txn.coinDeposit || 0,
+                currency: 'Coins',
+                isPositive: false,
+            };
         // Thêm các case khác nếu có (ví dụ: RÚT TIỀN, NÂNG CẤP VIP...)
         default:
             return {
-                typeText: 'Không xác định',
+                typeText: 'Thuê truyện',
                 amount: txn.amountDeposit || txn.coinDeposit || 0,
                 currency: '',
                 isPositive: true,

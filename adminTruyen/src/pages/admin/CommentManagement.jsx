@@ -467,7 +467,7 @@ const CommentManagement = () => {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Người dùng</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Nội dung</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Loại</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Thời gian</th>
+                  {/* <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Thời gian</th> */}
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Thao tác</th>
                 </tr>
               </thead>
@@ -544,11 +544,11 @@ const CommentManagement = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                      {/* <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
                         <div className="text-sm">
                           {comment.dateCreate ? formatDate(comment.dateCreate) : 'Không rõ'}
                         </div>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4">
                         <button
                           onClick={() => handleDeleteComment(comment)}

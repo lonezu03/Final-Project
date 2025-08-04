@@ -144,7 +144,6 @@ const RecommendedStories = () => {
         categoryNames: categories.slice(0, 5), // Danh sách tên thể loại
         statuses: ["COMPLETED"], // Sử dụng statuses thay vì statusNovel
         ratingGreaterThanOrEqual: 0, // Giảm xuống 0 để có nhiều kết quả hơn vì rating trong response là string "0"
-        isDelete: false, // Chỉ lấy truyện chưa bị xóa
       };
 
       const paginationParams = {
@@ -186,7 +185,6 @@ const RecommendedStories = () => {
           console.log('No results with strict criteria, trying with relaxed criteria...');
           const relaxedCriteria = {
             categoryNames: categories.slice(0, 3), // Chỉ lấy 3 thể loại phổ biến nhất
-            isDelete: false,
             // Bỏ điều kiện rating và status
           };
 
@@ -281,7 +279,6 @@ const RecommendedStories = () => {
       const searchCriteria = {
         statuses: ["COMPLETED"], // Sử dụng statuses thay vì statusNovel
         ratingGreaterThanOrEqual: 0, // Giảm xuống 0 vì rating trong response là string "0"
-        isDelete: false, // Chỉ lấy truyện chưa bị xóa
       };
 
       const paginationParams = {
@@ -299,7 +296,6 @@ const RecommendedStories = () => {
       } else {
         // Nếu không có kết quả, thử với criteria ít khắt khe hơn
         const relaxedCriteria = {
-          isDelete: false,
           // Bỏ điều kiện rating và status
         };
 

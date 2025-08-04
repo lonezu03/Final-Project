@@ -353,7 +353,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
   }
 
   // Lấy state mới từ Redux
-  const { currentUser } = useSelector((state) => state.user);
+  const { currentUser, loading: userLoading } = useSelector((state) => state.user);
   const { createStatus, confirmStatus, pendingTransaction, createError, allTransactions } = useSelector((state) => state.transaction);
   const { currentNovel } = useSelector((state) => state.novels);
 
@@ -591,8 +591,8 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
     
-    // Kiểm tra nếu chapter miễn phí (coinPrice = 0)
-    if ((chapter.coinPrice || 0) === 0) {
+    // Kiểm tra nếu chapter miễn phí thực sự (không có giá mua VÀ không có giá thuê)
+    if ((chapter.coinPrice || 0) === 0 && (chapter.cointRentPrice || 0) === 0) {
       navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
       return;
     }
@@ -627,8 +627,8 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
-    // Kiểm tra nếu chapter miễn phí
-    if ((chapter.coinPrice || 0) === 0) {
+    // Kiểm tra nếu chapter miễn phí thực sự
+    if ((chapter.coinPrice || 0) === 0 && (chapter.cointRentPrice || 0) === 0) {
       toast.info("Chương này miễn phí, bạn có thể đọc trực tiếp.");
       navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
       return;
@@ -700,9 +700,10 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
-    // Kiểm tra nếu chapter miễn phí
+    // Kiểm tra nếu chapter miễn phí thực sự
     const coinPrice = chapterToBuy.coinPrice || 0;
-    if (coinPrice === 0) {
+    const coinRentPrice = chapterToBuy.cointRentPrice || 0;
+    if (coinPrice === 0 && coinRentPrice === 0) {
       toast.info("Chương này miễn phí, bạn có thể đọc trực tiếp.");
       navigate(`/novel/${novelId}/chapter/${chapterToBuy.idChapter}`);
       return;
@@ -810,8 +811,8 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
-    // Kiểm tra nếu chapter miễn phí
-    if ((chapter.coinPrice || 0) === 0) {
+    // Kiểm tra nếu chapter miễn phí thực sự
+    if ((chapter.coinPrice || 0) === 0 && (chapter.cointRentPrice || 0) === 0) {
       toast.info("Chương này miễn phí, bạn có thể đọc trực tiếp.");
       navigate(`/novel/${novelId}/chapter/${chapter.idChapter}`);
       return;
@@ -893,25 +894,33 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
             </div>
             <button
               onClick={handlePurchaseCart}
-              disabled={createStatus === 'loading' || confirmStatus === 'loading'}
+              disabled={createStatus === 'loading' || confirmStatus === 'loading' || userLoading}
               className="px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
             >
-              {createStatus === 'loading' ? (
+              {(createStatus === 'loading' || confirmStatus === 'loading' || userLoading) ? (
                 <Loader2 className="animate-spin mr-1" size={14} />
               ) : (
                 <ShoppingCart className="mr-1" size={14} />
               )}
-              Mua tất cả
+              {userLoading ? 'Đang cập nhật...' : confirmStatus === 'loading' ? 'Đang xác nhận...' : 'Mua tất cả'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Màn hình loading che phủ khi đang TẠO giao dịch */}
-      {(createStatus === 'loading') && (
+      {/* Màn hình loading che phủ khi đang xử lý giao dịch */}
+      {(createStatus === 'loading' || confirmStatus === 'loading' || userLoading) && (
         <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-[9998]">
             <Loader2 className="animate-spin text-white" size={48} />
-            <p className="text-white mt-4">Đang tạo giao dịch...</p>
+            <p className="text-white mt-4">
+              {createStatus === 'loading' 
+                ? 'Đang tạo giao dịch...' 
+                : confirmStatus === 'loading'
+                ? 'Đang xác nhận giao dịch...'
+                : userLoading
+                ? 'Đang cập nhật dữ liệu người dùng...'
+                : 'Đang xử lý...'}
+            </p>
         </div>
       )}
 
@@ -937,9 +946,9 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
           // Kiểm tra thông tin thuê chapter
           const rentInfo = getChapterRentInfo(chapter.idChapter);
           const isRented = rentInfo?.isRented && !rentInfo?.isExpired;
-          // Kiểm tra chapter miễn phí
-          const isFree = coinPrice === 0;
-          // Kiểm tra có thể đọc không (đã mua, đã thuê, hoặc miễn phí)
+          // Kiểm tra chapter miễn phí thực sự (không có giá mua VÀ không có giá thuê)
+          const isFree = coinPrice === 0 && coinRentPrice === 0;
+          // Kiểm tra có thể đọc không (đã mua, đã thuê, hoặc miễn phí thực sự)
           const canRead = isPurchased || isRented || isFree;
           
           return (
@@ -1041,29 +1050,37 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                 ) : (
                   // Chưa mua, chưa thuê và không miễn phí - hiển thị các tùy chọn mua/thuê
                   <>
-                    {/* Nút thêm vào giỏ hàng */}
-                    <button
-                      onClick={() => handleAddToCart(chapter)}
-                      disabled={isInCart || createStatus === 'loading' || confirmStatus === 'loading'}
-                      className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 flex items-center ${
-                        isInCart 
-                          ? isDarkMode
-                            ? 'bg-blue-600 text-white cursor-not-allowed'
-                            : 'bg-blue-500 text-white cursor-not-allowed'
-                          : isDarkMode
-                          ? 'bg-blue-500 text-white hover:bg-blue-600'
-                          : 'bg-blue-400 text-white hover:bg-blue-500'
-                      }`}
-                      title={isInCart ? "Đã có trong giỏ" : "Thêm vào giỏ hàng"}
-                    >
-                      {isInCart ? <ShoppingCart size={14} /> : <Plus size={14} />}
-                    </button>
+                    {/* Nút thêm vào giỏ hàng - chỉ hiển thị nếu có giá mua */}
+                    {coinPrice > 0 && (
+                      <button
+                        onClick={() => handleAddToCart(chapter)}
+                        disabled={isInCart || createStatus === 'loading' || confirmStatus === 'loading' || userLoading}
+                        className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 flex items-center ${
+                          isInCart 
+                            ? isDarkMode
+                              ? 'bg-blue-600 text-white cursor-not-allowed'
+                              : 'bg-blue-500 text-white cursor-not-allowed'
+                            : isDarkMode
+                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                            : 'bg-blue-400 text-white hover:bg-blue-500'
+                        }`}
+                        title={isInCart ? "Đã có trong giỏ" : "Thêm vào giỏ hàng"}
+                      >
+                        {(createStatus === 'loading' || confirmStatus === 'loading' || userLoading) ? (
+                          <Loader2 className="animate-spin" size={14} />
+                        ) : isInCart ? (
+                          <ShoppingCart size={14} />
+                        ) : (
+                          <Plus size={14} />
+                        )}
+                      </button>
+                    )}
 
                     {/* Nút thuê chapter nếu hỗ trợ */}
                     {canRent && (
                       <button 
                         onClick={() => handleRentClick(chapter)}
-                        disabled={createStatus === 'loading' || confirmStatus === 'loading'}
+                        disabled={createStatus === 'loading' || confirmStatus === 'loading' || userLoading}
                         className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 flex items-center ${
                           isDarkMode 
                             ? 'bg-purple-500 text-white hover:bg-purple-600'
@@ -1071,29 +1088,38 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                         }`}
                         title={`Thuê ${dayRentAmount} ngày - ${coinRentPrice} coin`}
                       >
-                        <Clock size={14} />
+                        {(createStatus === 'loading' || confirmStatus === 'loading' || userLoading) ? (
+                          <Loader2 className="animate-spin" size={14} />
+                        ) : (
+                          <Clock size={14} />
+                        )}
                       </button>
                     )}
 
-                    {/* Nút mua ngay */}
-                    <button
-                      onClick={() => handlePurchaseClick(chapter)}
-                      disabled={createStatus === 'loading' || confirmStatus === 'loading'}
-                      className={`px-3 py-1.5 text-xs rounded transition-colors disabled:opacity-50 ${
-                        isDarkMode 
-                          ? 'bg-orange-500 text-white hover:bg-orange-600'
-                          : 'bg-orange-400 text-white hover:bg-orange-500'
-                      }`}
-                      title={`Mua ngay chương ${chapterTitle}`}
-                    >
-                      {coinPrice} xu
-                    </button>
+                    {/* Nút mua ngay - chỉ hiển thị nếu có giá mua */}
+                    {coinPrice > 0 && (
+                      <button
+                        onClick={() => handlePurchaseClick(chapter)}
+                        disabled={createStatus === 'loading' || confirmStatus === 'loading' || userLoading}
+                        className={`px-3 py-1.5 text-xs rounded transition-colors disabled:opacity-50 flex items-center ${
+                          isDarkMode 
+                            ? 'bg-orange-500 text-white hover:bg-orange-600'
+                            : 'bg-orange-400 text-white hover:bg-orange-500'
+                        }`}
+                        title={`Mua ngay chương ${chapterTitle}`}
+                      >
+                        {(createStatus === 'loading' || confirmStatus === 'loading' || userLoading) ? (
+                          <Loader2 className="animate-spin mr-1" size={12} />
+                        ) : null}
+                        {userLoading ? 'Đang cập nhật...' : confirmStatus === 'loading' ? 'Đang xác nhận...' : `${coinPrice} xu`}
+                      </button>
+                    )}
                   </>
                 )}
               </div>
             </li>
           );
-        }), [chapters, currentPage, chaptersPerPage, isChapterPurchased, getChapterRentInfo, downloadingChapterId, cart, createStatus, confirmStatus, isDarkMode, currentNovel?.nameNovel])}
+        }), [chapters, currentPage, chaptersPerPage, isChapterPurchased, getChapterRentInfo, downloadingChapterId, cart, createStatus, confirmStatus, userLoading, isDarkMode, currentNovel?.nameNovel])}
       </ul>
 
       {showConfirmDialog && pendingTransaction && (
@@ -1137,7 +1163,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
           chapter={chapterToRent}
           onConfirm={handleConfirmRent}
           onCancel={handleCancelRent}
-          loading={createStatus === 'loading'}
+          loading={createStatus === 'loading' || confirmStatus === 'loading' || userLoading}
           isDarkMode={isDarkMode}
         />
       )}

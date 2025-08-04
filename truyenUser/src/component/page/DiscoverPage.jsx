@@ -34,72 +34,123 @@ const DiscoverPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page')) || 1);
   const [pageSize] = useState(24); // Số truyện mỗi trang
-  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'rating');
   const [selectedCategories, setSelectedCategories] = useState(
     searchParams.get('categories')?.split(',').filter(Boolean) || []
   );
   const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '');
   const [minRating, setMinRating] = useState(parseFloat(searchParams.get('minRating')) || 0);
+  const [selectedAuthors, setSelectedAuthors] = useState(
+    searchParams.get('authors')?.split(',').filter(Boolean) || []
+  );
+  const [minChapters, setMinChapters] = useState(parseInt(searchParams.get('minChapters')) || 0);
+  const [maxChapters, setMaxChapters] = useState(parseInt(searchParams.get('maxChapters')) || 0);
+  
+  // State để lưu tất cả novels từ API
+  const [allNovels, setAllNovels] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Fetch initial data - Không cần fetch nữa vì đã load trong App.jsx
-  // useEffect(() => {
-  //   if (categories.length === 0) dispatch(getAllCategories());
-  //   if (authors.length === 0) dispatch(getAllAuthors());
-  // }, [dispatch, categories.length, authors.length]);
-
-  // Search novels when filters change
+  // Fetch all novels only once on component mount
   useEffect(() => {
-    handleSearch();
-  }, [currentPage, sortBy, selectedCategories, selectedStatus, minRating, searchTerm]);
+    const fetchAllNovels = async () => {
+      try {
+        setIsInitialLoading(true);
+        // Gọi API search với criteria rỗng để lấy tất cả novels
+        const result = await dispatch(searchNovels({
+          searchCriteria: { },
+          pageable: { page: 0, size: 1000 } // Lấy số lượng lớn để có tất cả data
+        })).unwrap();
+        
+        if (result && result.content) {
+          setAllNovels(result.content);
+        }
+      } catch (error) {
+        console.error('Failed to fetch all novels:', error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    fetchAllNovels();
+  }, [dispatch]);
+
+  // Client-side filtering và phân trang
+  const filteredNovels = useMemo(() => {
+    let filtered = [...allNovels];
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(novel => 
+        novel.nameNovel?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by categories
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(novel =>
+        novel.categories?.some(cat => selectedCategories.includes(cat.nameCategory))
+      );
+    }
+
+    // Filter by authors
+    if (selectedAuthors.length > 0) {
+      filtered = filtered.filter(novel =>
+        novel.authors?.some(author => selectedAuthors.includes(author.nameAuthor))
+      );
+    }
+
+    // Filter by status
+    if (selectedStatus) {
+      filtered = filtered.filter(novel => novel.statusNovel === selectedStatus);
+    }
+
+    // Filter by rating
+    if (minRating > 0) {
+      filtered = filtered.filter(novel => {
+        const rating = parseFloat(novel.rating) || 0;
+        return rating >= minRating;
+      });
+    }
+
+    // Filter by chapters
+    if (minChapters > 0) {
+      filtered = filtered.filter(novel => (novel.totalChapter || 0) > minChapters);
+    }
+    if (maxChapters > 0) {
+      filtered = filtered.filter(novel => (novel.totalChapter || 0) < maxChapters);
+    }
+
+    return filtered;
+  }, [allNovels, searchTerm, selectedCategories, selectedAuthors, selectedStatus, minRating, minChapters, maxChapters]);
+
+  // Client-side pagination
+  const paginatedNovels = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredNovels.slice(startIndex, endIndex);
+  }, [filteredNovels, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredNovels.length / pageSize);
+  const totalElements = filteredNovels.length;
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategories, selectedAuthors, selectedStatus, minRating, minChapters, maxChapters]);
 
   // Update URL params when filters change
   useEffect(() => {
     const params = new URLSearchParams();
     if (searchTerm) params.set('search', searchTerm);
     if (currentPage > 1) params.set('page', currentPage.toString());
-    if (sortBy !== 'rating') params.set('sort', sortBy);
     if (selectedCategories.length > 0) params.set('categories', selectedCategories.join(','));
     if (selectedStatus) params.set('status', selectedStatus);
     if (minRating > 0) params.set('minRating', minRating.toString());
+    if (selectedAuthors.length > 0) params.set('authors', selectedAuthors.join(','));
+    if (minChapters > 0) params.set('minChapters', minChapters.toString());
+    if (maxChapters > 0) params.set('maxChapters', maxChapters.toString());
     
     setSearchParams(params);
-  }, [searchTerm, currentPage, sortBy, selectedCategories, selectedStatus, minRating, setSearchParams]);
-
-  const handleSearch = async () => {
-    try {
-      const searchCriteria = {
-        ...(searchTerm && { nameNovel: searchTerm }),
-        ...(selectedCategories.length > 0 && { categoryNames: selectedCategories }),
-        ...(selectedStatus && { statuses: [selectedStatus] }),
-        ...(minRating > 0 && { ratingGreaterThanOrEqual: minRating }),
-        isDelete: false
-      };
-
-      const paginationParams = {
-        page: currentPage - 1, // API sử dụng 0-based index
-        size: pageSize,
-        ...(sortBy && { sort: getSortParam(sortBy) })
-      };
-
-      await dispatch(searchNovels({
-        searchCriteria,
-        paginationAndSortParams: paginationParams
-      })).unwrap();
-    } catch (error) {
-      console.error('Search failed:', error);
-    }
-  };
-
-  const getSortParam = (sortType) => {
-    switch (sortType) {
-      case 'rating': return ['rating,desc'];
-      case 'views': return ['totalView,desc'];
-      case 'newest': return ['createDate,desc'];
-      case 'oldest': return ['createDate,asc'];
-      case 'name': return ['nameNovel,asc'];
-      default: return ['rating,desc'];
-    }
-  };
+  }, [searchTerm, currentPage, selectedCategories, selectedStatus, minRating, selectedAuthors, minChapters, maxChapters, setSearchParams]);
 
   const handleCategoryToggle = (categoryName) => {
     setSelectedCategories(prev => {
@@ -112,15 +163,32 @@ const DiscoverPage = () => {
     });
   };
 
+  const handleAuthorToggle = (authorName) => {
+    setSelectedAuthors(prev => {
+      const isSelected = prev.includes(authorName);
+      const newAuthors = isSelected 
+        ? prev.filter(a => a !== authorName)
+        : [...prev, authorName];
+      setCurrentPage(1); // Reset to first page when filters change
+      return newAuthors;
+    });
+  };
+
+  const handleChaptersChange = (type, value) => {
+    if (type === 'min') {
+      setMinChapters(value);
+    } else if (type === 'max') {
+      setMaxChapters(value);
+    }
+    setCurrentPage(1);
+  };
+
   const handleStatusChange = (status) => {
     setSelectedStatus(status);
     setCurrentPage(1);
   };
 
-  const handleSortChange = (sort) => {
-    setSortBy(sort);
-    setCurrentPage(1);
-  };
+  // handleSortChange removed since API doesn't support sort parameter
 
   const handleRatingChange = (rating) => {
     setMinRating(rating);
@@ -130,10 +198,12 @@ const DiscoverPage = () => {
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategories([]);
+    setSelectedAuthors([]);
     setSelectedStatus('');
     setMinRating(0);
-    setSortBy('rating');
-    setCurrentPage(1);
+    setMinChapters(0);
+    setMaxChapters(0);
+    setCurrentPage(1); // Reset về trang 1
   };
 
   const handlePageChange = (page) => {
@@ -220,9 +290,8 @@ const DiscoverPage = () => {
     );
   };
 
-  const displayedNovels = searchResults?.content || novels || [];
-  const totalPages = searchResults?.totalPages || Math.ceil((novels?.length || 0) / pageSize);
-  const totalElements = searchResults?.totalElements || novels?.length || 0;
+  // Use client-side filtered and paginated data
+  const displayedNovels = paginatedNovels;
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
@@ -285,9 +354,9 @@ const DiscoverPage = () => {
           {/* Filters */}
           {showFilters && (
             <div className={`border-t pt-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Sort */}
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {/* Sort - Disabled because API doesn't support it */}
+                {/* <div>
                   <label className={`block text-sm font-medium mb-2 ${
                     isDarkMode ? 'text-gray-300' : 'text-gray-700'
                   }`}>
@@ -302,13 +371,13 @@ const DiscoverPage = () => {
                         : 'bg-white border-gray-300 text-gray-900'
                     }`}
                   >
-                    <option value="rating">Đánh giá cao nhất</option>
-                    <option value="views">Lượt xem nhiều nhất</option>
                     <option value="newest">Mới nhất</option>
+                    <option value="views">Lượt xem nhiều nhất</option>
+                    <option value="rating">Đánh giá cao nhất</option>
                     <option value="oldest">Cũ nhất</option>
                     <option value="name">Tên A-Z</option>
                   </select>
-                </div>
+                </div> */}
 
                 {/* Status */}
                 <div>
@@ -333,7 +402,7 @@ const DiscoverPage = () => {
                   </select>
                 </div>
 
-                {/* Rating */}
+                {/* Đánh giá tối thiểu */}
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${
                     isDarkMode ? 'text-gray-300' : 'text-gray-700'
@@ -358,6 +427,27 @@ const DiscoverPage = () => {
                   </select>
                 </div>
 
+                {/* Số chương tối thiểu */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Số chương tối thiểu
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={minChapters || ''}
+                    onChange={(e) => handleChaptersChange('min', parseInt(e.target.value) || 0)}
+                    placeholder="Ví dụ: 10"
+                    className={`w-full p-2 rounded-lg border ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                    }`}
+                  />
+                </div>
+
                 {/* Clear Filters */}
                 <div className="flex items-end">
                   <button
@@ -371,6 +461,29 @@ const DiscoverPage = () => {
                     <X size={16} />
                     Xóa bộ lọc
                   </button>
+                </div>
+              </div>
+
+              {/* Số chương tối đa - Row riêng */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Số chương tối đa
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={maxChapters || ''}
+                    onChange={(e) => handleChaptersChange('max', parseInt(e.target.value) || 0)}
+                    placeholder="Ví dụ: 100"
+                    className={`w-full p-2 rounded-lg border ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                    }`}
+                  />
                 </div>
               </div>
 
@@ -401,16 +514,44 @@ const DiscoverPage = () => {
                   </div>
                 </div>
               )}
+
+              {/* Authors */}
+              {authors.length > 0 && (
+                <div className="mt-4">
+                  <label className={`block text-sm font-medium mb-2 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Tác giả
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {authors.map((author) => (
+                      <button
+                        key={author.idAuthor}
+                        onClick={() => handleAuthorToggle(author.nameAuthor)}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          selectedAuthors.includes(author.nameAuthor)
+                            ? 'bg-green-500 text-white'
+                            : isDarkMode
+                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {author.nameAuthor}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Results Summary */}
         <div className={`mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          {searchLoading ? (
+          {isInitialLoading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="animate-spin" size={16} />
-              Đang tìm kiếm...
+              Đang tải dữ liệu...
             </div>
           ) : (
             <div className="flex items-center justify-between">
@@ -424,12 +565,12 @@ const DiscoverPage = () => {
         </div>
 
         {/* Novels Grid */}
-        {searchLoading ? (
+        {isInitialLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
               <Loader2 className="w-12 h-12 animate-spin text-sky-500 mx-auto mb-4" />
               <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Đang tìm kiếm truyện...
+                Đang tải dữ liệu truyện...
               </p>
             </div>
           </div>
@@ -443,12 +584,56 @@ const DiscoverPage = () => {
               ))}
             </div>
 
-            {/* Pagination */}
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+            {/* Pagination với Previous/Next buttons */}
+            <div className="mt-8">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+              
+              {/* Previous/Next Navigation */}
+              <div className="flex justify-between items-center mt-4">
+                <button
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                    currentPage === 1
+                      ? 'opacity-50 cursor-not-allowed'
+                      : isDarkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  <ChevronLeft size={16} />
+                  Trang trước
+                </button>
+                
+                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {displayedNovels.length > 0 && (
+                    <>
+                      Hiển thị {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalElements)} 
+                      trong tổng số {totalElements} truyện
+                    </>
+                  )}
+                </span>
+                
+                <button
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                    currentPage === totalPages
+                      ? 'opacity-50 cursor-not-allowed'
+                      : isDarkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  Trang sau
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </>
         ) : (
           <div className="text-center py-20">

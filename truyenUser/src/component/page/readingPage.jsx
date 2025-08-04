@@ -70,6 +70,11 @@ const { allTransactions } = useSelector((state) => state.transaction);
   const [savedScrollPosition, setSavedScrollPosition] = useState(null);
   const [savedAudioPosition, setSavedAudioPosition] = useState(null);
 
+  // Thêm state loading để đồng bộ hóa việc tải dữ liệu
+  const [isInitialDataLoading, setIsInitialDataLoading] = useState(true);
+  const [historyLoadCompleted, setHistoryLoadCompleted] = useState(false);
+  const [chapterContentLoadCompleted, setChapterContentLoadCompleted] = useState(false);
+
   const mainContentAreaRef = useRef(null);
   const [showAudioPlayer, setShowAudioPlayer] = useState(() => {
     const saved = localStorage.getItem('showAudioPlayer');
@@ -268,6 +273,13 @@ const { allTransactions } = useSelector((state) => state.transaction);
    };
  }, [currentUser, currentChapterContent, isAudioPlaying, dispatch]); // Loại bỏ currentAudioTime
 
+  // Reset loading states khi user thay đổi
+  useEffect(() => {
+    console.log("[User Change] Resetting loading states for new user");
+    setHistoryLoadCompleted(false);
+    historyLoadedForUser.current = null;
+  }, [currentUser?.idUser]);
+
   // Fetch transaction data để kiểm tra chapter thuê
   useEffect(() => {
     if (currentUser?.idUser) {
@@ -438,6 +450,9 @@ useEffect(() => {
     if (novelId && chapterId) {
       console.log("[Effect #2] Tải nội dung cho chapterId:", chapterId);
       
+      // Đánh dấu bắt đầu tải content
+      setChapterContentLoadCompleted(false);
+      
       // SỬA: SCROLL VỀ TOP NGAY LẬP TỨC khi bắt đầu load chương mới
       window.scrollTo({ top: 0, behavior: 'auto' });
       console.log("[Effect #2] Reset scroll position to top for new chapter");
@@ -457,6 +472,11 @@ useEffect(() => {
         // Tải nội dung chương
         await dispatch(getChapterContentById({ novelId, chapterId }));
 
+        // Đánh dấu hoàn thành tải content
+        if (isCurrentRequest) {
+          setChapterContentLoadCompleted(true);
+        }
+
         // TĂNG VIEW: chỉ gọi nếu chưa tăng view cho chương này trong session
         const viewKey = `viewed_${novelId}_${chapterId}`;
         if (!sessionStorage.getItem(viewKey)) {
@@ -469,6 +489,9 @@ useEffect(() => {
         }
       } catch (error) {
         console.error("[Effect #2] Lỗi khi tải nội dung:", error);
+        if (isCurrentRequest) {
+          setChapterContentLoadCompleted(true); // Vẫn đánh dấu completed dù có lỗi
+        }
       }
     }
   };
@@ -490,14 +513,31 @@ useEffect(() => {
     if (currentUser?.idUser && currentUser.idUser !== historyLoadedForUser.current) {
       console.log("[Effect #3] Tải lịch sử cho user:", currentUser.idUser);
       
+      // Đánh dấu bắt đầu tải history
+      setHistoryLoadCompleted(false);
+      
       try {
         if (isActive) {
           await dispatch(getAllHistoryByUser(currentUser.idUser));
           historyLoadedForUser.current = currentUser.idUser; // Đánh dấu đã tải cho user này
+          
+          // Đánh dấu hoàn thành tải history
+          if (isActive) {
+            setHistoryLoadCompleted(true);
+          }
         }
       } catch (error) {
         console.error("[Effect #3] Lỗi khi tải lịch sử:", error);
+        if (isActive) {
+          setHistoryLoadCompleted(true); // Vẫn đánh dấu completed dù có lỗi
+        }
       }
+    } else if (!currentUser?.idUser) {
+      // Không có user, coi như hoàn thành
+      setHistoryLoadCompleted(true);
+    } else {
+      // User đã được tải rồi, coi như hoàn thành
+      setHistoryLoadCompleted(true);
     }
   };
 
@@ -508,21 +548,51 @@ useEffect(() => {
   };
 }, [dispatch, currentUser?.idUser]); // Chỉ phụ thuộc vào user ID
 
-// Effect #4: Hiển thị dialog "ĐỌC TIẾP?" và set vị trí audio
+// Effect để kiểm tra khi cả history và content đã load xong
+useEffect(() => {
+  const bothCompleted = historyLoadCompleted && chapterContentLoadCompleted;
+  
+  console.log(`[Data Loading Status] History: ${historyLoadCompleted}, Content: ${chapterContentLoadCompleted}, Both: ${bothCompleted}`);
+  
+  if (bothCompleted) {
+    setIsInitialDataLoading(false);
+    console.log("[Data Loading] All initial data loaded, ready for interactions");
+  } else {
+    setIsInitialDataLoading(true);
+  }
+}, [historyLoadCompleted, chapterContentLoadCompleted]);
+
+// Effect #4: Hiển thị dialog "ĐỌC TIẾP?" và set vị trí audio - CHỈ KHI ĐÃ LOAD XONG
 // Sử dụng ref để tránh hiển thị dialog nhiều lần cho cùng một chương
 const dialogShownForChapter = useRef(null);
+const dialogProcessedForChapter = useRef(null); // Thêm ref để track việc đã xử lý dialog
 
 useEffect(() => {
+  // ĐIỀU KIỆN MỚI: Chỉ chạy khi tất cả dữ liệu đã được tải xong
+  if (isInitialDataLoading) {
+    console.log("[Effect #4] Still loading initial data, skipping history dialog check");
+    return;
+  }
+
   // Điều kiện tiên quyết: chỉ chạy khi có đủ dữ liệu
   if (loadingContent || !currentChapterContent || !Array.isArray(userHistory) || userHistory.length === 0) {
     setSavedAudioPosition(0); // reset audio về 0 khi vào chương mới
     return;
   }
 
-  // Nếu đã hiển thị dialog cho chương này rồi thì không hiển thị nữa
-  if (dialogShownForChapter.current === chapterId) {
+  // RÀNG BUỘC CHẶT: Kiểm tra cả dialogShownForChapter và dialogProcessedForChapter
+  if (dialogShownForChapter.current === chapterId || dialogProcessedForChapter.current === chapterId) {
+    console.log("[Effect #4] Dialog already shown/processed for this chapter, skipping");
     return;
   }
+
+  // RÀNG BUỘC THÊM: Chỉ chạy khi dialog chưa được hiển thị
+  if (showContinueDialog) {
+    console.log("[Effect #4] Dialog is already showing, skipping");
+    return;
+  }
+
+  console.log("[Effect #4] Checking history for chapter:", chapterId);
 
   let chapterHistoryFound = null;
   for (const novelGroup of userHistory) {
@@ -538,6 +608,8 @@ useEffect(() => {
   }
 
   if (chapterHistoryFound) {
+    console.log("[Effect #4] Found chapter history:", chapterHistoryFound);
+    
     // Set vị trí audio ngay lập tức nếu có trong lịch sử
     if (chapterHistoryFound.hearTime && chapterHistoryFound.hearTime > 0) {
       console.log('[History] Setting audio position to:', chapterHistoryFound.hearTime);
@@ -546,16 +618,26 @@ useEffect(() => {
       setSavedAudioPosition(0);
     }
     
-    // Chỉ hiển thị dialog nếu có vị trí đọc đáng kể
-    if (chapterHistoryFound.readPlace > 50) {
+    // RÀNG BUỘC CHẶT HƠN: Chỉ hiển thị dialog nếu có vị trí đọc đáng kể VÀ chưa được xử lý
+    if (chapterHistoryFound.readPlace > 100) { // Tăng threshold từ 50 lên 100
+      console.log("[Effect #4] Showing continue dialog for saved position:", chapterHistoryFound.readPlace);
       setSavedScrollPosition(chapterHistoryFound.readPlace);
       setShowContinueDialog(true);
+      
+      // Đánh dấu cả hai ref để đảm bảo không hiển thị lại
       dialogShownForChapter.current = chapterId;
+      dialogProcessedForChapter.current = chapterId;
+    } else {
+      // Đánh dấu đã xử lý dù không hiển thị dialog
+      dialogProcessedForChapter.current = chapterId;
     }
   } else {
+    console.log("[Effect #4] No history found for chapter:", chapterId);
     setSavedAudioPosition(0); // reset audio về 0 nếu không có lịch sử
+    // Đánh dấu đã xử lý dù không có lịch sử
+    dialogProcessedForChapter.current = chapterId;
   }
-}, [userHistory, loadingContent, currentChapterContent, chapterId]);
+}, [userHistory, loadingContent, currentChapterContent, chapterId, isInitialDataLoading, showContinueDialog]);
 
 // Effect set lại scroll position khi dialog được xác nhận
 // Khi vào chương mới, luôn scroll về top 0 và reset dialog state  
@@ -571,8 +653,14 @@ useEffect(() => {
   setShowContinueDialog(false);
   setSavedScrollPosition(null);
   dialogShownForChapter.current = null; // Reset flag để có thể hiển thị dialog cho chương mới
+  dialogProcessedForChapter.current = null; // Reset flag xử lý dialog
   permissionCheckedRef.current = null; // Reset permission check để có thể kiểm tra lại cho chương mới
   toastShownRef.current = null; // Reset toast để có thể hiển thị lại cho chương mới
+  
+  // Reset loading states khi chuyển chương
+  setIsInitialDataLoading(true);
+  setHistoryLoadCompleted(false);
+  setChapterContentLoadCompleted(false);
 }, [chapterId]);
 
 // Khi ấn Đọc tiếp mới scroll tới vị trí đã lưu
@@ -582,11 +670,17 @@ useEffect(() => {
     // (Scroll sẽ thực hiện khi user ấn Đọc tiếp)
   }
 }, [showContinueDialog, savedScrollPosition]);
-// Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC (trước đây là Effect #4)
+// Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC - CHỈ KHI ĐÃ LOAD XONG DỮ LIỆU
 let vitrilandau = 100;
 const lastSavedPosition = useRef(0); // Track vị trí đã lưu gần nhất
 
 useEffect(() => {
+  // ĐIỀU KIỆN MỚI: Chỉ cho phép lưu lịch sử khi đã load xong dữ liệu ban đầu
+  if (isInitialDataLoading) {
+    console.log("[Effect #5] Still loading initial data, scroll tracking disabled");
+    return;
+  }
+
   // THAY ĐỔI Ở ĐÂY:
   // Thay vì lắng nghe trên `contentRef.current`, chúng ta sẽ lắng nghe trên `window`.
   // `window` là đối tượng đáng tin cậy nhất cho sự kiện cuộn trang toàn cục.
@@ -596,6 +690,8 @@ useEffect(() => {
   if (!scrollContainer || !currentUser || !currentChapterContent?.titleChapter) {
     return;
   }
+  
+  console.log("[Effect #5] Enabling scroll tracking for chapter:", chapterId);
   
   const handleScroll = () => {
     // COMMENT: Không cần kiểm tra isScrollingByAudio nữa vì audio không cuộn
@@ -655,7 +751,7 @@ useEffect(() => {
     window.removeEventListener('scroll', handleScroll);
     clearTimeout(debounceTimerRef.current);
   };
-}, [dispatch, currentUser, currentChapterContent, novelId, chapterId]);
+}, [dispatch, currentUser, currentChapterContent, novelId, chapterId, isInitialDataLoading]);
 // Effect #5: Theo dõi và LƯU VỊ TRÍ ĐỌC Thoat(sử dụng ref để tránh lặp lại)
 //  useEffect(() => {
 //   // Chỉ thực hiện logic này nếu người dùng đã đăng nhập
@@ -835,15 +931,18 @@ useEffect(() => {
     console.log('[Continue] Audio position already set to:', savedAudioPosition);
     
     setShowContinueDialog(false);
-    // Đánh dấu rằng dialog đã được xử lý cho chương này
+    // RÀNG BUỘC: Đánh dấu rằng dialog đã được xử lý hoàn toàn cho chương này
     dialogShownForChapter.current = chapterId;
+    dialogProcessedForChapter.current = chapterId;
   };
+  
   const handleCancelContinue = () => {
     setShowContinueDialog(false);
     setSavedScrollPosition(null);
     setSavedAudioPosition(0);
-    // Đánh dấu rằng dialog đã được xử lý cho chương này
+    // RÀNG BUỘC: Đánh dấu rằng dialog đã được xử lý hoàn toàn cho chương này
     dialogShownForChapter.current = chapterId;
+    dialogProcessedForChapter.current = chapterId;
     localStorage.removeItem(getPositionKey());
   };
 
@@ -957,6 +1056,25 @@ useEffect(() => {
       return <div className="flex justify-center items-center min-h-screen text-xl">Đang kiểm tra quyền truy cập...</div>;
     }
   }
+
+  // Hiển thị loading khi đang tải dữ liệu ban đầu
+  if (isInitialDataLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen text-xl">
+        <div className="mb-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+        <div className="text-center">
+          <p className="mb-2">Đang tải dữ liệu chương...</p>
+          <p className="text-sm text-gray-600">
+            {!historyLoadCompleted && "⏳ Đang tải lịch sử đọc..."}
+            {!chapterContentLoadCompleted && "⏳ Đang tải nội dung chương..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (loadingContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return <div className="flex justify-center items-center min-h-screen text-xl">Đang tải nội dung chương...</div>;
   if (errorContent && (!currentChapterContent || String(currentChapterContent.idChapter) !== String(chapterId))) return renderErrorText(errorContent, "nội dung chương");
   if (!currentChapterContent) return <div className="flex justify-center items-center min-h-screen text-xl">Không tìm thấy nội dung chương này.</div>;
@@ -1122,7 +1240,7 @@ useEffect(() => {
       </div>
 
       {/* Nút Toggle Audio Player - Luôn hiển thị khi có audio */}
-      {(currentChapterContent?.urlAudio || urlAudio) && (
+      {/* {(currentChapterContent?.urlAudio || urlAudio) && (
         <button
           onClick={toggleAudioPlayer}
           className={`fixed right-4 w-12 h-12 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 hover:shadow-xl flex items-center justify-center
@@ -1149,7 +1267,7 @@ useEffect(() => {
             <FaVolumeMute className="text-lg" />
           )}
         </button>
-      )}
+      )} */}
 
       {/* Audio Player với animation slide - Chỉ render khi có audio */}
       {(currentChapterContent?.urlAudio || urlAudio) && (

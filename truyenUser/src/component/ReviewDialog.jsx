@@ -55,6 +55,17 @@ const ReviewDialog = ({ novelId, novelTitle, onClose }) => {
       return;
     }
 
+    // Ràng buộc độ dài các trường review không quá 500 ký tự
+    if (
+      reviewMC.length > 500 ||
+      reviewSC.length > 500 ||
+      reviewWorld.length > 500 ||
+      reviewPersonal.length > 500
+    ) {
+      toast.error("Mỗi trường đánh giá không được vượt quá 500 ký tự.");
+      return;
+    }
+
     const payload = {
       idUser: currentUser.idUser,
       idNovel: novelId,

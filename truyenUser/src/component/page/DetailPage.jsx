@@ -32,6 +32,10 @@ const DetailPage = () => {
   const [activeTab, setActiveTab] = useState('summary');
   const [currentChapterListPage, setCurrentChapterListPage] = useState(1); // Đổi tên để rõ ràng
   const chaptersPerPageInList = 5; // Giảm xuống 5 như ReadingPage để khớp với UI
+  
+  // THÊM: Loading states riêng cho novel và chapters
+  const [isLoadingNovelData, setIsLoadingNovelData] = useState(false);
+  const [isLoadingChaptersData, setIsLoadingChaptersData] = useState(false);
   const { currentUser, followedNovels, userHistory, loading: userLoading } = useSelector((state) => state.user);
   const { allTransactions, error: transactionError } = useSelector((state) => state.transaction);
 
@@ -160,8 +164,9 @@ const DetailPage = () => {
       
       const apiPromises = [];
       
-      // SIMPLE novel data fetching - LUÔN GỌI MỖI LẦN VÀO COMPONENT
+      // SIMPLE novel data fetching với loading state
       console.log('🔄 [DetailPage] Fetching novel data for:', novelId, '(always fetch)');
+      setIsLoadingNovelData(true);
       apiPromises.push(
         dispatch(getNovelById(novelId)).then((result) => {
           if (result.payload) {
@@ -172,12 +177,17 @@ const DetailPage = () => {
               console.warn('⚠️ [DetailPage] Failed to save novel cache:', error);
             }
           }
+          setIsLoadingNovelData(false);
           return result;
+        }).catch((error) => {
+          setIsLoadingNovelData(false);
+          throw error;
         })
       );
       
-      // SIMPLE chapters fetching - LUÔN GỌI MỖI LẦN VÀO COMPONENT
+      // SIMPLE chapters fetching với loading state
       console.log('🔄 [DetailPage] Fetching chapters data for:', novelId, '(always fetch)');
+      setIsLoadingChaptersData(true);
       apiPromises.push(
         dispatch(getAllChapters(novelId)).then((result) => {
           if (result.payload) {
@@ -187,7 +197,11 @@ const DetailPage = () => {
               console.warn('⚠️ [DetailPage] Failed to save chapters cache:', error);
             }
           }
+          setIsLoadingChaptersData(false);
           return result;
+        }).catch((error) => {
+          setIsLoadingChaptersData(false);
+          throw error;
         })
       );
 
@@ -636,7 +650,7 @@ const DetailPage = () => {
     coverImage: novelDetailData.imageNovel || "https://via.placeholder.com/200x300.png?text=No+Image",
     heroBackground: novelDetailData.imageNovel || "https://truyenchu.com.vn/theme/images/bg_detail.png",
     fullDescription: novelDetailData.descriptionNovel || "Chưa có mô tả chi tiết.",
-    ads: novelDetailData.ads || [{ id: 1, image: "https://tpc.googlesyndication.com/simgad/12350005988817403671" }],
+    ads: novelDetailData.ads || [{ id: 1, image: "data:image/jpeg;base64,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" }],
   };
 
   const totalChapterListPages = Math.ceil(sortedChaptersForDetailPage.length / chaptersPerPageInList) || 1;
@@ -718,6 +732,194 @@ const DetailPage = () => {
   };
   const novelStatus = getStatusTextAndColor(storyDetails.status);
 
+  // SKELETON LOADING COMPONENTS với cải tiến animation
+  const NovelHeroSkeleton = () => (
+    <div className="py-8 md:py-12 bg-no-repeat bg-cover bg-center relative">
+      <div className={`absolute inset-0 ${isDarkMode ? 'bg-black opacity-80' : 'bg-black opacity-60'}`}></div>
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+          <div className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0 mx-auto md:mx-0">
+            <div className={`w-full max-w-[180px] md:max-w-full h-auto rounded-md shadow-lg mx-auto aspect-[2/3] animate-pulse bg-gradient-to-r ${
+              isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+            }`} style={{ 
+              backgroundSize: '400% 400%',
+              animation: 'shimmer 2s ease-in-out infinite'
+            }}></div>
+          </div>
+          <div className="md:w-3/4 lg:w-4/5 text-white text-center md:text-left">
+            <div className={`h-8 md:h-10 rounded mb-3 bg-gradient-to-r ${
+              isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+            }`} style={{ 
+              backgroundSize: '400% 400%',
+              animation: 'shimmer 2s ease-in-out infinite'
+            }}></div>
+            <div className={`h-4 rounded mb-2 bg-gradient-to-r ${
+              isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+            }`} style={{ 
+              backgroundSize: '400% 400%',
+              animation: 'shimmer 2s ease-in-out infinite'
+            }}></div>
+            <div className={`h-4 rounded mb-2 w-3/4 bg-gradient-to-r ${
+              isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+            }`} style={{ 
+              backgroundSize: '400% 400%',
+              animation: 'shimmer 2s ease-in-out infinite'
+            }}></div>
+            <div className="flex items-center justify-center md:justify-start space-x-1 mt-2 mb-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className={`w-4 h-4 rounded bg-gradient-to-r ${
+                  isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+                }`} style={{ 
+                  backgroundSize: '400% 400%',
+                  animation: 'shimmer 2s ease-in-out infinite',
+                  animationDelay: `${i * 0.1}s`
+                }}></div>
+              ))}
+            </div>
+            <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-3 mt-3 text-sm">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="text-center">
+                  <div className={`h-4 w-16 rounded mb-1 bg-gradient-to-r ${
+                    isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+                  }`} style={{ 
+                    backgroundSize: '400% 400%',
+                    animation: 'shimmer 2s ease-in-out infinite',
+                    animationDelay: `${i * 0.2}s`
+                  }}></div>
+                  <div className={`h-6 w-12 rounded bg-gradient-to-r ${
+                    isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+                  }`} style={{ 
+                    backgroundSize: '400% 400%',
+                    animation: 'shimmer 2s ease-in-out infinite',
+                    animationDelay: `${i * 0.2 + 0.1}s`
+                  }}></div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className={`h-6 w-16 rounded bg-gradient-to-r ${
+                  isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+                }`} style={{ 
+                  backgroundSize: '400% 400%',
+                  animation: 'shimmer 2s ease-in-out infinite',
+                  animationDelay: `${i * 0.15}s`
+                }}></div>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className={`h-10 w-24 rounded bg-gradient-to-r ${
+                  isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+                }`} style={{ 
+                  backgroundSize: '400% 400%',
+                  animation: 'shimmer 2s ease-in-out infinite',
+                  animationDelay: `${i * 0.1}s`
+                }}></div>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className={`h-8 w-20 rounded bg-gradient-to-r ${
+                  isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-300 via-gray-200 to-gray-300'
+                }`} style={{ 
+                  backgroundSize: '400% 400%',
+                  animation: 'shimmer 2s ease-in-out infinite',
+                  animationDelay: `${i * 0.1}s`
+                }}></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* CSS Animation để tạo hiệu ứng shimmer */}
+      <style jsx>{`
+        @keyframes shimmer {
+          0% { background-position: -400% 0; }
+          100% { background-position: 400% 0; }
+        }
+      `}</style>
+    </div>
+  );
+
+  const ChapterListSkeleton = () => (
+    <div className="space-y-3">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className={`p-4 rounded border animate-pulse ${
+          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className={`h-5 w-3/4 rounded animate-pulse ${
+              isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+            }`}></div>
+            <div className={`h-4 w-16 rounded animate-pulse ${
+              isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+            }`}></div>
+          </div>
+          <div className={`h-4 w-1/2 rounded animate-pulse mt-2 ${
+            isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+          }`}></div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const LoadingOverlay = ({ children, isLoading, loadingText }) => (
+    <div className="relative">
+      {children}
+      {isLoading && (
+        <div className={`absolute inset-0 flex items-center justify-center rounded-lg z-10 backdrop-blur-sm ${
+          isDarkMode ? 'bg-gray-900 bg-opacity-90' : 'bg-white bg-opacity-90'
+        }`}>
+          <div className="text-center">
+            <div className="flex justify-center mb-4">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-4 h-4 rounded-full animate-bounce mx-1 ${
+                    isDarkMode ? 'bg-sky-400' : 'bg-sky-500'
+                  }`}
+                  style={{ 
+                    animationDelay: `${i * 0.2}s`,
+                    animationDuration: '1.4s'
+                  }}
+                ></div>
+              ))}
+            </div>
+            <p className={`text-base font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+              {loadingText}
+            </p>
+            <div className={`mt-2 h-1 w-32 mx-auto rounded-full overflow-hidden ${
+              isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+            }`}>
+              <div className={`h-full rounded-full animate-pulse ${
+                isDarkMode ? 'bg-sky-400' : 'bg-sky-500'
+              }`} style={{
+                width: '30%',
+                animation: 'loading-bar 2s ease-in-out infinite'
+              }}></div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* CSS cho loading bar animation */}
+      <style jsx>{`
+        @keyframes loading-bar {
+          0%, 100% { 
+            transform: translateX(-100%); 
+            width: 30%;
+          }
+          50% { 
+            transform: translateX(233%); 
+            width: 70%;
+          }
+        }
+      `}</style>
+    </div>
+  );
+
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
@@ -733,68 +935,93 @@ const DetailPage = () => {
         }`}>Trang Chủ</Link> / <span className={isDarkMode ? 'text-gray-200' : 'text-gray-800'}>{storyDetails.title.replace(" - Truyện Chữ", "")}</span>
       </div>
 
-      <div className="py-8 md:py-12 bg-no-repeat bg-cover bg-center relative" style={{ backgroundImage: `url('${storyDetails.heroBackground}')` }}>
-        <div className={`absolute inset-0 ${
-          isDarkMode ? 'bg-black opacity-80' : 'bg-black opacity-60'
-        }`}></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-            <div className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0 mx-auto md:mx-0">
-              <img src={storyDetails.coverImage} alt={`Bìa truyện ${storyDetails.title}`} className="w-full max-w-[180px] md:max-w-full h-auto rounded-md shadow-lg mx-auto aspect-[2/3] object-cover"/>
-            </div>
-            <div className="md:w-3/4 lg:w-4/5 text-white text-center md:text-left">
-              <h1 className="text-2xl md:text-3xl font-bold">{storyDetails.title}</h1>
-              <p className="text-xs md:text-sm text-gray-300 mt-1">{storyDetails.shortDescription}</p>
-              <p className="text-sm text-gray-400 mt-2">Tác giả: <a href="#" className={`${
-                isDarkMode ? 'hover:text-sky-400' : 'hover:text-sky-300'
-              }`}>{storyDetails.author}</a></p>
-              <div className="flex items-center justify-center md:justify-start space-x-1 mt-2">
-                {renderStars(storyDetails.ratingValue)}
-                <span className="text-sm ml-2">({storyDetails.ratingValue.toFixed(1)}/5 {storyDetails.ratingCount > 0 ? ` từ ${storyDetails.ratingCount} lượt` : ''})</span>
+      {/* Hero Section với Loading State */}
+      {isLoadingNovelData ? (
+        <NovelHeroSkeleton />
+      ) : (
+        <div className="py-8 md:py-12 bg-no-repeat bg-cover bg-center relative" style={{ backgroundImage: `url('${storyDetails.heroBackground}')` }}>
+          <div className={`absolute inset-0 ${
+            isDarkMode ? 'bg-black opacity-80' : 'bg-black opacity-60'
+          }`}></div>
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+              <div className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0 mx-auto md:mx-0">
+                <img src={storyDetails.coverImage} alt={`Bìa truyện ${storyDetails.title}`} className="w-full max-w-[180px] md:max-w-full h-auto rounded-md shadow-lg mx-auto aspect-[2/3] object-cover"/>
               </div>
-              <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-3 mt-3 text-sm">
-                <div><span className="block text-gray-400">Chương</span><span className="font-semibold text-lg">{storyDetails.chapters}</span></div>
-                <div><span className="block text-gray-400">Lượt Xem</span><span className="font-semibold text-lg">{storyDetails.views}</span></div>
-                <div><span className="block text-gray-400">Theo dõi</span><span className="font-semibold text-lg">{storyDetails.bookmarks}</span></div>
-                {/* <div><span className="block text-gray-400">Trạng thái</span><span className={`font-semibold text-lg ${novelStatus.color}`}>{novelStatus.text}</span></div> */}
-              </div>
-              <div className="mt-3">
-                <span className="text-gray-400 text-sm">Thể Loại: </span>
-                {storyDetails.categories.map((cat, idx) => <a key={idx} href="#" className={`inline-block text-xs px-2 py-1 rounded mr-1 mb-1 transition-colors ${
-                  isDarkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700 hover:text-gray-900'
-                }`}>{cat}</a>)}
-              </div>
-              <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
-                <button onClick={handleReadFirstChapter} className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
-                  isDarkMode 
-                    ? 'bg-sky-600 hover:bg-sky-700 text-white' 
-                    : 'bg-sky-500 hover:bg-sky-600 text-white'
-                }`}><FaBookOpen className="mr-2" /> Đọc từ đầu</button>
-                <button onClick={handleReadContinue} className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
-                  isDarkMode 
-                    ? 'bg-sky-600 hover:bg-sky-700 text-white' 
-                    : 'bg-sky-500 hover:bg-sky-600 text-white'
-                }`}><FaListUl className="mr-2" /> Đọc tiếp</button>
-                <button onClick={handleReadLatestChapter} className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
-                  isDarkMode 
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                    : 'bg-orange-500 hover:bg-orange-600 text-white'
-                }`}><FaPlusSquare className="mr-2" /> Chương mới nhất</button>
-              </div>
-              <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
-                <button onClick={() => setActiveTab('summary')} className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
-                  activeTab === 'summary' 
-                    ? (isDarkMode ? 'bg-slate-600 text-white' : 'bg-gray-600 text-white')
-                    : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')
-                }`}><FaInfoCircle className="mr-1 md:mr-2" /> Giới thiệu</button>
-                <button onClick={() => setActiveTab('chapters')} className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
-                  activeTab === 'chapters' 
-                    ? (isDarkMode ? 'bg-slate-600 text-white' : 'bg-gray-600 text-white')
-                    : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')
-                }`}><FaThList className="mr-1 md:mr-2" /> Danh Sách</button>
-                <button 
+              <div className="md:w-3/4 lg:w-4/5 text-white text-center md:text-left">
+                <h1 className="text-2xl md:text-3xl font-bold">{storyDetails.title}</h1>
+                <p className="text-xs md:text-sm text-gray-300 mt-1">{storyDetails.shortDescription}</p>
+                <p className="text-sm text-gray-400 mt-2">Tác giả: <a href="#" className={`${
+                  isDarkMode ? 'hover:text-sky-400' : 'hover:text-sky-300'
+                }`}>{storyDetails.author}</a></p>
+                <div className="flex items-center justify-center md:justify-start space-x-1 mt-2">
+                  {renderStars(storyDetails.ratingValue)}
+                  <span className="text-sm ml-2">({storyDetails.ratingValue.toFixed(1)}/5 {storyDetails.ratingCount > 0 ? ` từ ${storyDetails.ratingCount} lượt` : ''})</span>
+                </div>
+                <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-3 mt-3 text-sm">
+                  <div><span className="block text-gray-400">Chương</span><span className="font-semibold text-lg">{storyDetails.chapters}</span></div>
+                  <div><span className="block text-gray-400">Lượt Xem</span><span className="font-semibold text-lg">{storyDetails.views}</span></div>
+                  <div><span className="block text-gray-400">Theo dõi</span><span className="font-semibold text-lg">{storyDetails.bookmarks}</span></div>
+                  {/* <div><span className="block text-gray-400">Trạng thái</span><span className={`font-semibold text-lg ${novelStatus.color}`}>{novelStatus.text}</span></div> */}
+                </div>
+                <div className="mt-3">
+                  <span className="text-gray-400 text-sm">Thể Loại: </span>
+                  {storyDetails.categories.map((cat, idx) => <a key={idx} href="#" className={`inline-block text-xs px-2 py-1 rounded mr-1 mb-1 transition-colors ${
+                    isDarkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white' 
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700 hover:text-gray-900'
+                  }`}>{cat}</a>)}
+                </div>
+                <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
+                  <button 
+                    onClick={handleReadFirstChapter} 
+                    disabled={isLoadingChaptersData}
+                    className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
+                      isLoadingChaptersData 
+                        ? (isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed')
+                        : (isDarkMode 
+                          ? 'bg-sky-600 hover:bg-sky-700 text-white' 
+                          : 'bg-sky-500 hover:bg-sky-600 text-white')
+                    }`}>
+                    <FaBookOpen className="mr-2" /> Đọc từ đầu
+                  </button>
+                  <button 
+                    onClick={handleReadContinue} 
+                    disabled={isLoadingChaptersData}
+                    className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
+                      isLoadingChaptersData 
+                        ? (isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed')
+                        : (isDarkMode 
+                          ? 'bg-sky-600 hover:bg-sky-700 text-white' 
+                          : 'bg-sky-500 hover:bg-sky-600 text-white')
+                    }`}>
+                    <FaListUl className="mr-2" /> Đọc tiếp
+                  </button>
+                  <button 
+                    onClick={handleReadLatestChapter} 
+                    disabled={isLoadingChaptersData}
+                    className={`flex items-center font-semibold py-2 px-4 rounded text-sm transition-colors ${
+                      isLoadingChaptersData 
+                        ? (isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed')
+                        : (isDarkMode 
+                          ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                          : 'bg-orange-500 hover:bg-orange-600 text-white')
+                    }`}>
+                    <FaPlusSquare className="mr-2" /> Chương mới nhất
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
+                  <button onClick={() => setActiveTab('summary')} className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
+                    activeTab === 'summary' 
+                      ? (isDarkMode ? 'bg-slate-600 text-white' : 'bg-gray-600 text-white')
+                      : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')
+                  }`}><FaInfoCircle className="mr-1 md:mr-2" /> Giới thiệu</button>
+                  <button onClick={() => setActiveTab('chapters')} className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
+                    activeTab === 'chapters' 
+                      ? (isDarkMode ? 'bg-slate-600 text-white' : 'bg-gray-600 text-white')
+                      : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')
+                  }`}><FaThList className="mr-1 md:mr-2" /> Danh Sách</button>
+                  <button 
                             onClick={handleFollowToggle}
                             className={`flex items-center py-2 px-3 rounded text-xs transition-colors ${
                               isFollowing 
@@ -817,11 +1044,12 @@ const DetailPage = () => {
                           >
                             <FaPenSquare className="mr-1 md:mr-2" /> Đánh giá
                           </button>              
-          </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row gap-8">
@@ -831,27 +1059,32 @@ const DetailPage = () => {
               : 'bg-gradient-to-br from-white to-gray-50 text-gray-800 border border-gray-200'
           }`}>
             {activeTab === 'summary' && (
-              <div>
-                <h2 className={`text-xl font-semibold mb-4 border-l-4 pl-3 ${
-                  isDarkMode ? 'border-sky-400 text-white' : 'border-sky-500 text-gray-800'
-                }`}>Tóm Tắt Nội Dung Truyện {storyDetails.title.replace(" - Truyện Chữ", "")}</h2>
-                <div className={`prose prose-sm md:prose-base max-w-none ${
-                  isDarkMode 
-                    ? 'prose-invert text-gray-300' 
-                    : 'prose-gray text-gray-700'
-                }`} dangerouslySetInnerHTML={{ __html: storyDetails.fullDescription.replace(/\n\n/g, '<p><br/></p>').replace(/\n/g, '<br/>') }} />
-                <div className={`mt-6 pt-4 border-t ${
-                  isDarkMode ? 'border-gray-600' : 'border-gray-200'
-                }`}>
-                  <button onClick={handleReadLatestChapter} className={`font-semibold flex items-center text-sm transition-colors ${
+              <LoadingOverlay 
+                isLoading={isLoadingNovelData}
+                loadingText="Đang tải thông tin truyện..."
+              >
+                <div>
+                  <h2 className={`text-xl font-semibold mb-4 border-l-4 pl-3 ${
+                    isDarkMode ? 'border-sky-400 text-white' : 'border-sky-500 text-gray-800'
+                  }`}>Tóm Tắt Nội Dung Truyện {storyDetails.title.replace(" - Truyện Chữ", "")}</h2>
+                  <div className={`prose prose-sm md:prose-base max-w-none ${
                     isDarkMode 
-                      ? 'text-sky-400 hover:text-sky-300' 
-                      : 'text-sky-500 hover:text-sky-600'
+                      ? 'prose-invert text-gray-300' 
+                      : 'prose-gray text-gray-700'
+                  }`} dangerouslySetInnerHTML={{ __html: storyDetails.fullDescription.replace(/\n\n/g, '<p><br/></p>').replace(/\n/g, '<br/>') }} />
+                  <div className={`mt-6 pt-4 border-t ${
+                    isDarkMode ? 'border-gray-600' : 'border-gray-200'
                   }`}>
-                    Xem Thêm Chương Mới Nhất <FaAngleRight className="ml-1" />
-                  </button>
+                    <button onClick={handleReadLatestChapter} className={`font-semibold flex items-center text-sm transition-colors ${
+                      isDarkMode 
+                        ? 'text-sky-400 hover:text-sky-300' 
+                        : 'text-sky-500 hover:text-sky-600'
+                    }`}>
+                      Xem Thêm Chương Mới Nhất <FaAngleRight className="ml-1" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </LoadingOverlay>
             )}
             {activeTab === 'chapters' && (
               <div>
@@ -870,27 +1103,33 @@ const DetailPage = () => {
                     />
                   </div>
                 </div>
-                {chaptersLoading && !currentChaptersForTabDisplay.length && <p className={`text-center py-4 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                }`}>Đang tải danh sách chương...</p>}
-                {chaptersError && !currentChaptersForTabDisplay.length && <p className="text-red-500 text-center py-4">Lỗi tải chương. Phiên đăng nhập của bạn có thể đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.</p>}
-                {!chaptersLoading && !chaptersError && currentChaptersForTabDisplay.length > 0 && (
-                  <div data-chapter-list>
-                    <ChapterListDisplay
-                      chapters={currentChaptersForTabDisplay}
-                      novelId={novelId} // Truyền novelId xuống
-                      currentPage={currentChapterListPage}
-                      chaptersPerPage={chaptersPerPageInList}
-                    />
-                  </div>
-                )}
-                {!chaptersLoading && !chaptersError && sortedChaptersForDetailPage.length === 0 && (
-                  <p className={`text-center py-4 ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>Truyện này chưa có chương nào.</p>
-                )}
+                
+                {/* Loading Overlay cho Chapters */}
+                <LoadingOverlay 
+                  isLoading={isLoadingChaptersData}
+                  loadingText="Đang tải danh sách chương..."
+                >
+                  {(chaptersLoading || isLoadingChaptersData) && !currentChaptersForTabDisplay.length && <ChapterListSkeleton />}
+                  {chaptersError && !currentChaptersForTabDisplay.length && <p className="text-red-500 text-center py-4">Lỗi tải chương. Phiên đăng nhập của bạn có thể đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.</p>}
+                  {!chaptersLoading && !isLoadingChaptersData && !chaptersError && currentChaptersForTabDisplay.length > 0 && (
+                    <div data-chapter-list>
+                      <ChapterListDisplay
+                        chapters={currentChaptersForTabDisplay}
+                        novelId={novelId} // Truyền novelId xuống
+                        currentPage={currentChapterListPage}
+                        chaptersPerPage={chaptersPerPageInList}
+                      />
+                    </div>
+                  )}
+                  {!chaptersLoading && !isLoadingChaptersData && !chaptersError && sortedChaptersForDetailPage.length === 0 && (
+                    <p className={`text-center py-4 ${
+                      isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Truyện này chưa có chương nào.</p>
+                  )}
+                </LoadingOverlay>
+                
                 {/* Pagination dưới danh sách chương nếu cần */}
-                {totalChapterListPages > 1 && currentChaptersForTabDisplay.length > 0 && (
+                {totalChapterListPages > 1 && currentChaptersForTabDisplay.length > 0 && !isLoadingChaptersData && (
                      <div className={`flex flex-col sm:flex-row justify-center sm:items-center mt-6 pt-4 border-t gap-y-3 ${
                        isDarkMode ? 'border-gray-600' : 'border-gray-200'
                      }`}>
@@ -916,7 +1155,7 @@ const DetailPage = () => {
               <div key={ad.id} className={`p-1 rounded-lg shadow-lg mb-6 ${
                 isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-white border border-gray-200'
               }`}>
-                <a href="#" aria-label={`Quảng cáo ${ad.id}`}><img src={ad.image} alt={`Quảng cáo ${ad.id}`} className="w-full h-auto rounded-md object-contain"/></a>
+                <a href="https://www.youtube.com/watch?v=ul86dicq_ck&list=RDul86dicq_ck&start_radio=1" aria-label={`Quảng cáo ${ad.id}`}><img src={ad.image} alt={`Quảng cáo ${ad.id}`} className="w-full h-auto rounded-md object-contain"/></a>
               </div>
             ))}
             

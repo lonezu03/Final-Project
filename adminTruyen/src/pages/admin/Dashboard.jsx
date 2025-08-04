@@ -33,10 +33,10 @@ const Dashboard = () => {
                                     <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                                         <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                                     </div>
-                                    <div>
+                                    {/* <div>
                                         <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Hoạt Động</div>
                                         <div className="text-xl font-bold text-slate-900 dark:text-slate-100">98.5%</div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
 
@@ -45,10 +45,10 @@ const Dashboard = () => {
                                     <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
                                         <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
                                     </div>
-                                    <div>
+                                    {/* <div>
                                         <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Người Dùng</div>
                                         <div className="text-xl font-bold text-slate-900 dark:text-slate-100">1,234</div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
 
@@ -57,10 +57,10 @@ const Dashboard = () => {
                                     <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
                                         <BookOpen className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                                     </div>
-                                    <div>
+                                    {/* <div>
                                         <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Truyện</div>
                                         <div className="text-xl font-bold text-slate-900 dark:text-slate-100">856</div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         </div>

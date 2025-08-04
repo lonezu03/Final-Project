@@ -83,14 +83,18 @@ export const getAllTransactions = createAsyncThunk(
         
         // Filter transactions by current user if idUser is provided
         const userTransactions = idUser 
-          ? allTransactions.filter(transaction => transaction.idUser === idUser)
+          ? allTransactions.filter(transaction => transaction.user?.idUser === idUser)
           : allTransactions;
         
         console.log('🔍 [getAllTransactions] Filter info:', {
           totalTransactions: allTransactions.length,
           userFilteredTransactions: userTransactions.length,
           filteringByUserId: idUser,
-          userTransactionIds: userTransactions.map(t => t.idUser)
+          userTransactionIds: userTransactions.map(t => t.user?.idUser),
+          userTransactionDetails: userTransactions.map(t => ({
+            userId: t.user?.idUser,
+            novelCount: Object.keys(t.novelBought || {}).length
+          }))
         });
         
         const rentedChapters = [];
@@ -101,11 +105,17 @@ export const getAllTransactions = createAsyncThunk(
         userTransactions.forEach(transaction => {
           const novelBought = transaction.novelBought || {};
           
+          console.log('🔍 [getAllTransactions] Processing transaction for user:', transaction.user?.idUser, 'novels:', Object.keys(novelBought));
+          
           Object.values(novelBought).forEach(novel => {
             if (novel.chapterBoughtRespone && Array.isArray(novel.chapterBoughtRespone)) {
+              console.log('🔍 [getAllTransactions] Processing novel:', novel.nameNovel, 'chapters:', novel.chapterBoughtRespone.length);
+              
               novel.chapterBoughtRespone.forEach(chapter => {
                 // Check if chapter has rental expiration date (dayRentAmount is array format)
                 if (chapter.dayRentAmount && Array.isArray(chapter.dayRentAmount)) {
+                  console.log('🔍 [getAllTransactions] Found rented chapter:', chapter.titleChapter, 'dayRentAmount:', chapter.dayRentAmount);
+                  
                   rentedChapters.push(chapter.idChapter);
                   
                   // Convert dayRentAmount array to Date object
@@ -117,12 +127,14 @@ export const getAllTransactions = createAsyncThunk(
                       ...novel,
                       chapterBoughtRespone: []
                     };
+                    console.log('🔍 [getAllTransactions] Created rentedNovels entry for:', novel.nameNovel);
                   }
                   rentedNovels[novel.idNovel].chapterBoughtRespone.push({
                     ...chapter,
                     rentExpiration: expirationDate.toISOString() // Convert to ISO string for consistency
                   });
                 } else {
+                  console.log('🔍 [getAllTransactions] Found purchased chapter:', chapter.titleChapter);
                   purchasedChapters.push(chapter.idChapter);
                   
                   if (!purchasedNovels[novel.idNovel]) {
@@ -136,6 +148,18 @@ export const getAllTransactions = createAsyncThunk(
               });
             }
           });
+        });
+
+        console.log('🔍 [getAllTransactions] Final result:', {
+          rentedChaptersCount: rentedChapters.length,
+          purchasedChaptersCount: purchasedChapters.length,
+          rentedNovelsCount: Object.keys(rentedNovels).length,
+          purchasedNovelsCount: Object.keys(purchasedNovels).length,
+          rentedNovels: Object.keys(rentedNovels).map(novelId => ({
+            novelId,
+            novelName: rentedNovels[novelId].nameNovel,
+            chaptersCount: rentedNovels[novelId].chapterBoughtRespone.length
+          }))
         });
 
         return {

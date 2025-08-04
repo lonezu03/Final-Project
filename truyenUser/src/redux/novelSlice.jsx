@@ -112,24 +112,25 @@ export const deleteNovel = createAsyncThunk(
 // API SEARCH NOVELS
 export const searchNovels = createAsyncThunk(
   'novels/search',
-  async ({ searchCriteria, paginationAndSortParams }, { rejectWithValue }) => {
+  async ({ searchCriteria, pageable }, { rejectWithValue }) => {
     try {
+      // Xây dựng URL query string từ pageable params
       let queryString = '';
-      if (paginationAndSortParams) {
+      if (pageable) {
         const params = new URLSearchParams();
-        if (paginationAndSortParams.page !== undefined && paginationAndSortParams.page !== null) {
-          params.append('page', paginationAndSortParams.page);
+        if (pageable.page !== undefined && pageable.page !== null) {
+          params.append('page', pageable.page);
         }
-        if (paginationAndSortParams.size !== undefined && paginationAndSortParams.size !== null) {
-          params.append('size', paginationAndSortParams.size);
+        if (pageable.size !== undefined && pageable.size !== null) {
+          params.append('size', pageable.size);
         }
-        if (paginationAndSortParams.sort) {
-          if (Array.isArray(paginationAndSortParams.sort)) {
-            paginationAndSortParams.sort.forEach(sortParam => {
+        if (pageable.sort) {
+          if (Array.isArray(pageable.sort)) {
+            pageable.sort.forEach(sortParam => {
               if (sortParam) params.append('sort', sortParam);
             });
           } else {
-            params.append('sort', paginationAndSortParams.sort);
+            params.append('sort', pageable.sort);
           }
         }
         queryString = params.toString() ? `?${params.toString()}` : '';
@@ -138,7 +139,7 @@ export const searchNovels = createAsyncThunk(
       console.log("searchNovels thunk - URL:", `${publicApiBaseNovel}/search${queryString}`);
       console.log("searchNovels thunk - searchCriteria:", searchCriteria);
 
-      // SỬA: Dùng axios thay vì apiClient vì API này là public
+      // Gọi API search với POST method và pageable params trong query string
       const response = await axios.post(`${publicApiBaseNovel}/search${queryString}`, searchCriteria || {}, {
         headers: {
           'Content-Type': 'application/json',
@@ -147,11 +148,12 @@ export const searchNovels = createAsyncThunk(
 
       console.log("searchNovels thunk - response:", response.data);
 
-      if (response.data && Array.isArray(response.data.content) && response.data.pageable) {
+      // Kiểm tra cấu trúc response theo API specification
+      if (response.data && Array.isArray(response.data.content) && response.data.pageable !== undefined) {
         console.log("Thunk searchNovels returning fulfilled with:", response.data);
-        return response.data; // Trả về toàn bộ object response.data (chứa content, pageable, ...)
+        return response.data; // Trả về toàn bộ object response.data (chứa content, pageable, totalPages, etc.)
       } else {
-        // Nếu response không có cấu trúc mong đợi (thiếu content hoặc pageable)
+        // Nếu response không có cấu trúc mong đợi
         console.error("API Search Response Issue (trong thunk): Dữ liệu trả về không đúng cấu trúc.", response.data);
         return rejectWithValue(response.data?.message || 'Dữ liệu tìm kiếm không hợp lệ.');
       }
