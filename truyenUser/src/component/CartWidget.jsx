@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ShoppingCart, X, Loader2, Trash2 } from 'lucide-react';
-import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
+import { createTransaction, confirmTransactions, resetTransactionState, setShowConfirmDialog } from '../redux/transactionSlice';
 import { refreshUser } from '../redux/userSlice';
 import { useTheme } from '../context/ThemeContext';
 
@@ -35,11 +35,12 @@ const CartWidget = ({ novelTitle }) => {
   const { isDarkMode } = useTheme();
   
   const { currentUser } = useSelector((state) => state.user);
-  const { createStatus, confirmStatus, pendingTransaction, createError } = useSelector((state) => state.transaction);
+  const { createStatus, confirmStatus, pendingTransaction, createError, showConfirmDialog: globalShowConfirmDialog } = useSelector((state) => state.transaction);
   
   const [cart, setCart] = useState(getCartFromStorage());
   const [showCart, setShowCart] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isCartTransaction, setIsCartTransaction] = useState(false); // Flag để track transaction từ cart
 
   // Cập nhật cart từ storage
   useEffect(() => {
@@ -58,16 +59,18 @@ const CartWidget = ({ novelTitle }) => {
     return () => clearInterval(interval);
   }, [cart]);
 
-  // Effect để xử lý kết quả từ createTransaction
+  // Effect để xử lý kết quả từ createTransaction - sử dụng global dialog state
   useEffect(() => {
-    if (createStatus === 'succeeded' && pendingTransaction) {
+    // Sử dụng global dialog state và check nếu transaction từ cart
+    if (globalShowConfirmDialog && pendingTransaction && isCartTransaction) {
       setShowConfirmDialog(true);
     }
     if (createStatus === 'failed' && createError) {
       toast.error(`Lỗi tạo giao dịch: ${createError}`);
       dispatch(resetTransactionState());
+      setIsCartTransaction(false); // Reset flag
     }
-  }, [createStatus, pendingTransaction, createError, dispatch]);
+  }, [createStatus, pendingTransaction, createError, dispatch, isCartTransaction, globalShowConfirmDialog]);
 
   const handleRemoveFromCart = (chapterId) => {
     const newCart = removeFromCart(chapterId);
@@ -100,24 +103,33 @@ const CartWidget = ({ novelTitle }) => {
       return;
     }
 
+    // Tạo chapterAndPrice array từ cart để hỗ trợ nhiều truyện
+    const chapterAndPrice = cart.map(item => ({
+      idChapter: item.chapterId,
+      coin: item.coinPrice
+    }));
+
     const transactionData = {
       idUser: currentUser.idUser,
-      idChapters: cart.map(item => item.chapterId),
-      amountCoin: totalCost,
-      typeTransaction: 'BUY',
+      chapterAndPrice: chapterAndPrice,
       dateEndRent: null,
+      typeTransaction: 'BUY'
     };
     
-    console.log('Tạo giao dịch giỏ hàng với data:', transactionData);
+    console.log('🛒 [CartWidget] Tạo giao dịch giỏ hàng với data:', transactionData);
+    setIsCartTransaction(true); // Đánh dấu transaction từ cart
     dispatch(createTransaction(transactionData));
   };
 
   const handleConfirmPurchase = async () => {
     if (!currentUser || !pendingTransaction) return;
     
+    // Lấy danh sách chapter IDs từ chapterAndPrice
+    const listIdChapter = pendingTransaction.chapterAndPrice.map(item => item.idChapter);
+    
     const confirmationData = {
       idUser: currentUser.idUser,
-      listIdChapter: pendingTransaction.idChapters,
+      listIdChapter: listIdChapter,
     };
     
     console.log('Xác nhận giao dịch giỏ hàng:', confirmationData);
@@ -140,17 +152,25 @@ const CartWidget = ({ novelTitle }) => {
     } finally {
       setShowConfirmDialog(false);
       setShowCart(false);
+      setIsCartTransaction(false); // Reset flag
+      dispatch(setShowConfirmDialog(false)); // Đóng global dialog
       dispatch(resetTransactionState());
     }
   };
 
   const handleCancelConfirm = () => {
     setShowConfirmDialog(false);
+    setIsCartTransaction(false); // Reset flag
+    dispatch(setShowConfirmDialog(false)); // Đóng global dialog
     dispatch(resetTransactionState());
   };
 
   const totalItems = cart.length;
   const totalCost = cart.reduce((sum, item) => sum + item.coinPrice, 0);
+  
+  // Đếm số truyện khác nhau trong giỏ hàng
+  const uniqueNovels = [...new Set(cart.map(item => item.novelId))];
+  const novelCount = uniqueNovels.length;
 
   if (totalItems === 0) {
     return (
@@ -192,7 +212,7 @@ const CartWidget = ({ novelTitle }) => {
           <div className={`text-sm ${
             isDarkMode ? 'text-gray-300' : 'text-gray-700'
           }`}>
-            <span className="font-medium">Truyện:</span> {novelTitle}
+            <span className="font-medium">Số truyện:</span> {novelCount}
           </div>
           <div className={`text-sm ${
             isDarkMode ? 'text-gray-300' : 'text-gray-700'
@@ -277,7 +297,9 @@ const CartWidget = ({ novelTitle }) => {
                       }`}>{item.chapterTitle}</div>
                       <div className={`text-xs ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                      }`}>{item.coinPrice} xu</div>
+                      }`}>
+                        {item.novelTitle || 'Chưa rõ truyện'} • {item.coinPrice} xu
+                      </div>
                     </div>
                     <button
                       onClick={() => handleRemoveFromCart(item.chapterId)}
@@ -339,8 +361,8 @@ const CartWidget = ({ novelTitle }) => {
         </div>
       )}
 
-      {/* Dialog xác nhận mua */}
-      {showConfirmDialog && pendingTransaction && (
+      {/* Dialog xác nhận mua - Chỉ hiển thị khi transaction từ cart */}
+      {showConfirmDialog && pendingTransaction && isCartTransaction && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
           <div className={`rounded-lg shadow-xl p-6 w-11/12 max-w-md transition-colors ${
             isDarkMode 
@@ -355,7 +377,7 @@ const CartWidget = ({ novelTitle }) => {
             }`}>
               Bạn sắp dùng <span className={`font-bold ${
                 isDarkMode ? 'text-orange-400' : 'text-orange-500'
-              }`}>{pendingTransaction.amountCoin} xu</span> để mua {pendingTransaction.idChapters.length} chương.
+              }`}>{pendingTransaction.chapterAndPrice.reduce((sum, item) => sum + item.coin, 0)} xu</span> để mua {pendingTransaction.chapterAndPrice.length} chương từ {[...new Set(pendingTransaction.chapterAndPrice.map(item => cart.find(c => c.chapterId === item.idChapter)?.novelId).filter(Boolean))].length} truyện.
             </p>
             <div className="flex justify-end space-x-3">
               <button 

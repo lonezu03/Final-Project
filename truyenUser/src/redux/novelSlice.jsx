@@ -304,6 +304,11 @@ const novelSlice = createSlice({
                             // Hoặc tạo một state riêng cho kết quả tìm kiếm, ví dụ: state.searchedNovels
         state.pagination = initialPaginationState;
         state.error = null;
+    },
+    clearReviews: (state) => {
+      state.reviews = [];
+      state.loadingReviews = false;
+      state.errorReviews = null;
     }
   },
   extraReducers: (builder) => {
@@ -468,7 +473,7 @@ const novelSlice = createSlice({
   }
 });
 
-export const { clearCurrentNovel, setCurrentNovelFromList, clearSearchedNovels } = novelSlice.actions;
+export const { clearCurrentNovel, setCurrentNovelFromList, clearSearchedNovels, clearReviews } = novelSlice.actions;
 
 export const selectAllFetchedNovels = (state) => state.novels.novels;
 export const selectSearchedNovels = (state) => state.novels.searchedNovels; // Cho kết quả tìm kiếm

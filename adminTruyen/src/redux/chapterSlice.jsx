@@ -6,26 +6,21 @@ const apiPath = "/chapter"; // Đường dẫn tương đối
 
 // --- ASYNC THUNKS ---
 
-// Lấy tất cả chapter của một truyện (không cần token nếu là public)
+// Lấy tất cả chapter của một truyện (không cần token - chỉ lấy metadata)
 export const getAllChapters = createAsyncThunk(
   'chapters/getAll', 
- async (novelId, { getState, rejectWithValue }) => {
+ async (novelId, { rejectWithValue }) => {
     try {
        console.log('--- Running getAllChapters thunk ---');
       console.log('Received novelId:', novelId);
-      const fullState = getState();
-      console.log('Full Redux State:', fullState); 
-      const { token } = getState().user; // Lấy token từ userSlice
       const payload = { idNovel: novelId };
-      if (token) {
-        payload.token = token; // Gửi token nếu có
-      }
+      // Không gửi token để API response nhanh hơn - chỉ lấy metadata
 
       const response = await apiClient.post(`${apiPath}/getAll`, payload);
 
       if (response.data && response.data.code === 1000 && Array.isArray(response.data.result)) {
-        // Sắp xếp các chương theo chapterNumber
-        return response.data.result.sort((a, b) => Number(a.chapterNumber) - Number(b.chapterNumber));
+        // Sắp xếp các chương theo indexChapter
+        return response.data.result.sort((a, b) => Number(a.indexChapter) - Number(b.indexChapter));
       }
       return rejectWithValue(response.data?.message || 'Không thể tải danh sách chương.');
     } catch (error) {
@@ -115,7 +110,12 @@ const chapterSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    clearChapters: (state) => {
+      state.chapters = [];
+      state.error = null;
+    }
+  },
   extraReducers: (builder) => {
     // Hàm chung để xử lý pending và rejected
     const handlePending = (state) => {
@@ -133,8 +133,12 @@ const chapterSlice = createSlice({
       .addCase(getAllChapters.fulfilled, (state, action) => {
         state.loading = false;
         state.chapters = action.payload || []; // Đảm bảo là mảng
-      })
-      .addCase(getAllChapters.rejected, handleRejected)
+            })
+            .addCase(getAllChapters.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.chapters = []; // Clear danh sách chapter khi bị lỗi
+            })
 
       // GET BY ID (Cập nhật 1 chapter hoặc thêm nếu chưa có)
       .addCase(getChapterById.pending, handlePending)
@@ -178,5 +182,7 @@ const chapterSlice = createSlice({
       .addCase(deleteChapter.rejected, handleRejected);
   }
 });
+
+export const { clearChapters } = chapterSlice.actions;
 
 export default chapterSlice.reducer;

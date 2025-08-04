@@ -229,9 +229,13 @@ const [isFilterSidebarOpen, setFilterSidebarOpen] = useState(false);
       console.log("Redux logout action dispatched.");
 
       setSettingsSidebarOpen(false); // Đóng sidebar cài đặt nếu đang mở
-      navigate('/'); // Điều hướng về trang chủ sau khi logout
+      
+      // Reload trang để clear hết cache và force gọi lại API
+      window.location.reload();
     } catch (error) {
       console.error("Error during logout: ", error);
+      // Nếu có lỗi vẫn reload để đảm bảo clear cache
+      window.location.reload();
     }
   };
 

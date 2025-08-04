@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getAllChapters, createChapter, deleteChapter, updateChapter } from '../../redux/chapterSlice';
+import { getAllChapters, createChapter, deleteChapter, updateChapter, clearChapters, getChapterById } from '../../redux/chapterSlice';
 import { PencilLine, Trash, Plus, Eye, BookOpen, Coins, FileText } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { toast } from 'react-toastify';
@@ -17,20 +17,36 @@ const ChapterManagement = ({ novel }) => {
   const [currentChapter, setCurrentChapter] = useState(null); 
   const [file, setFile] = useState(null);
   const [showFormpre, setShowFormpre] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // State để lưu nội dung chương cần preview
+  const [previewContent, setPreviewContent] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Trích xuất novelId để làm dependency cho useEffect
   const novelId = novel?.idNovel;
 
   useEffect(() => {
     // Chỉ dispatch khi có novelId
-          dispatch(getAllChapters(novelId));
-
     if (novelId) {
+      console.log('ChapterManagement: Fetching chapters for novelId:', novelId);
+      // Clear chapters trước khi fetch data mới
+      dispatch(clearChapters());
       dispatch(getAllChapters(novelId));
     }
     // Reset lại trang về 1 mỗi khi đổi truyện
     setCurrentPage(1); 
   }, [novelId, dispatch]);
+
+  // Debug effect để track error
+  useEffect(() => {
+    if (error) {
+      console.error('ChapterManagement Error:', error);
+    }
+  }, [error]);
 
   // Nếu không có novel được truyền vào, không render gì cả.
   // Đây là một "guard clause" để component tự ẩn đi.
@@ -112,23 +128,51 @@ const ChapterManagement = ({ novel }) => {
   };
 
   // Logic phân trang
-  const [currentPage, setCurrentPage] = useState(1);
   const chaptersPerPage = 5;
+  
+  // Lọc chapters theo search term
+  const filteredChapters = Array.isArray(chapters) ? chapters.filter(chapter =>
+    chapter.titleChapter?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) : [];
+  
+  // Debug logging - sau khi filteredChapters được khởi tạo
+  console.log('ChapterManagement Debug:', {
+    novelId: novel?.idNovel,
+    chapters: chapters,
+    chaptersLength: chapters?.length,
+    loading: loading,
+    error: error,
+    searchTerm: searchTerm,
+    filteredChaptersLength: filteredChapters?.length
+  });
+  
   const indexOfLastChapter = currentPage * chaptersPerPage;
   const indexOfFirstChapter = indexOfLastChapter - chaptersPerPage;
-  const currentChaptersToDisplay = chapters.slice(indexOfFirstChapter, indexOfLastChapter);
+  const currentChaptersToDisplay = filteredChapters.slice(indexOfFirstChapter, indexOfLastChapter);
   const paginate = (page) => setCurrentPage(page);
 
-  // State để lưu nội dung chương cần preview
-  const [previewContent, setPreviewContent] = useState('');
-  const [previewTitle, setPreviewTitle] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
-
   // Hàm xử lý khi nhấn nút Preview
-  const handlepreviewClick = (chapter) => {
+  const handlepreviewClick = async (chapter) => {
     setPreviewTitle(chapter.titleChapter);
-    setPreviewContent(chapter.contentChapter || 'Không có nội dung chương.');
     setShowPreview(true);
+    setLoadingPreview(true);
+    
+    try {
+      // Gọi API để lấy nội dung đầy đủ của chapter
+      const result = await dispatch(getChapterById(chapter.idChapter)).unwrap();
+      
+      if (result && result.contentChapter) {
+        setPreviewContent(result.contentChapter);
+      } else {
+        setPreviewContent('⚠️ Không thể tải nội dung chapter này.');
+      }
+    } catch (error) {
+      console.error('Error fetching chapter content:', error);
+      setPreviewContent('❌ Lỗi khi tải nội dung chapter: ' + (error || 'Không xác định'));
+      toast.error('Không thể tải nội dung chapter!');
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   return (
@@ -142,6 +186,7 @@ const ChapterManagement = ({ novel }) => {
           <p className="text-slate-600 dark:text-slate-300">
             Quản lý các chương của truyện một cách dễ dàng
           </p>
+          
         </div>
       </div>
 
@@ -151,7 +196,7 @@ const ChapterManagement = ({ novel }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tổng Chương</p>
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{chapters.length}</p>
+              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{Array.isArray(chapters) ? chapters.length : 0}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
               <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -164,8 +209,9 @@ const ChapterManagement = ({ novel }) => {
             <div>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tổng Lượt Xem</p>
               <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-                {chapters.reduce((total, chapter) => total + (chapter.viewChapter || 0), 0)}
+                {Array.isArray(chapters) ? chapters.reduce((total, chapter) => total + (chapter.viewChapter || 0), 0) : 0}
               </p>
+             
             </div>
             <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl">
               <Eye className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
@@ -178,7 +224,7 @@ const ChapterManagement = ({ novel }) => {
             <div>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Trung Bình Coin Mua</p>
               <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                {chapters.length > 0 ? Math.round(chapters.reduce((total, chapter) => total + (chapter.coinPrice || 0), 0) / chapters.length) : 0}
+                {Array.isArray(chapters) && chapters.length > 0 ? Math.round(chapters.reduce((total, chapter) => total + (chapter.coinPrice || 0), 0) / chapters.length) : 0}
               </p>
             </div>
             <div className="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
@@ -192,13 +238,27 @@ const ChapterManagement = ({ novel }) => {
             <div>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Trung Bình Coin Thuê</p>
               <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                {chapters.length > 0 ? Math.round(chapters.reduce((total, chapter) => total + (chapter.cointRentPrice || 0), 0) / chapters.length) : 0}
+                {Array.isArray(chapters) && chapters.length > 0 ? Math.round(chapters.reduce((total, chapter) => total + (chapter.cointRentPrice || 0), 0) / chapters.length) : 0}
               </p>
             </div>
             <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl">
               <Coins className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Search Input */}
+      <div className="mb-6">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên chương..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400"
+          />
+          <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
         </div>
       </div>
 
@@ -245,11 +305,24 @@ const ChapterManagement = ({ novel }) => {
                   <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   {previewTitle}
                 </h3>
-                <div className="bg-slate-50/80 dark:bg-slate-700/80 rounded-xl p-4 max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">
-                    {previewContent}
-                  </pre>
-                </div>
+                
+                {loadingPreview ? (
+                  <div className="bg-slate-50/80 dark:bg-slate-700/80 rounded-xl p-8 text-center">
+                    <div className="flex items-center justify-center gap-3 mb-3">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      <span className="text-slate-600 dark:text-slate-300">Đang tải nội dung chapter...</span>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Gọi API getChapterById để lấy nội dung đầy đủ
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50/80 dark:bg-slate-700/80 rounded-xl p-4 max-h-96 overflow-y-auto">
+                    <pre className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">
+                      {previewContent}
+                    </pre>
+                  </div>
+                )}
               </div>
               
               <div className="p-6 border-t border-slate-200/50 dark:border-slate-700/50">
@@ -399,7 +472,7 @@ const ChapterManagement = ({ novel }) => {
         </div>
       )} */}
       
-      {!loading && chapters.length === 0 && (
+      {!loading && (!Array.isArray(chapters) || chapters.length === 0) && (
         <div className="text-center">
           <div className="bg-slate-50/80 dark:bg-slate-700/80 backdrop-blur-xl rounded-2xl p-8">
             <div className="flex flex-col items-center gap-4">
@@ -412,7 +485,7 @@ const ChapterManagement = ({ novel }) => {
         </div>
       )}
 
-      {chapters.length > 0 && (
+      {Array.isArray(chapters) && chapters.length > 0 && (
         <>
           {/* Chapters Table */}
           <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
@@ -451,8 +524,8 @@ const ChapterManagement = ({ novel }) => {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <Eye className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                          <span className="font-medium text-slate-900 dark:text-slate-100">{chapter.viewChapter}</span>
+                          <Eye className="h-4 w-4 text-slate-400" />
+                          <span className="font-medium text-slate-500 dark:text-slate-400">{chapter.viewChapter}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -518,7 +591,7 @@ const ChapterManagement = ({ novel }) => {
                 </span>
                 <button 
                   onClick={() => paginate(currentPage + 1)} 
-                  disabled={indexOfLastChapter >= chapters.length} 
+                  disabled={indexOfLastChapter >= filteredChapters.length} 
                   className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   Sau

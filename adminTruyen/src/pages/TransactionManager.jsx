@@ -16,13 +16,50 @@ const TransactionManager = () => {
   const [transactionsPerPage, setTransactionsPerPage] = useState(10);
   const [statusFilter, setStatusFilter] = useState('SUCCESS');
   const [typeFilter, setTypeFilter] = useState('ALL'); // Bộ lọc loại giao dịch
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Fetch history deposit when component mounts
   useEffect(() => {
     dispatch(getAllHistoryDeposit());
   }, [dispatch]);
 
-  // Filter history deposits based on search term, type, and remove FAILED
+  // Helper function to parse date from array format to Date object
+  const parseDate = (dateArray) => {
+    if (Array.isArray(dateArray) && dateArray.length >= 3) {
+      const [year, month, day] = dateArray;
+      return new Date(year, month - 1, day); // month is 0-indexed in JS Date
+    }
+    if (typeof dateArray === 'string') {
+      return new Date(dateArray);
+    }
+    return null;
+  };
+
+  // Helper function to check if date is within range
+  const isDateInRange = (dateArray, startDate, endDate) => {
+    const transactionDate = parseDate(dateArray);
+    if (!transactionDate) return true; // If can't parse date, include it
+
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+
+    if (start && end) {
+      // Set time to start/end of day for accurate comparison
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return transactionDate >= start && transactionDate <= end;
+    } else if (start) {
+      start.setHours(0, 0, 0, 0);
+      return transactionDate >= start;
+    } else if (end) {
+      end.setHours(23, 59, 59, 999);
+      return transactionDate <= end;
+    }
+    return true;
+  };
+
+  // Filter history deposits based on search term, type, date range, and remove FAILED
   const filteredTransactions = allHistoryDeposit
     .filter(deposit => deposit.statusDeposit !== 'FAILED')
     .filter(deposit => {
@@ -32,7 +69,8 @@ const TransactionManager = () => {
     .filter(deposit => 
       deposit.userNameUser?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       deposit.emailUser?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    )
+    .filter(deposit => isDateInRange(deposit.dateCreate, startDate, endDate));
 
   // Pagination logic
   const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
@@ -40,10 +78,10 @@ const TransactionManager = () => {
   const endIndex = startIndex + transactionsPerPage;
   const paginatedTransactions = filteredTransactions.slice(startIndex, endIndex);
 
-  // Reset page when searching or changing status
+  // Reset page when searching, changing status, or changing date range
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, typeFilter, startDate, endDate]);
 
   // Status options for filter
   // const statusOptions = ['ALL', 'PENDING', 'SUCCESS', 'FAILED'];
@@ -133,7 +171,8 @@ const TransactionManager = () => {
 
         {/* Filters and Search */}
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 dark:border-slate-700/50 p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-4">
+            {/* Search Input */}
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -144,28 +183,118 @@ const TransactionManager = () => {
               />
               <Search className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-500" size={18} />
             </div>
-            <div className="flex items-center gap-4">
-              <select
-                value={typeFilter}
-                onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100"
-              >
-                <option value="ALL">Tất cả loại giao dịch</option>
-                <option value="BUY_COIN">Nạp tiền</option>
-                <option value="BUY_CHAPTER">Mua chương</option>
-              </select>
-              <select
-                value={transactionsPerPage}
-                onChange={(e) => {
-                  setTransactionsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
+            
+            {/* Filters Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              {/* Date Range Filters */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Từ ngày:</span>
+                </div>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100 text-sm"
+                />
+                <span className="text-slate-500 dark:text-slate-400">đến</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100 text-sm"
+                />
+                {(startDate || endDate) && (
+                  <button
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                    }}
+                    className="px-3 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-all duration-200"
+                  >
+                    Xóa lọc
+                  </button>
+                )}
+              </div>
+              
+              {/* Type and Per Page Filters */}
+              <div className="flex items-center gap-4 ml-auto">
+                <select
+                  value={typeFilter}
+                  onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+                  className="px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100"
+                >
+                  <option value="ALL">Tất cả loại giao dịch</option>
+                  <option value="BUY_COIN">Nạp tiền</option>
+                  <option value="BUY_CHAPTER">Mua chương</option>
+                </select>
+                <select
+                  value={transactionsPerPage}
+                  onChange={(e) => {
+                    setTransactionsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100"
+                >
+                  {[5, 10, 20, 50].map(num => (
+                    <option key={num} value={num}>{num} / trang</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            {/* Quick Date Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Lọc nhanh:</span>
+              <button
+                onClick={() => {
+                  const today = new Date();
+                  const todayStr = today.toISOString().split('T')[0];
+                  setStartDate(todayStr);
+                  setEndDate(todayStr);
                 }}
-                className="px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100"
+                className="px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium transition-all duration-200"
               >
-                {[5, 10, 20, 50].map(num => (
-                  <option key={num} value={num}>{num} / trang</option>
-                ))}
-              </select>
+                Hôm nay
+              </button>
+              <button
+                onClick={() => {
+                  const today = new Date();
+                  const yesterday = new Date(today);
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  const yesterdayStr = yesterday.toISOString().split('T')[0];
+                  setStartDate(yesterdayStr);
+                  setEndDate(yesterdayStr);
+                }}
+                className="px-3 py-1 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium transition-all duration-200"
+              >
+                Hôm qua
+              </button>
+              <button
+                onClick={() => {
+                  const today = new Date();
+                  const weekAgo = new Date(today);
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  setStartDate(weekAgo.toISOString().split('T')[0]);
+                  setEndDate(today.toISOString().split('T')[0]);
+                }}
+                className="px-3 py-1 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-medium transition-all duration-200"
+              >
+                7 ngày qua
+              </button>
+              <button
+                onClick={() => {
+                  const today = new Date();
+                  const monthAgo = new Date(today);
+                  monthAgo.setDate(monthAgo.getDate() - 30);
+                  setStartDate(monthAgo.toISOString().split('T')[0]);
+                  setEndDate(today.toISOString().split('T')[0]);
+                }}
+                className="px-3 py-1 bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-700 dark:text-orange-300 rounded-lg text-sm font-medium transition-all duration-200"
+              >
+                30 ngày qua
+              </button>
             </div>
           </div>
         </div>
@@ -276,7 +405,14 @@ const TransactionManager = () => {
           <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 dark:border-slate-700/50 p-6">
             <div className="flex justify-between items-center">
               <div className="text-sm text-slate-700 dark:text-slate-300">
-                Hiển thị {startIndex + 1} - {Math.min(endIndex, filteredTransactions.length)} của {filteredTransactions.length} giao dịch
+                <div>
+                  Hiển thị {startIndex + 1} - {Math.min(endIndex, filteredTransactions.length)} của {filteredTransactions.length} giao dịch
+                </div>
+                {(searchTerm || typeFilter !== 'ALL' || startDate || endDate) && (
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    (Đã lọc từ tổng {allHistoryDeposit.filter(d => d.statusDeposit !== 'FAILED').length} giao dịch)
+                  </div>
+                )}
               </div>
               <div className="flex space-x-2">
                 <button

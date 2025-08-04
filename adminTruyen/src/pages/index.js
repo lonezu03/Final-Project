@@ -16,7 +16,7 @@
 export { default as Dashboard }           from "./admin/Dashboard";
 export { default as CategoryManagement }  from "./admin/CategoryManagement";
 export { default as NovelManagement }   from "./admin/NovelManagement";
-export { default as AnalyticsReport }     from "./admin/AnalyticsReport";
+// export { default as AnalyticsReport }     from "./admin/AnalyticsReport";
 export { default as CommentManagement } from "./admin/CommentManagement";
 export { default as UserManager }         from "./UserManager";
 export { default as RolePermissionManager } from "./RolePermissionManager";

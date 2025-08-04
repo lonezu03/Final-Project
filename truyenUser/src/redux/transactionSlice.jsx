@@ -8,9 +8,9 @@ export const createTransaction = createAsyncThunk(
   'transaction/create',
   async (transactionData, { rejectWithValue }) => {
     try {
-      console.log('Sending transaction data:', transactionData);
+      // console.log('📝 [createTransaction] Sending transaction data:', transactionData);
       const response = await apiClient.post('/transaction/createTransaction', transactionData);
-      console.log('Transaction response:', response.data);
+      // console.log('📨 [createTransaction] Response:', response.data);
       
       if (response.data && response.data.code === 1000 && response.data.result === true) {
         // Trả về dữ liệu gốc để component có thể dùng cho bước confirm
@@ -18,7 +18,7 @@ export const createTransaction = createAsyncThunk(
       }
       return rejectWithValue(response.data?.message || 'Không thể tạo giao dịch.');
     } catch (error) {
-      console.error('Create transaction error:', error);
+      console.error('❌ [createTransaction] Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tạo giao dịch.');
     }
   }
@@ -28,9 +28,9 @@ export const confirmTransactions = createAsyncThunk(
   'transaction/confirm',
   async (confirmationData, { rejectWithValue }) => {
     try {
-      console.log('Sending confirmation data:', confirmationData);
+      // console.log('📝 [confirmTransactions] Sending confirmation data:', confirmationData);
       const response = await apiClient.post('/transaction/confirmTransactions', confirmationData);
-      console.log('Confirmation response:', response.data);
+      // console.log('📨 [confirmTransactions] Response:', response.data);
       
       if (response.data && response.data.code === 1000 && response.data.result === true) {
         // Trả về danh sách chương đã xác nhận để cập nhật state
@@ -38,7 +38,7 @@ export const confirmTransactions = createAsyncThunk(
       }
       return rejectWithValue(response.data?.message || 'Không thể xác nhận giao dịch.');
     } catch (error) {
-      console.error('Confirm transaction error:', error);
+      console.error('❌ [confirmTransactions] Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi xác nhận giao dịch.');
     }
   }
@@ -86,16 +86,16 @@ export const getAllTransactions = createAsyncThunk(
           ? allTransactions.filter(transaction => transaction.user?.idUser === idUser)
           : allTransactions;
         
-        console.log('🔍 [getAllTransactions] Filter info:', {
-          totalTransactions: allTransactions.length,
-          userFilteredTransactions: userTransactions.length,
-          filteringByUserId: idUser,
-          userTransactionIds: userTransactions.map(t => t.user?.idUser),
-          userTransactionDetails: userTransactions.map(t => ({
-            userId: t.user?.idUser,
-            novelCount: Object.keys(t.novelBought || {}).length
-          }))
-        });
+        // console.log('🔍 [getAllTransactions] Filter info:', {
+        //   totalTransactions: allTransactions.length,
+        //   userFilteredTransactions: userTransactions.length,
+        //   filteringByUserId: idUser,
+        //   userTransactionIds: userTransactions.map(t => t.user?.idUser),
+        //   userTransactionDetails: userTransactions.map(t => ({
+        //     userId: t.user?.idUser,
+        //     novelCount: Object.keys(t.novelBought || {}).length
+        //   }))
+        // });
         
         const rentedChapters = [];
         const purchasedChapters = [];
@@ -105,16 +105,16 @@ export const getAllTransactions = createAsyncThunk(
         userTransactions.forEach(transaction => {
           const novelBought = transaction.novelBought || {};
           
-          console.log('🔍 [getAllTransactions] Processing transaction for user:', transaction.user?.idUser, 'novels:', Object.keys(novelBought));
+          // console.log('🔍 [getAllTransactions] Processing transaction for user:', transaction.user?.idUser, 'novels:', Object.keys(novelBought));
           
           Object.values(novelBought).forEach(novel => {
             if (novel.chapterBoughtRespone && Array.isArray(novel.chapterBoughtRespone)) {
-              console.log('🔍 [getAllTransactions] Processing novel:', novel.nameNovel, 'chapters:', novel.chapterBoughtRespone.length);
+              // console.log('🔍 [getAllTransactions] Processing novel:', novel.nameNovel, 'chapters:', novel.chapterBoughtRespone.length);
               
               novel.chapterBoughtRespone.forEach(chapter => {
                 // Check if chapter has rental expiration date (dayRentAmount is array format)
                 if (chapter.dayRentAmount && Array.isArray(chapter.dayRentAmount)) {
-                  console.log('🔍 [getAllTransactions] Found rented chapter:', chapter.titleChapter, 'dayRentAmount:', chapter.dayRentAmount);
+                  // console.log('🔍 [getAllTransactions] Found rented chapter:', chapter.titleChapter, 'dayRentAmount:', chapter.dayRentAmount);
                   
                   rentedChapters.push(chapter.idChapter);
                   
@@ -127,14 +127,14 @@ export const getAllTransactions = createAsyncThunk(
                       ...novel,
                       chapterBoughtRespone: []
                     };
-                    console.log('🔍 [getAllTransactions] Created rentedNovels entry for:', novel.nameNovel);
+                    // console.log('🔍 [getAllTransactions] Created rentedNovels entry for:', novel.nameNovel);
                   }
                   rentedNovels[novel.idNovel].chapterBoughtRespone.push({
                     ...chapter,
                     rentExpiration: expirationDate.toISOString() // Convert to ISO string for consistency
                   });
                 } else {
-                  console.log('🔍 [getAllTransactions] Found purchased chapter:', chapter.titleChapter);
+                  // console.log('🔍 [getAllTransactions] Found purchased chapter:', chapter.titleChapter);
                   purchasedChapters.push(chapter.idChapter);
                   
                   if (!purchasedNovels[novel.idNovel]) {
@@ -150,17 +150,17 @@ export const getAllTransactions = createAsyncThunk(
           });
         });
 
-        console.log('🔍 [getAllTransactions] Final result:', {
-          rentedChaptersCount: rentedChapters.length,
-          purchasedChaptersCount: purchasedChapters.length,
-          rentedNovelsCount: Object.keys(rentedNovels).length,
-          purchasedNovelsCount: Object.keys(purchasedNovels).length,
-          rentedNovels: Object.keys(rentedNovels).map(novelId => ({
-            novelId,
-            novelName: rentedNovels[novelId].nameNovel,
-            chaptersCount: rentedNovels[novelId].chapterBoughtRespone.length
-          }))
-        });
+        // console.log('🔍 [getAllTransactions] Final result:', {
+        //   rentedChaptersCount: rentedChapters.length,
+        //   purchasedChaptersCount: purchasedChapters.length,
+        //   rentedNovelsCount: Object.keys(rentedNovels).length,
+        //   purchasedNovelsCount: Object.keys(purchasedNovels).length,
+        //   rentedNovels: Object.keys(rentedNovels).map(novelId => ({
+        //     novelId,
+        //     novelName: rentedNovels[novelId].nameNovel,
+        //     chaptersCount: rentedNovels[novelId].chapterBoughtRespone.length
+        //   }))
+        // });
 
         return {
           rentedChapters,
@@ -186,6 +186,8 @@ const initialState = {
   confirmError: null,
   
   pendingTransaction: null, // Lưu giao dịch đang chờ xác nhận
+  transactionSource: null, // Track nguồn tạo transaction để hiển thị dialog đúng chỗ
+  showConfirmDialog: false, // Global flag để đảm bảo chỉ 1 dialog hiển thị
   transactions: {
     user: null,
     purchasedChapters: [], // Store chapter IDs
@@ -211,6 +213,15 @@ const transactionSlice = createSlice({
   reducers: {
     resetTransactionState: (state) => {
       Object.assign(state, initialState); // Reset tất cả về ban đầu
+    },
+    setTransactionSource: (state, action) => {
+      state.transactionSource = action.payload; // payload: componentId hoặc identifier
+    },
+    clearTransactionSource: (state) => {
+      state.transactionSource = null;
+    },
+    setShowConfirmDialog: (state, action) => {
+      state.showConfirmDialog = action.payload; // true/false
     }
   },
   extraReducers: (builder) => {
@@ -223,6 +234,8 @@ const transactionSlice = createSlice({
       .addCase(createTransaction.fulfilled, (state, action) => {
         state.createStatus = 'succeeded';
         state.pendingTransaction = action.payload.request;
+        state.showConfirmDialog = true; // Tự động hiển thị dialog khi transaction thành công
+        // Giữ nguyên transactionSource để component đúng có thể hiển thị dialog
       })
       .addCase(createTransaction.rejected, (state, action) => {
         state.createStatus = 'failed';
@@ -236,6 +249,8 @@ const transactionSlice = createSlice({
       .addCase(confirmTransactions.fulfilled, (state, action) => {
         state.confirmStatus = 'succeeded';
         state.pendingTransaction = null; // Xóa giao dịch đang chờ
+        state.transactionSource = null; // Clear source sau khi confirm
+        state.showConfirmDialog = false; // Đóng dialog sau khi confirm
       })
       .addCase(confirmTransactions.rejected, (state, action) => {
         state.confirmStatus = 'failed';
@@ -278,5 +293,5 @@ const transactionSlice = createSlice({
   },
 });
 
-export const { resetTransactionState } = transactionSlice.actions;
+export const { resetTransactionState, setTransactionSource, clearTransactionSource, setShowConfirmDialog } = transactionSlice.actions;
 export default transactionSlice.reducer;

@@ -46,6 +46,12 @@ const ReportManagement = () => {
   const [statusReportFilter, setStatusReportFilter] = useState('ALL');
   const [statusProcessingFilter, setStatusProcessingFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Dialog states
   const [selectedReport, setSelectedReport] = useState(null);
@@ -94,6 +100,61 @@ const ReportManagement = () => {
     if (searchTerm && !report.content?.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !report.reporterEmail?.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
+    }
+
+    // Lọc theo ngày - chỉ hiển thị báo cáo trong khoảng thời gian được chọn
+    if (startDate || endDate) {
+      // Thử các field name có thể có
+      const reportDateValue = report.createdAt || report.createAt || report.createTime || report.createdTime;
+      
+      // Nếu không có date field nào hoặc date không hợp lệ, bỏ qua báo cáo này
+      if (!reportDateValue) {
+        return false;
+      }
+      
+      let reportDate;
+      try {
+        // Xử lý date format từ Java (array) hoặc string
+        if (Array.isArray(reportDateValue) && reportDateValue.length >= 3) {
+          reportDate = new Date(
+            reportDateValue[0], 
+            reportDateValue[1] - 1, 
+            reportDateValue[2], 
+            reportDateValue[3] || 0, 
+            reportDateValue[4] || 0, 
+            reportDateValue[5] || 0
+          );
+          reportDate.setHours(reportDate.getHours() + 7); // UTC+7
+        } else {
+          reportDate = new Date(reportDateValue);
+        }
+        
+        // Kiểm tra date hợp lệ
+        if (isNaN(reportDate.getTime())) {
+          return false;
+        }
+      } catch (error) {
+        return false;
+      }
+      
+      // Chỉ lấy phần ngày (bỏ qua giờ) để so sánh
+      const reportDateOnly = new Date(reportDate.getFullYear(), reportDate.getMonth(), reportDate.getDate());
+      
+      if (startDate) {
+        const start = new Date(startDate);
+        const startDateOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        if (reportDateOnly < startDateOnly) {
+          return false;
+        }
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate);
+        const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        if (reportDateOnly > endDateOnly) {
+          return false;
+        }
+      }
     }
 
     // Không hiển thị báo cáo đã xóa
@@ -168,7 +229,8 @@ const ReportManagement = () => {
 
   // Format date - Handle array format from Java LocalDateTime
   const formatDate = (dateInput) => {
-    if (!dateInput) return 'N/A';
+    if (!dateInput) return 'Không có dữ liệu';
+    
     try {
       let date;
       // If it's an array [year, month, day, hour, minute, second, nanosecond]
@@ -192,8 +254,7 @@ const ReportManagement = () => {
       
       // Kiểm tra date hợp lệ
       if (isNaN(date.getTime())) {
-        console.error('Invalid date in formatDate:', dateInput);
-        return 'Invalid Date';
+        return 'Ngày không hợp lệ';
       }
       
       return date.toLocaleString('vi-VN', {
@@ -206,7 +267,7 @@ const ReportManagement = () => {
       });
     } catch (error) {
       console.error('Error formatting date:', dateInput, error);
-      return 'Invalid Date';
+      return 'Lỗi định dạng ngày';
     }
   };
 
@@ -222,6 +283,24 @@ const ReportManagement = () => {
   };
 
   const statusCounts = getStatusCounts();
+
+  // Pagination logic
+  const totalItems = filteredReports.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPageReports = filteredReports.slice(startIndex, endIndex);
+
+  // Reset current page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [statusReportFilter, statusProcessingFilter, searchTerm, startDate, endDate]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top when changing page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -338,11 +417,74 @@ const ReportManagement = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-xs"
           />
+
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Từ ngày:</span>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-auto"
+              title="Chọn ngày bắt đầu để lọc báo cáo"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Đến ngày:</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-auto"
+              title="Chọn ngày kết thúc để lọc báo cáo"
+            />
+          </div>
+
+          {/* Clear all filters button */}
+          {(statusReportFilter !== 'ALL' || statusProcessingFilter !== 'ALL' || searchTerm || startDate || endDate) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStatusReportFilter('ALL');
+                setStatusProcessingFilter('ALL');
+                setSearchTerm('');
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <X className="h-4 w-4" />
+              Xóa tất cả bộ lọc
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Reports List */}
       <div className="space-y-4">
+        {/* List Header with pagination info */}
+        {!reportsLoading && filteredReports.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                📊 Tìm thấy <span className="font-semibold text-blue-600">{totalItems}</span> báo cáo
+                {totalPages > 1 && (
+                  <span> • Trang {currentPage}/{totalPages}</span>
+                )}
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {itemsPerPage} báo cáo/trang
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {reportsLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
@@ -353,8 +495,10 @@ const ReportManagement = () => {
             <p className="text-gray-500 dark:text-gray-400">Không có báo cáo nào</p>
           </div>
         ) : (
-          <AnimatePresence>
-            {filteredReports.map((report) => (
+          <>
+            {/* Reports List */}
+            <AnimatePresence>
+              {currentPageReports.map((report) => (
               <motion.div
                 key={report.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -374,7 +518,7 @@ const ReportManagement = () => {
                       </Badge>
                       <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        {formatDate(report.createdAt)}
+                        {formatDate(report.createdAt || report.createAt || report.createTime || report.createdTime)}
                       </div>
                     </div>
 
@@ -460,6 +604,72 @@ const ReportManagement = () => {
               </motion.div>
             ))}
           </AnimatePresence>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Hiển thị {startIndex + 1}-{Math.min(endIndex, totalItems)} trong số {totalItems} báo cáo
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-2"
+                  >
+                    ← Trước
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {[...Array(totalPages)].map((_, index) => {
+                      const page = index + 1;
+                      const isCurrentPage = page === currentPage;
+                      
+                      // Show only 5 pages around current page
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 2 && page <= currentPage + 2)
+                      ) {
+                        return (
+                          <Button
+                            key={page}
+                            variant={isCurrentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(page)}
+                            className={`min-w-[40px] ${isCurrentPage ? 'bg-blue-600 text-white' : ''}`}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      } else if (
+                        page === currentPage - 3 ||
+                        page === currentPage + 3
+                      ) {
+                        return <span key={page} className="px-2 text-gray-400">...</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-2"
+                  >
+                    Sau →
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
         )}
       </div>
 
@@ -507,11 +717,11 @@ const ReportManagement = () => {
               <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
                 <div>
                   <label className="font-medium">Ngày tạo:</label>
-                  <p>{formatDate(selectedReport.createdAt)}</p>
+                  <p>{formatDate(selectedReport.createdAt || selectedReport.createAt || selectedReport.createTime || selectedReport.createdTime)}</p>
                 </div>
                 <div>
                   <label className="font-medium">Ngày cập nhật:</label>
-                  <p>{formatDate(selectedReport.updateAt)}</p>
+                  <p>{formatDate(selectedReport.updateAt || selectedReport.updatedAt || selectedReport.updateTime || selectedReport.updatedTime)}</p>
                 </div>
               </div>
             </div>

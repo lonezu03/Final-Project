@@ -77,7 +77,11 @@ const categorySlice = createSlice({
     loading: false,
     error: null
   },
-  reducers: {},
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    }
+  },
   extraReducers: (builder) => {
     // Hàm chung để xử lý pending và rejected
     const handlePending = (state) => {
@@ -129,4 +133,5 @@ const categorySlice = createSlice({
   }
 });
 
+export const { clearError } = categorySlice.actions;
 export default categorySlice.reducer;

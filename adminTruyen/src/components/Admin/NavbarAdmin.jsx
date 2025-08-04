@@ -538,7 +538,7 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                         <DropdownMenuLabel className="px-6 py-4">
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-12 w-12 ring-2 ring-orange-300/50 dark:ring-orange-600/50">
-                                    <AvatarImage src={currentUser?.avatarUser || "https://github.com/shadcn.png"} />
+                                    <AvatarImage src={currentUser?.avatarUser || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTUspugOXub65sbxVHOEaD-JEKC8NNWgkWhlg&s"} />
                                     <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-600 text-white font-bold">
                                         {currentUser?.userNameUser?.charAt(0) || "A"}
                                     </AvatarFallback>
@@ -595,15 +595,15 @@ const NavbarAdmin = ({ collapsed, setCollapsed }) => {
                             </>
                         )}
                         
-                        <DropdownMenuItem className="flex items-center gap-3 rounded-xl m-2 p-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-900/20 dark:hover:to-red-900/20 font-medium">
+                        {/* <DropdownMenuItem className="flex items-center gap-3 rounded-xl m-2 p-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-900/20 dark:hover:to-red-900/20 font-medium">
                             <User className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                             <span className="text-orange-700 dark:text-orange-300">Hồ sơ</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem className="flex items-center gap-3 rounded-xl m-2 p-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-900/20 dark:hover:to-red-900/20 font-medium">
                             <Settings className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                             <span className="text-orange-700 dark:text-orange-300">Cài đặt</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-gradient-to-r from-red-200 to-pink-200 dark:from-red-700 dark:to-pink-700 h-px my-2" />
+                        </DropdownMenuItem> */}
+                        {/* <DropdownMenuSeparator className="bg-gradient-to-r from-red-200 to-pink-200 dark:from-red-700 dark:to-pink-700 h-px my-2" /> */}
                         <DropdownMenuItem 
                             onClick={handleLogout}
                             className="flex items-center gap-3 rounded-xl m-2 p-4 transition-all duration-200 text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-red-700 dark:text-red-400 dark:hover:from-red-950/50 dark:hover:to-pink-950/50 dark:hover:text-red-300 font-medium"

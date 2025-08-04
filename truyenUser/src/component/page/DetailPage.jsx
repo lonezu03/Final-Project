@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react'; // Thêm useMemo
 import { useParams, Link, useNavigate } from 'react-router-dom'; // Thêm useNavigate
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '../../context/ThemeContext'; // Import useTheme
-import { getNovelById,LyberiNovels,getAllReviews  } from '../../redux/novelSlice';
+import { getNovelById,LyberiNovels,getAllReviews, clearReviews  } from '../../redux/novelSlice';
 import {followNovel} from '../../redux/userSlice'
 import { getAllChapters, clearChapterState } from '../../redux/chapterSlice'; // Action này lấy danh sách chương cho tab
 import { getAllTransactions } from '../../redux/transactionSlice'; // Import action để lấy transactions
@@ -126,22 +126,20 @@ const DetailPage = () => {
       setActiveTab('summary');
       setCurrentChapterListPage(1);
       
-      // Cache configuration với production safety
+      // Cache configuration với production safety - BỎ REVIEWS CACHE
       const novelCacheKey = `novel_${novelId}`;
       const chaptersCacheKey = `chapters_${novelId}`;
-      const reviewsCacheKey = `reviews_${novelId}`;
       
       // Safe sessionStorage access với error handling
-      let cachedNovel, cachedChapters, cachedReviews, cacheTimestamp;
+      let cachedNovel, cachedChapters, cacheTimestamp;
       try {
         cachedNovel = sessionStorage.getItem(novelCacheKey);
         cachedChapters = sessionStorage.getItem(chaptersCacheKey);
-        cachedReviews = sessionStorage.getItem(reviewsCacheKey);
         cacheTimestamp = sessionStorage.getItem(`${novelCacheKey}_timestamp`);
       } catch (error) {
         console.warn('⚠️ [DetailPage] SessionStorage access failed:', error);
         // Fallback - force API calls when sessionStorage fails
-        cachedNovel = cachedChapters = cachedReviews = cacheTimestamp = null;
+        cachedNovel = cachedChapters = cacheTimestamp = null;
       }
       
       // Dynamic cache duration based on load type
@@ -205,14 +203,11 @@ const DetailPage = () => {
         })
       );
 
-      // Smart reviews fetching với optimized delay và better caching
-      const hasReviewsInStore = reviews && Array.isArray(reviews) && reviews.length >= 0; // Có thể là array rỗng
-      const shouldFetchReviews = String(lastFetchedReviews.current) !== String(novelId) && 
-                                (!cachedReviews || !isCacheValid) && 
-                                !loadingReviews; // Không fetch nếu đang loading
+      // Smart reviews fetching - KHÔNG DÙNG CACHE, LUÔN FETCH MỚI
+      const shouldFetchReviews = String(lastFetchedReviews.current) !== String(novelId) && !loadingReviews;
       
       if (shouldFetchReviews) {
-        console.log('🔄 [DetailPage] Fetching reviews data for:', novelId);
+        console.log('🔄 [DetailPage] Fetching reviews data for:', novelId, '(no cache)');
         lastFetchedReviews.current = novelId; // Set ngay để tránh gọi lại
         
         // Clear existing timeout
@@ -220,23 +215,11 @@ const DetailPage = () => {
           clearTimeout(reviewsTimeoutRef.current);
         }
         
-        // Optimized delay based on load type
-        const reviewDelay = pageLoadInfo.isReload ? 100 : 
-                           pageLoadInfo.isBackForward ? 200 : 500;
-        
+        // Minimal delay để tránh spam API
         reviewsTimeoutRef.current = setTimeout(() => {
-          // Double check trước khi gọi API
           if (String(lastFetchedReviews.current) === String(novelId) && !loadingReviews) {
             console.log('🔄 [DetailPage] Actually calling getAllReviews for:', novelId);
-            dispatch(getAllReviews(novelId)).then((result) => {
-              if (result.payload) {
-                try {
-                  sessionStorage.setItem(reviewsCacheKey, JSON.stringify(result.payload));
-                } catch (error) {
-                  console.warn('⚠️ [DetailPage] Failed to save reviews cache:', error);
-                }
-              }
-            }).catch((error) => {
+            dispatch(getAllReviews(novelId)).catch((error) => {
               console.error('❌ [DetailPage] Failed to fetch reviews:', error);
               // Reset để có thể retry
               if (String(lastFetchedReviews.current) === String(novelId)) {
@@ -244,11 +227,9 @@ const DetailPage = () => {
               }
             });
           }
-        }, reviewDelay);
-      } else if (hasReviewsInStore) {
-        console.log('✅ [DetailPage] Using existing reviews data');
+        }, 300); // Giảm delay xuống 300ms
       } else {
-        console.log('✅ [DetailPage] Using existing/cached reviews data');
+        console.log('✅ [DetailPage] Reviews already being loaded or loaded');
       }
       
       // Execute API calls - LUÔN CÓ ÍT NHẤT 2 CALLS: novel + chapters
@@ -359,9 +340,17 @@ const DetailPage = () => {
     // Lưu trạng thái user hiện tại để so sánh lần sau (không trigger re-render)
     if (previousUser.current?.idUser !== currentUser?.idUser) {
       console.log('👤 [DetailPage] User changed:', previousUser.current?.idUser, '->', currentUser?.idUser);
+      
+      // Nếu user logout (từ có user thành null), clear reviews data
+      if (previousUser.current?.idUser && !currentUser?.idUser) {
+        console.log('🚪 [DetailPage] User logged out, clearing reviews data');
+        dispatch(clearReviews());
+        lastFetchedReviews.current = null;
+      }
+      
       previousUser.current = currentUser;
     }
-  }, [currentUser?.idUser]);
+  }, [currentUser?.idUser, dispatch]);
 
   // Cleanup an toàn - không clear data khi reload
   useEffect(() => {
@@ -627,7 +616,7 @@ const DetailPage = () => {
   
   if (!novelDetailData && !novelLoading) {
     console.warn('⚠️ [DetailPage] No novel data found');
-    return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-800 bg-gray-50'}`}>Không tìm thấy truyện.</div>;
+    return <div className={`flex justify-center items-center min-h-screen text-xl p-10 ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-800 bg-gray-50'}`}>Đang tải ....</div>;
   }
   
   if (!novelDetailData) return null;

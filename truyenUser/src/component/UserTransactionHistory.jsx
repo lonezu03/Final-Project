@@ -15,7 +15,7 @@ const convertApiTimeToDate = (timeArray) => {
   if (!Array.isArray(timeArray) || timeArray.length < 3) return null;
   const date = new Date(timeArray[0], timeArray[1] - 1, timeArray[2], timeArray[3] || 0, timeArray[4] || 0, timeArray[5] || 0);
   // Cộng thêm 7 giờ để chuyển từ UTC sang UTC+7 (múi giờ Việt Nam)
-  date.setHours(date.getHours() );
+  date.setHours(date.getHours() +7);
   return date;
 };
 
@@ -164,8 +164,8 @@ return (
                 className={`text-sm rounded-lg block w-full p-2 transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-200 focus:ring-blue-700 focus:border-blue-700' : 'bg-white border-gray-300 text-gray-700 focus:ring-blue-500 focus:border-blue-500'}`}
               >
                 <option value="all">Tất cả</option>
-                <option value="nap">Nạp Linh Thạch</option>
-                <option value="tieu">Tiêu thụ Linh Thạch</option>
+                <option value="nap">Nạp Xu</option>
+                <option value="tieu">Tiêu thụ Xu</option>
               </select>
             </div>
           </div>

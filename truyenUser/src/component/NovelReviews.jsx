@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { FaStar, FaUserCircle, FaTrash, FaChevronLeft, FaChevronRight, FaExpand, FaCompress } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react';
 import { deleteReview } from '../redux/userSlice';
-import { getAllReviews } from '../redux/novelSlice';
+import { getAllReviews, clearReviews } from '../redux/novelSlice';
 import { toast } from 'react-toastify';
 import { useParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -30,7 +30,7 @@ const formatDate = (dateArray) => {
     try {
         // [year, month, day, hour, minute, ...]
         const [year, month, day, hour, minute] = dateArray;
-        const dateObj = new Date(year, month - 1, day, hour, minute);
+        const dateObj = new Date(year, month - 1, day, hour+7, minute);
         return dateObj.toLocaleString('vi-VN', {
             year: 'numeric',
             month: '2-digit',
@@ -312,23 +312,72 @@ const NovelReviews = () => {
     // Lấy dữ liệu reviews từ novelSlice
     const { reviews, loadingReviews, errorReviews } = useSelector((state) => state.novels);
     const { currentUser, loading: userLoading } = useSelector((state) => state.user);
+    
+    // Track để tránh duplicate API calls
+    const lastFetchedNovelId = useRef(null);
+    const hasFetchedForCurrentNovel = useRef(false);
 
-    // Debounced refresh function
+    // Debounced refresh function - chỉ gọi khi cần thiết
     const debouncedRefreshReviews = useCallback(() => {
         if (refreshTimeoutRef.current) {
             clearTimeout(refreshTimeoutRef.current);
         }
         refreshTimeoutRef.current = setTimeout(() => {
-            console.log('🔄 [NovelReviews] Refreshing reviews after delete');
-            dispatch(getAllReviews(novelId));
+            // Chỉ refresh nếu novelId hợp lệ
+            if (novelId && currentUser) {
+                console.log('🔄 [NovelReviews] Refreshing reviews after delete');
+                dispatch(getAllReviews(novelId));
+                // KHÔNG update lastFetchedNovelId ở đây để tránh conflict
+            }
         }, 1000); // 1 giây delay
-    }, [dispatch, novelId]);
+    }, [dispatch, novelId, currentUser]); // Thêm currentUser vào dependencies
 
-    // Pagination calculations
-    const totalPages = Math.ceil(reviews.length / reviewsPerPage);
+    // Load reviews khi component mount hoặc novelId thay đổi - KHÔNG CACHE
+    useEffect(() => {
+        // Chỉ gọi API khi:
+        // 1. novelId tồn tại và hợp lệ
+        // 2. novelId khác với lần fetch trước
+        // 3. Không đang loading user
+        // 4. Có currentUser (đã login) - reviews cần authentication
+        if (novelId && 
+            novelId !== lastFetchedNovelId.current && 
+            !userLoading &&
+            currentUser) {
+            
+            console.log('📚 [NovelReviews] Loading reviews for novel:', novelId);
+            
+            // Clear previous data để tránh hiển thị data cũ
+            dispatch(clearReviews());
+            
+            // Fetch reviews mới
+            dispatch(getAllReviews(novelId));
+            lastFetchedNovelId.current = novelId;
+            hasFetchedForCurrentNovel.current = true;
+        } else if (!currentUser && lastFetchedNovelId.current) {
+            console.log('👤 [NovelReviews] No user logged in, clearing reviews');
+            dispatch(clearReviews());
+            lastFetchedNovelId.current = null;
+            hasFetchedForCurrentNovel.current = false;
+        }
+    }, [dispatch, novelId, userLoading, currentUser]); // BỎ 'reviews' khỏi dependencies
+
+    // Reset tracking khi logout hoặc user thay đổi
+    useEffect(() => {
+        if (!currentUser && hasFetchedForCurrentNovel.current) {
+            console.log('🚪 [NovelReviews] User logged out, clearing review tracking');
+            lastFetchedNovelId.current = null;
+            hasFetchedForCurrentNovel.current = false;
+            // Clear reviews data
+            dispatch(clearReviews());
+        }
+    }, [currentUser, dispatch]);
+
+    // Pagination calculations - với safety checks
+    const safeReviews = reviews || [];
+    const totalPages = Math.ceil(safeReviews.length / reviewsPerPage) || 1;
     const indexOfLastReview = currentPage * reviewsPerPage;
     const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
-    const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview);
+    const currentReviews = safeReviews.slice(indexOfFirstReview, indexOfLastReview);
 
     const handlePageChange = (pageNumber) => {
         setCurrentPage(pageNumber);
@@ -348,36 +397,46 @@ const NovelReviews = () => {
                 toast.success('Xóa đánh giá thành công!');
                 
                 // Điều chỉnh currentPage nếu cần thiết
-                const newTotalReviews = reviews.length - 1;
+                const newTotalReviews = safeReviews.length - 1;
                 const newTotalPages = Math.ceil(newTotalReviews / reviewsPerPage);
                 
                 if (currentPage > newTotalPages && newTotalPages > 0) {
                     setCurrentPage(newTotalPages);
                 }
                 
-                // Sử dụng debounced refresh để tránh spam API
-                debouncedRefreshReviews();
+                // Refresh reviews sau khi xóa thành công - không dùng debounce
+                setTimeout(() => {
+                    if (novelId) {
+                        console.log('🔄 [NovelReviews] Refreshing reviews after successful delete');
+                        dispatch(getAllReviews(novelId));
+                    }
+                }, 500);
+                
             } catch (error) {
-                toast.error(`Lỗi khi xóa đánh giá: ${error}`);
+                console.error('❌ [NovelReviews] Error deleting review:', error);
+                toast.error('Lỗi khi xóa đánh giá: ' + (error.message || 'Unknown error'));
             }
         }
     };
 
-    // Cleanup timeout on unmount
+    // Cleanup timeout on unmount và clear tracking
     useEffect(() => {
         return () => {
             if (refreshTimeoutRef.current) {
                 clearTimeout(refreshTimeoutRef.current);
             }
+            // Clear tracking khi component unmount
+            lastFetchedNovelId.current = null;
+            hasFetchedForCurrentNovel.current = false;
         };
     }, []);
 
-    // Reset currentPage when reviews change (new reviews loaded)
+    // Reset currentPage when reviews length changes - với điều kiện an toàn
     useEffect(() => {
-        if (reviews.length > 0 && currentPage > totalPages) {
+        if (reviews && reviews.length > 0 && currentPage > totalPages && totalPages > 0) {
             setCurrentPage(1);
         }
-    }, [reviews.length, currentPage, totalPages]);
+    }, [reviews?.length, totalPages]); // Chỉ theo dõi length và totalPages
 
     if (loadingReviews) {
         return (
@@ -420,7 +479,7 @@ const NovelReviews = () => {
                     ? 'border-sky-400 text-white' 
                     : 'border-sky-500 text-gray-800'
             }`}>
-                Đánh giá từ độc giả ({reviews.length})
+                Đánh giá từ độc giả ({safeReviews.length})
                 {totalPages > 1 && (
                     <span className={`text-sm font-normal ml-2 ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-600'
@@ -441,7 +500,7 @@ const NovelReviews = () => {
                 </div>
             )}
             
-            {reviews.length > 0 ? (
+            {safeReviews.length > 0 ? (
                 <>
                     <div className="space-y-4">
                         {currentReviews.map((review, index) => (
@@ -463,6 +522,16 @@ const NovelReviews = () => {
                         isDarkMode={isDarkMode}
                     />
                 </>
+            ) : !currentUser ? (
+                <div className={`text-center py-8 rounded-lg ${
+                    isDarkMode 
+                        ? 'bg-gradient-to-br from-slate-800 to-gray-800' 
+                        : 'bg-gradient-to-br from-white to-gray-50'
+                }`}>
+                    <p className={`${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Vui lòng đăng nhập để xem đánh giá.</p>
+                </div>
             ) : (
                 <div className={`text-center py-8 rounded-lg ${
                     isDarkMode 

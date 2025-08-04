@@ -9,6 +9,7 @@ import { PencilLine, Trash, Star, BookOpen, UserPlus, Tag, ScanSearch, Plus, Boo
 import Select from 'react-select';
 import { useTheme } from '../../context/ThemeContext';
 import { toast } from 'react-toastify';
+import defaultNovelImage from '../../assets/image.png';
 
 
 
@@ -44,9 +45,12 @@ const PreviewModal = ({ novel, onClose }) => {
               <div className="lg:col-span-1">
                 <div className="relative group">
                   <img 
-                    src={novel.imageNovel} 
+                    src={novel.imageNovel || defaultNovelImage} 
                     alt={novel.nameNovel} 
                     className="w-full h-80 object-cover rounded-xl shadow-lg ring-1 ring-slate-200 dark:ring-slate-700"
+                    onError={(e) => {
+                      e.target.src = defaultNovelImage;
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl"></div>
                 </div>
@@ -223,8 +227,7 @@ const NovelManager = () => {
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const dropdownRefs = useRef({}); // Dùng để xử lý click ra ngoài
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
-
-
+  const [searchTerm, setSearchTerm] = useState('');
 
 
    useEffect(() => {
@@ -383,10 +386,17 @@ const handleAddCategorySubmit = (categoryId) => {
   // Logic phân trang
   const [currentPage, setCurrentPage] = useState(1);
   const novelsPerPage = 5;
-  const totalNovels = novels.length;
+  
+  // Lọc novels theo search term
+  const filteredNovels = novels.filter(novel =>
+    novel.nameNovel?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    novel.authors?.some(author => author.nameAuthor?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  
+  const totalNovels = filteredNovels.length;
   const indexOfLastNovel = currentPage * novelsPerPage;
   const indexOfFirstNovel = indexOfLastNovel - novelsPerPage;
-  const currentNovelsToDisplay = novels.slice(indexOfFirstNovel, indexOfLastNovel);
+  const currentNovelsToDisplay = filteredNovels.slice(indexOfFirstNovel, indexOfLastNovel);
   const paginate = (pageNumber) => {
     if (pageNumber > 0 && pageNumber <= Math.ceil(totalNovels / novelsPerPage)) {
         setCurrentPage(pageNumber);
@@ -460,6 +470,20 @@ const handleAddCategorySubmit = (categoryId) => {
                 <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên truyện hoặc tác giả..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400"
+            />
+            <ScanSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
           </div>
         </div>
 
@@ -595,6 +619,9 @@ const handleAddCategorySubmit = (categoryId) => {
                       onChange={(e) => setImage(e.target.files[0])} 
                       className="w-full px-4 py-3 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm border border-indigo-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Nếu không chọn ảnh, hệ thống sẽ sử dụng ảnh mặc định
+                    </p>
                   </div>
                   <div className="flex gap-4 pt-4">
                     <button 
@@ -655,9 +682,12 @@ const handleAddCategorySubmit = (categoryId) => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-x-3">
                         <img 
-                          src={novel.imageNovel} 
+                          src={novel.imageNovel || defaultNovelImage} 
                           alt={novel.nameNovel} 
                           className="w-12 h-16 rounded-lg object-cover flex-shrink-0 shadow-md"
+                          onError={(e) => {
+                            e.target.src = defaultNovelImage;
+                          }}
                         />
                         <span className="font-semibold text-slate-900 dark:text-slate-100">{novel.nameNovel}</span>
                       </div>

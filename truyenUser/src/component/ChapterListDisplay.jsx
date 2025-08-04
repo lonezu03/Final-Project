@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -8,10 +8,10 @@ import { getChapterContentById } from '../redux/chapterSlice';
 import { useTheme } from '../context/ThemeContext'; // Import useTheme 
 
 // Import các action từ transactionSlice và userSlice
-import { createTransaction, confirmTransactions, resetTransactionState } from '../redux/transactionSlice';
+import { createTransaction, confirmTransactions, resetTransactionState, setTransactionSource, clearTransactionSource, setShowConfirmDialog } from '../redux/transactionSlice';
 import { logoutUser, loginUserWithPassword, refreshUser } from '../redux/userSlice';
 
-// Utility functions cho giỏ hàng
+// Utility functions cho giỏ hàng - Hỗ trợ nhiều truyện
 const getCartFromStorage = () => {
   const cart = sessionStorage.getItem('chapterCart');
   return cart ? JSON.parse(cart) : [];
@@ -21,7 +21,7 @@ const saveCartToStorage = (cart) => {
   sessionStorage.setItem('chapterCart', JSON.stringify(cart));
 };
 
-const addToCart = (chapter, novelId) => {
+const addToCart = (chapter, novelId, novelTitle = '') => {
   const cart = getCartFromStorage();
   const exists = cart.find(item => item.chapterId === chapter.idChapter);
   if (!exists) {
@@ -29,7 +29,8 @@ const addToCart = (chapter, novelId) => {
       chapterId: chapter.idChapter,
       chapterTitle: chapter.titleChapter,
       coinPrice: chapter.coinPrice || 0,
-      novelId: novelId
+      novelId: novelId,
+      novelTitle: novelTitle // Thêm title truyện để hiển thị
     });
     saveCartToStorage(cart);
     return true;
@@ -212,9 +213,10 @@ const RentDialog = ({ chapter, onConfirm, onCancel, loading, isDarkMode }) => {
 };
 
 // Component Dialog xác nhận cuối cùng cho giỏ hàng
-const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading, isDarkMode }) => {
+const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading, isDarkMode, transactionType = 'BUY' }) => {
     if (!cartItems || cartItems.length === 0) return null;
     const totalCost = cartItems.reduce((sum, item) => sum + item.coinPrice, 0);
+    const isRentTransaction = transactionType === 'RENT';
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
@@ -226,10 +228,21 @@ const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading, isDarkMode
                 <h3 className={`text-xl font-semibold mb-4 flex items-center ${
                   isDarkMode ? 'text-white' : 'text-gray-800'
                 }`}>
-                    <ShoppingCart className="mr-2" size={20} />
-                    Xác Nhận Mua Giỏ Hàng
+                    {isRentTransaction ? (
+                        <>
+                            <Clock className="mr-2" size={20} />
+                            Xác Nhận Thuê Chương
+                        </>
+                    ) : (
+                        <>
+                            <ShoppingCart className="mr-2" size={20} />
+                            Xác Nhận Mua Giỏ Hàng
+                        </>
+                    )}
                 </h3>
-                <p className="mb-2">Bạn sắp dùng xu để mua {cartItems.length} chương:</p>
+                <p className="mb-2">
+                    Bạn sắp dùng xu để {isRentTransaction ? 'thuê' : 'mua'} {cartItems.length} chương:
+                </p>
                 <div className={`max-h-32 overflow-y-auto p-2 rounded border mb-4 ${
                   isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-100 border-gray-300'
                 }`}>
@@ -263,7 +276,7 @@ const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading, isDarkMode
                       className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700"
                     >
                         {loading && <Loader2 className="animate-spin mr-2" size={16}/>}
-                        Xác nhận mua
+                        {isRentTransaction ? 'Xác nhận thuê' : 'Xác nhận mua'}
                     </button>
                 </div>
             </div>
@@ -272,9 +285,10 @@ const CartConfirmDialog = ({ cartItems, onConfirm, onCancel, loading, isDarkMode
 };
 
 // Component Dialog xác nhận cuối cùng cho mua lẻ
-const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, isDarkMode }) => {
+const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, isDarkMode, transactionType = 'BUY' }) => {
     if (!transactionDetails) return null;
     const { chapters, totalCost } = transactionDetails;
+    const isRentTransaction = transactionType === 'RENT';
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
@@ -283,10 +297,21 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                 ? 'bg-gradient-to-br from-slate-800 to-gray-800 text-gray-200' 
                 : 'bg-white text-gray-800'
             }`}>
-                <h3 className={`text-xl font-semibold mb-4 ${
+                <h3 className={`text-xl font-semibold mb-4 flex items-center ${
                   isDarkMode ? 'text-white' : 'text-gray-800'
-                }`}>Xác Nhận Thanh Toán</h3>
-                <p className="mb-2">Bạn sắp dùng xu để mua {chapters.length} chương:</p>
+                }`}>
+                    {isRentTransaction ? (
+                        <>
+                            <Clock className="mr-2" size={20} />
+                            Xác Nhận Thuê Chương
+                        </>
+                    ) : (
+                        'Xác Nhận Thanh Toán'
+                    )}
+                </h3>
+                <p className="mb-2">
+                    Bạn sắp dùng xu để {isRentTransaction ? 'thuê' : 'mua'} {chapters.length} chương:
+                </p>
                 <div className={`max-h-24 overflow-y-auto p-2 rounded border mb-4 ${
                   isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-100 border-gray-300'
                 }`}>
@@ -313,7 +338,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
                       className="px-5 py-2 rounded-md text-white bg-green-500 hover:bg-green-600 flex items-center disabled:bg-green-700"
                     >
                         {loading && <Loader2 className="animate-spin mr-2" size={16}/>}
-                        Xác nhận
+                        {isRentTransaction ? 'Xác nhận thuê' : 'Xác nhận mua'}
                     </button>
                 </div>
             </div>
@@ -325,11 +350,15 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
   const navigate = useNavigate();
   const { isDarkMode } = useTheme(); // Sử dụng theme context
 
+  // Tạo unique ID cho component instance để debug
+  const componentId = useRef(Math.random().toString(36).substr(2, 9));
+  
   console.log('🔍 [ChapterListDisplay] Props received:', { 
     chapters: chapters?.length || 0, 
     novelId, 
     currentPage, 
-    chaptersPerPage 
+    chaptersPerPage,
+    componentId: componentId.current
   });
   console.log('📋 [ChapterListDisplay] Chapters data:', chapters);
 
@@ -354,7 +383,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
 
   // Lấy state mới từ Redux
   const { currentUser, loading: userLoading } = useSelector((state) => state.user);
-  const { createStatus, confirmStatus, pendingTransaction, createError, allTransactions } = useSelector((state) => state.transaction);
+  const { createStatus, confirmStatus, pendingTransaction, createError, allTransactions, transactionSource, showConfirmDialog: globalShowConfirmDialog } = useSelector((state) => state.transaction);
   const { currentNovel } = useSelector((state) => state.novels);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -479,67 +508,27 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       setDownloadingChapterId(null);
     }
   };
-  // Effect để xử lý kết quả từ `createTransaction`
+
+  // Effect để xử lý kết quả từ `createTransaction` - sử dụng global dialog state
   useEffect(() => {
-    if (createStatus === 'succeeded' && pendingTransaction) {
-      // Chỉ hiển thị dialog xác nhận cho transaction mua, không phải thuê
-      if (!isRentTransaction) {
-        setShowConfirmDialog(true);
-      }
+    console.log(`🔍 [Effect-${componentId.current}] createStatus:`, createStatus, 'pendingTransaction:', !!pendingTransaction, 'globalShowConfirmDialog:', globalShowConfirmDialog, 'thisComponentId:', componentId.current, 'isRentTransaction:', isRentTransaction);
+    console.log(`🔍 [Effect-${componentId.current}] pendingTransaction full:`, pendingTransaction);
+    
+    // Sử dụng global dialog state để đồng bộ hiển thị dialog
+    if (globalShowConfirmDialog && pendingTransaction) {
+      console.log(`✅ [Effect-${componentId.current}] Sử dụng global dialog state để hiển thị dialog`);
+      setShowConfirmDialog(true);
+    } else {
+      console.log(`❌ [Effect-${componentId.current}] Không hiển thị dialog - globalShowConfirmDialog:`, globalShowConfirmDialog, 'pendingTransaction:', !!pendingTransaction);
     }
+    
     if (createStatus === 'failed' && createError) {
       toast.error(`Lỗi tạo giao dịch: ${createError}`);
       dispatch(resetTransactionState());
       setIsRentTransaction(false); // Reset flag
+      dispatch(clearTransactionSource()); // Clear source
     }
-  }, [createStatus, pendingTransaction, createError, dispatch, isRentTransaction]);
-
-  // Effect riêng để xử lý transaction thuê thành công
-  useEffect(() => {
-    if (createStatus === 'succeeded' && pendingTransaction && isRentTransaction) {
-      // Tự động confirm transaction thuê luôn
-      handleConfirmRentTransaction();
-    }
-  }, [createStatus, pendingTransaction, isRentTransaction]);
-
-  const handleConfirmRentTransaction = async () => {
-    if (!currentUser || !pendingTransaction) return;
-    
-    const confirmationData = {
-      idUser: currentUser.idUser,
-      listIdChapter: pendingTransaction.idChapters,
-    };
-    
-    console.log('Xác nhận giao dịch thuê với data:', confirmationData);
-    
-    try {
-      // Xác nhận giao dịch thuê
-      const result = await dispatch(confirmTransactions(confirmationData)).unwrap();
-      toast.success("Thuê chương thành công! Đang cập nhật dữ liệu...");
-
-      // Refresh dữ liệu người dùng
-      await dispatch(refreshUser()).unwrap();
-      
-      // Không cần gọi getAllTransactions nữa vì đã được gọi ở Home
-      // và refreshUser sẽ cập nhật user data
-      
-      toast.success("Đã thuê chương thành công!");
-
-      // Điều hướng đến chương đã thuê
-      if (pendingTransaction.idChapters.length === 1) {
-        const rentedChapterId = pendingTransaction.idChapters[0];
-        navigate(`/novel/${novelId}/chapter/${rentedChapterId}`);
-      }
-
-    } catch (error) {
-      console.error('Lỗi xác nhận giao dịch thuê:', error);
-      toast.error(`Giao dịch thuê thất bại: ${error.message || error}`);
-    } finally {
-      // Reset state
-      setIsRentTransaction(false);
-      dispatch(resetTransactionState());
-    }
-  };
+  }, [createStatus, pendingTransaction, createError, dispatch, globalShowConfirmDialog]);
 
   // Cập nhật cart từ storage
   useEffect(() => {
@@ -647,7 +636,7 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
-    const success = addToCart(chapter, novelId);
+    const success = addToCart(chapter, novelId, currentNovel?.nameNovel || 'Chưa rõ truyện');
     if (success) {
       setCart(getCartFromStorage());
       toast.success(`Đã thêm "${chapter.titleChapter}" vào giỏ hàng!`);
@@ -675,16 +664,25 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
 
+    console.log(`🛒 [Cart Purchase-${componentId.current}] Bắt đầu set flags...`);
     setIsRentTransaction(false); // Đây là transaction mua
+    dispatch(setTransactionSource(componentId.current)); // Set source trong Redux
+    console.log(`🛒 [Cart Purchase-${componentId.current}] Đã set flags`);
+    
+    // Tạo chapterAndPrice array từ cart
+    const chapterAndPrice = cart.map(item => ({
+      idChapter: item.chapterId,
+      coin: item.coinPrice
+    }));
+    
     const transactionData = {
       idUser: currentUser.idUser,
-      idChapters: cart.map(item => item.chapterId),
-      amountCoin: totalCost,
-      typeTransaction: 'BUY',
+      chapterAndPrice: chapterAndPrice,
       dateEndRent: null,
+      typeTransaction: 'BUY'
     };
     
-    console.log('Tạo giao dịch với data:', transactionData);
+    console.log('🛒 [Cart Purchase] Tạo giao dịch giỏ hàng với data:', transactionData);
     dispatch(createTransaction(transactionData));
   };
 
@@ -731,33 +729,53 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       return;
     }
     
+    console.log(`💰 [Single Purchase-${componentId.current}] Bắt đầu set flags...`);
     setIsRentTransaction(false); // Đây là transaction mua
+    dispatch(setTransactionSource(componentId.current)); // Set source trong Redux
+    console.log(`💰 [Single Purchase-${componentId.current}] Đã set flags`);
+    
+    // Tạo chapterAndPrice array cho mua đơn lẻ
+    const chapterAndPrice = [{
+      idChapter: chapterToBuy.idChapter,
+      coin: coinPrice
+    }];
+    
     const transactionData = {
       idUser: currentUser.idUser,
-      idChapters: [chapterToBuy.idChapter],
-      amountCoin: coinPrice,
-      typeTransaction: 'BUY',
+      chapterAndPrice: chapterAndPrice,
       dateEndRent: null,
+      typeTransaction: 'BUY'
     };
     
-    console.log('Tạo giao dịch đơn lẻ với data:', transactionData);
+    console.log('💰 [Single Purchase] Tạo giao dịch đơn lẻ với data:', transactionData);
     dispatch(createTransaction(transactionData));
   };
 
    const handleConfirmPurchase = async () => {
     if (!currentUser || !pendingTransaction) return;
     
+    // Lấy danh sách chapter IDs từ chapterAndPrice
+    const listIdChapter = pendingTransaction.chapterAndPrice.map(item => item.idChapter);
+    
     const confirmationData = {
       idUser: currentUser.idUser,
-      listIdChapter: pendingTransaction.idChapters,
+      listIdChapter: listIdChapter,
     };
     
-    console.log('Xác nhận giao dịch với data:', confirmationData);
+    // Kiểm tra xem có phải transaction thuê không
+    const isRentTransactionFromAPI = pendingTransaction?.typeTransaction === 'RENT';
+    console.log('✅ [Confirm] Xác nhận giao dịch với data:', confirmationData);
+    console.log('✅ [Confirm] Loại giao dịch:', isRentTransactionFromAPI ? 'RENT' : 'BUY');
     
     try {
       // BƯỚC 1: Chờ xác nhận giao dịch thành công
       const result = await dispatch(confirmTransactions(confirmationData)).unwrap();
-      toast.success("Mua chương thành công! Đang cập nhật dữ liệu...");
+      
+      if (isRentTransactionFromAPI) {
+        toast.success("Thuê chương thành công! Đang cập nhật dữ liệu...");
+      } else {
+        toast.success("Mua chương thành công! Đang cập nhật dữ liệu...");
+      }
 
       // BƯỚC 2: Chờ refresh dữ liệu người dùng thành công
       await dispatch(refreshUser()).unwrap();
@@ -765,28 +783,45 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
       // Không cần gọi getAllTransactions nữa vì đã được gọi ở Home
       // và refreshUser sẽ cập nhật user data với chương đã mua
       
-      // BƯỚC 3: Xóa các chương đã mua khỏi giỏ hàng
-      const purchasedChapterIds = pendingTransaction.idChapters;
-      purchasedChapterIds.forEach(chapterId => {
-        removeFromCart(chapterId);
-      });
-      setCart(getCartFromStorage());
-      
-      toast.success("Đã lưu chương!");
+      if (isRentTransactionFromAPI) {
+        toast.success("Đã thuê chương thành công!");
+        // Điều hướng đến chương đã thuê với delay nhỏ để hiển thị toast
+        if (pendingTransaction.chapterAndPrice?.length === 1) {
+          const rentedChapterId = pendingTransaction.chapterAndPrice[0].idChapter;
+          setTimeout(() => {
+            navigate(`/novel/${novelId}/chapter/${rentedChapterId}`);
+          }, 1500); // Delay 1.5 giây để hiển thị toast
+        }
+      } else {
+        // BƯỚC 3: Xóa các chương đã mua khỏi giỏ hàng (chỉ cho transaction mua)
+        const purchasedChapterIds = pendingTransaction.chapterAndPrice?.map(item => item.idChapter) || [];
+        purchasedChapterIds.forEach(chapterId => {
+          removeFromCart(chapterId);
+        });
+        setCart(getCartFromStorage());
+        
+        toast.success("Đã lưu chương!");
 
-      // BƯỚC 4: Sau khi mọi thứ đã xong, mới điều hướng (nếu chỉ mua 1 chương)
-      if (pendingTransaction.idChapters.length === 1) {
-        const purchasedChapterId = pendingTransaction.idChapters[0];
-        navigate(`/novel/${novelId}/chapter/${purchasedChapterId}`);
+        // BƯỚC 4: Sau khi mọi thứ đã xong, mới điều hướng (nếu chỉ mua 1 chương)
+        if (pendingTransaction.chapterAndPrice?.length === 1) {
+          const purchasedChapterId = pendingTransaction.chapterAndPrice[0].idChapter;
+          navigate(`/novel/${novelId}/chapter/${purchasedChapterId}`);
+        }
       }
 
     } catch (error) {
       console.error('Lỗi xác nhận giao dịch:', error);
-      toast.error(`Giao dịch thất bại: ${error.message || error}`);
+      if (isRentTransactionFromAPI) {
+        toast.error(`Giao dịch thuê thất bại: ${error.message || error}`);
+      } else {
+        toast.error(`Giao dịch mua thất bại: ${error.message || error}`);
+      }
     } finally {
       // Luôn đóng dialog và reset state dù thành công hay thất bại
       setShowConfirmDialog(false);
       setShowCartDialog(false);
+      dispatch(setShowConfirmDialog(false)); // Đóng global dialog
+      dispatch(clearTransactionSource()); // Clear source
       dispatch(resetTransactionState());
     }
   };
@@ -795,6 +830,8 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
     setShowConfirmDialog(false);
     setShowCartDialog(false);
     setIsRentTransaction(false); // Reset flag
+    dispatch(setShowConfirmDialog(false)); // Đóng global dialog
+    dispatch(clearTransactionSource()); // Clear source
     dispatch(resetTransactionState());
   };
 
@@ -855,16 +892,29 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + days);
 
+    console.log(`🕐 [handleConfirmRent-${componentId.current}] Bắt đầu set flags...`);
     setIsRentTransaction(true); // Đây là transaction thuê
+    dispatch(setTransactionSource(componentId.current)); // Set source trong Redux
+    console.log(`🕐 [handleConfirmRent-${componentId.current}] Đã set flags - isRentTransaction: true`);
+    
+    // Tạo chapterAndPrice array cho thuê
+    const chapterAndPrice = [{
+      idChapter: chapterToRent.idChapter,
+      coin: totalPrice
+    }];
+    
     const transactionData = {
       idUser: currentUser.idUser,
-      idChapters: [chapterToRent.idChapter],
-      amountCoin: totalPrice,
-      typeTransaction: 'RENT',
+      chapterAndPrice: chapterAndPrice,
       dateEndRent: endDate.toISOString(),
+      typeTransaction: 'RENT'
     };
     
-    console.log('Tạo giao dịch thuê với data:', transactionData);
+    console.log(`🕐 [Rent-${componentId.current}] Tạo giao dịch thuê với data:`, transactionData);
+    
+    // Thông báo ngay khi bắt đầu thuê
+    toast.info("Đang tạo giao dịch thuê...");
+    
     dispatch(createTransaction(transactionData));
     setShowRentDialog(false);
     setChapterToRent(null);
@@ -1124,34 +1174,36 @@ const FinalConfirmDialog = ({ transactionDetails, onConfirm, onCancel, loading, 
 
       {showConfirmDialog && pendingTransaction && (
         <>
-          {pendingTransaction.idChapters.length > 1 ? (
+          {pendingTransaction.chapterAndPrice && pendingTransaction.chapterAndPrice.length > 1 ? (
             <CartConfirmDialog
-              cartItems={pendingTransaction.idChapters.map(id => {
-                const chapter = chapters.find(c => c.idChapter === id);
+              cartItems={pendingTransaction.chapterAndPrice.map(item => {
+                const chapter = chapters.find(c => c.idChapter === item.idChapter);
                 return {
-                  chapterId: id,
-                  chapterTitle: chapter?.titleChapter || `Chương ID: ${id}`,
-                  coinPrice: chapter?.coinPrice || 0
+                  chapterId: item.idChapter,
+                  chapterTitle: chapter?.titleChapter || `Chương ID: ${item.idChapter}`,
+                  coinPrice: item.coin || 0
                 };
               })}
               onConfirm={handleConfirmPurchase}
               onCancel={handleCancelConfirm}
               loading={confirmStatus === 'loading'}
               isDarkMode={isDarkMode}
+              transactionType={pendingTransaction?.typeTransaction || 'BUY'}
             />
           ) : (
             <FinalConfirmDialog
               transactionDetails={{
-                  chapters: pendingTransaction.idChapters.map(id => ({ 
-                    id, 
-                    title: chapters.find(c => c.idChapter === id)?.titleChapter || `Chương ID: ${id}` 
+                  chapters: pendingTransaction.chapterAndPrice.map(item => ({ 
+                    id: item.idChapter, 
+                    title: chapters.find(c => c.idChapter === item.idChapter)?.titleChapter || `Chương ID: ${item.idChapter}` 
                   })),
-                  totalCost: pendingTransaction.amountCoin,
+                  totalCost: pendingTransaction.chapterAndPrice.reduce((sum, item) => sum + item.coin, 0),
               }}
               onConfirm={handleConfirmPurchase}
               onCancel={handleCancelConfirm}
               loading={confirmStatus === 'loading'}
               isDarkMode={isDarkMode}
+              transactionType={pendingTransaction?.typeTransaction || 'BUY'}
             />
           )}
         </>

@@ -29,6 +29,7 @@ import PaymentCallbackPage from './component/PaymentCallbackPage'; // Import com
 import SupportPage from './component/page/SupportPage'; // Trang hỗ trợ khách hàng
 import AboutUs from './component/page/AboutUs'; // Trang giới thiệu về công ty
 import NovelChatBot from './component/NovelChatBot'; // Import chatbot trợ lý truyện
+import ReportWidget from './component/ReportWidget'; // Import report widget
 
 // AppContent bây giờ chỉ chịu trách nhiệm routing và layout
 const AppContent = () => {
@@ -76,6 +77,9 @@ const AppContent = () => {
       
       {/* Chatbot trợ lý truyện */}
       <NovelChatBot />
+      
+      {/* Report Widget */}
+      <ReportWidget />
     </Router>
   );
 };

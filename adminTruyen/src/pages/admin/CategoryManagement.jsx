@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { createCategory, updateCategory, deleteCategory } from '../../redux/categorySlice';
+import { createCategory, updateCategory, deleteCategory, clearError } from '../../redux/categorySlice';
 import { Star, PencilLine, Trash, Plus, BookOpen, Tag, Users } from 'lucide-react';
 import Select from 'react-select';
 import { useTheme } from '../../context/ThemeContext';
+import { toast } from 'react-toastify';
 
 const CategoryManagement = () => {
   const dispatch = useDispatch();
@@ -21,6 +22,14 @@ const CategoryManagement = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const categoriesPerPage = 5;
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Xử lý lỗi và thành công với toast
+  useEffect(() => {
+    if (error) {
+      toast.error(`Lỗi: ${error}`);
+    }
+  }, [error]);
 
   // Tạo options cho react-select
   const novelOptions = novels?.map((novel) => ({
@@ -37,6 +46,7 @@ const CategoryManagement = () => {
 
   const handleAddNewClick = () => {
     resetForm(); // Đảm bảo form sạch sẽ
+    dispatch(clearError()); // Xóa lỗi cũ
     setShowForm(true);
   };
 
@@ -48,41 +58,84 @@ const CategoryManagement = () => {
       // Đảm bảo novels là một mảng ID, kể cả khi category.novels là null/undefined
       novels: Array.isArray(category.novels) ? category.novels.map(n => n.idNovel) : [],
     });
+    dispatch(clearError()); // Xóa lỗi cũ
     setShowForm(true);
   };
 
   const handleDelete = (id) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa thể loại này?')) {
-      dispatch(deleteCategory(id));
+      dispatch(deleteCategory(id))
+        .unwrap()
+        .then(() => {
+          toast.success('Xóa thể loại thành công!');
+        })
+        .catch((error) => {
+          toast.error(`Xóa thể loại thất bại: ${error}`);
+        });
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Validation
+    if (!newCategory.nameCategory.trim()) {
+      toast.error('Tên thể loại không được để trống!');
+      return;
+    }
+
+    if (newCategory.nameCategory.trim().length < 2) {
+      toast.error('Tên thể loại phải có ít nhất 2 ký tự!');
+      return;
+    }
+
+    if (newCategory.nameCategory.trim().length > 50) {
+      toast.error('Tên thể loại không được vượt quá 50 ký tự!');
+      return;
+    }
+
     // Payload cần được định dạng theo yêu cầu của backend
     // Giả sử backend cần key là `idNovels` cho mảng ID
     const payload = {
-      nameCategory: newCategory.nameCategory,
+      nameCategory: newCategory.nameCategory.trim(),
       // novels: newCategory.novels,
     };
 
     if (isEditing) {
       // Khi update, ta cần gửi cả id của category
       const updatePayload = { ...payload, idCategory: currentCategoryId };
-      dispatch(updateCategory(updatePayload));
+      dispatch(updateCategory(updatePayload))
+        .unwrap()
+        .then(() => {
+          toast.success('Cập nhật thể loại thành công!');
+          resetForm();
+        })
+        .catch((error) => {
+          toast.error(`Cập nhật thể loại thất bại: ${error}`);
+        });
     } else {
-      dispatch(createCategory(payload));
+      dispatch(createCategory(payload))
+        .unwrap()
+        .then(() => {
+          toast.success('Tạo thể loại mới thành công!');
+          resetForm();
+        })
+        .catch((error) => {
+          // toast.error(`Tạo thể loại thất bại: ${error}`);
+        });
     }
-    
-    resetForm();
   };
 
   // Pagination logic
+  // Lọc categories theo search term
+  const filteredCategories = categories.filter(category =>
+    category.nameCategory?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   const indexOfLastCategory = currentPage * categoriesPerPage;
   const indexOfFirstCategory = indexOfLastCategory - categoriesPerPage;
-  const currentCategories = categories.slice(indexOfFirstCategory, indexOfLastCategory);
-  const totalPages = Math.ceil(categories.length / categoriesPerPage);
+  const currentCategories = filteredCategories.slice(indexOfFirstCategory, indexOfLastCategory);
+  const totalPages = Math.ceil(filteredCategories.length / categoriesPerPage);
 
   const paginate = (pageNumber) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
@@ -90,10 +143,14 @@ const CategoryManagement = () => {
     }
   };
 
-  if (error) return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-slate-900 dark:via-slate-800 dark:to-red-900 flex items-center justify-center">
-      <div className="bg-red-50/80 dark:bg-red-900/20 backdrop-blur-xl rounded-2xl p-8 border border-red-200 dark:border-red-800">
-        <p className="text-red-600 dark:text-red-400">Lỗi: {error}</p>
+  // Loại bỏ phần hiển thị lỗi cũ vì đã dùng toast
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-slate-900 dark:via-slate-800 dark:to-emerald-900 flex items-center justify-center">
+      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-8 border border-white/20 dark:border-slate-700/50">
+        <div className="flex items-center justify-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+          <span className="text-slate-600 dark:text-slate-300">Đang tải...</span>
+        </div>
       </div>
     </div>
   );
@@ -155,6 +212,20 @@ const CategoryManagement = () => {
           </div>
         </div>
 
+        {/* Search Input */}
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên thể loại..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400"
+            />
+            <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+          </div>
+        </div>
+
         {/* Add Category Button */}
         <div className="mb-8">
           <button
@@ -201,10 +272,17 @@ const CategoryManagement = () => {
                     </button>
                     <button
                       type="submit"
-                      className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       disabled={loading}
                     >
-                      {loading ? (isEditing ? "Đang cập nhật..." : "Đang tạo...") : (isEditing ? "Lưu Thay Đổi" : "Tạo Thể Loại")}
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          {isEditing ? "Đang cập nhật..." : "Đang tạo..."}
+                        </>
+                      ) : (
+                        isEditing ? "Lưu Thay Đổi" : "Tạo Thể Loại"
+                      )}
                     </button>
                   </div>
                 </form>

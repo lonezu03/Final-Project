@@ -7,6 +7,7 @@ import { createAuthor } from '../../redux/authorSlice';
 import Select from 'react-select';
 import { useTheme } from '../../context/ThemeContext';
 import { toast } from 'react-toastify';
+import defaultAvatar from '../../assets/profile-image.jpg';
 
 const AuthorManager = () => {
   const dispatch = useDispatch();
@@ -37,7 +38,7 @@ const AuthorManager = () => {
     descriptionAuthor: '',
     nationalityAuthor: '',
     dobAuthor: '',
-    dodAuthor: '', // Thêm trường ngày mất
+    dodAuthor: '', 
     genderAuthor: 'MALE',
     novels: [],
   });
@@ -46,40 +47,65 @@ const AuthorManager = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditing, setIsEditing] = useState(false);
   const [currentAuthor, setCurrentAuthor] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  console.log('danh sách novel', novels);
-  console.log('Array.isArray(novels):', Array.isArray(novels));
-  console.log('novels?.length:', novels?.length);
+  // console.log('danh sách novel', novels);
+  // console.log('Array.isArray(novels):', Array.isArray(novels));
+  // console.log('novels?.length:', novels?.length);
   
-  const novelOptions = Array.isArray(novels) && novels.length > 0 
-    ? novels.map((novel) => ({
-        value: novel.idNovel,
-        label: novel.nameNovel,
-        key: novel.idNovel,
-      }))
+  // Filter out deleted novels (novels with delete_at not null)
+  const activeNovels = Array.isArray(novels) && novels.length > 0 
+    ? novels.filter(novel => novel.delete_at === null || novel.delete_at === undefined)
     : [];
+  
+  const novelOptions = activeNovels.map((novel) => ({
+    value: novel.idNovel,
+    label: novel.nameNovel,
+    key: novel.idNovel,
+  }));
 
-  console.log('novels.novels:', novels?.novels);
-  console.log('novelOptions:', novelOptions);
+  // console.log('novels.novels:', novels?.novels);
+  // console.log('activeNovels:', activeNovels);
+  // console.log('novelOptions:', novelOptions);
 
   useEffect(() => {
     dispatch(getAllAuthors());
-    dispatch(getAllNovels()); // Bỏ comment để load dữ liệu novels
+    // dispatch(getAllNovels()); // Bỏ comment để load dữ liệu novels
   }, [dispatch]);
 
   useEffect(() => {
     if (error) {
-      alert(error);
+      toast.error(error, { 
+        position: 'top-right', 
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
+      });
     }
   }, [error]);
 
   const authorsPerPage = 5;
-  const totalAuthors = authors.length;
+  
+  // Filter authors based on search term
+  const filteredAuthors = authors.filter(author =>
+    author.nameAuthor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    author.nationalityAuthor.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  // Lọc ra các truyện chưa bị xóa khỏi danh sách truyện của từng tác giả để hiển thị
+  const authorsWithActiveNovels = filteredAuthors.map(author => ({
+    ...author,
+    novels: author.novels ? author.novels.filter(novel => novel.delete_at === null || novel.delete_at === undefined) : []
+  }));
+  
+  const totalAuthors = authorsWithActiveNovels.length;
 
-  // Calculate the indices of the authors to show for the current page
+  // Tính toán chỉ số bắt đầu và kết thúc của tác giả trên trang hiện tại
   const indexOfLastAuthor = currentPage * authorsPerPage;
   const indexOfFirstAuthor = indexOfLastAuthor - authorsPerPage;
-  const currentAuthors = authors.slice(indexOfFirstAuthor, indexOfLastAuthor);
+  const currentAuthors = authorsWithActiveNovels.slice(indexOfFirstAuthor, indexOfLastAuthor);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -94,44 +120,68 @@ const AuthorManager = () => {
     
     // Validation cho ngày sinh
     if (!newAuthor.dobAuthor) {
-      alert("Ngày sinh là bắt buộc.");
+      toast.error("Ngày sinh là bắt buộc.", { 
+        position: 'top-right', 
+        autoClose: 3000 
+      });
       return;
     }
     if (dob > currentDate) {
-      alert("Ngày sinh không thể là ngày trong tương lai.");
+      toast.error("Ngày sinh không thể là ngày trong tương lai.", { 
+        position: 'top-right', 
+        autoClose: 3000 
+      });
       return;
     }
     
     // Validation cho ngày mất (nếu có)
     if (dod) {
       if (dod > currentDate) {
-        alert("Ngày mất không thể là ngày trong tương lai.");
+        toast.error("Ngày mất không thể là ngày trong tương lai.", { 
+          position: 'top-right', 
+          autoClose: 3000 
+        });
         return;
       }
       if (dod <= dob) {
-        alert("Ngày mất phải sau ngày sinh.");
+        toast.error("Ngày mất phải sau ngày sinh.", { 
+          position: 'top-right', 
+          autoClose: 3000 
+        });
         return;
       }
       // Kiểm tra tuổi tác giả khi mất (phải >= 18)
       const ageAtDeath = calculateAge(dob, dod);
       if (ageAtDeath < 18) {
-        alert("Tác giả phải ít nhất 18 tuổi khi mất.");
+        toast.error("Tác giả phải ít nhất 18 tuổi khi mất.", { 
+          position: 'top-right', 
+          autoClose: 3000 
+        });
         return;
       }
     } else {
       // Nếu chưa mất, kiểm tra tuổi hiện tại
       const currentAge = calculateAge(dob, currentDate);
       if (currentAge < 18) {
-        alert("Tác giả phải ít nhất 18 tuổi.");
+        toast.error("Tác giả phải ít nhất 18 tuổi.", { 
+          position: 'top-right', 
+          autoClose: 3000 
+        });
         return;
       }
     }
     if (!newAuthor.nameAuthor || newAuthor.nameAuthor.length < 3 || newAuthor.nameAuthor.length > 100) {
-      alert('Tên tác giả phải có độ dài từ 3 đến 100 ký tự!');
+      toast.error('Tên tác giả phải có độ dài từ 3 đến 100 ký tự!', { 
+        position: 'top-right', 
+        autoClose: 3000 
+      });
       return;
     }
     if (newAuthor.descriptionAuthor.length > 100) {
-      alert('Mô tả phải có độ dài tối đa 100 ký tự!');
+      toast.error('Mô tả phải có độ dài tối đa 100 ký tự!', { 
+        position: 'top-right', 
+        autoClose: 3000 
+      });
       return;
     }
     
@@ -164,10 +214,34 @@ const AuthorManager = () => {
       dispatch(updateAuthor({ 
         authorFormData: formData, 
         idAuthor: newAuthor.idAuthor 
-      }));
+      })).then((result) => {
+        if (result.type.endsWith('fulfilled')) {
+          toast.success('Cập nhật tác giả thành công!', { 
+            position: 'top-right', 
+            autoClose: 3000 
+          });
+        } else if (result.type.endsWith('rejected')) {
+          toast.error('Cập nhật tác giả thất bại!', { 
+            position: 'top-right', 
+            autoClose: 3000 
+          });
+        }
+      });
     } else {
       console.log('Creating author with payload:', payloadData);
-      dispatch(createAuthor(formData));
+      dispatch(createAuthor(formData)).then((result) => {
+        if (result.type.endsWith('fulfilled')) {
+          toast.success('Thêm tác giả thành công!', { 
+            position: 'top-right', 
+            autoClose: 3000 
+          });
+        } else if (result.type.endsWith('rejected')) {
+          toast.error('Thêm tác giả thất bại!', { 
+            position: 'top-right', 
+            autoClose: 3000 
+          });
+        }
+      });
     }
     
     // Reset
@@ -198,7 +272,12 @@ const AuthorManager = () => {
       dobAuthor: author.dobAuthor || '',
       dodAuthor: author.dodAuthor || '', // Thêm dodAuthor cho edit
       genderAuthor: author.genderAuthor || 'MALE',
-      novels: Array.isArray(author.novels) ? author.novels.map(n => n.idNovel) : [],
+      // Filter out deleted novels when editing
+      novels: Array.isArray(author.novels) 
+        ? author.novels
+            .filter(novel => novel.delete_at === null || novel.delete_at === undefined)
+            .map(n => n.idNovel) 
+        : [],
     };
     
     console.log('Setting newAuthor state with:', authorData);
@@ -228,7 +307,19 @@ const AuthorManager = () => {
   const handleDelete = (id) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa tác giả này không?')) {
       console.log('Deleting author with ID:', id);
-      dispatch(deleteAuthor(id));
+      dispatch(deleteAuthor(id)).then((result) => {
+        if (result.type.endsWith('fulfilled')) {
+          toast.success('Xóa tác giả thành công!', { 
+            position: 'top-right', 
+            autoClose: 3000 
+          });
+        } else if (result.type.endsWith('rejected')) {
+          toast.error('Xóa tác giả thất bại!', { 
+            position: 'top-right', 
+            autoClose: 3000 
+          });
+        }
+      });
     }
   };
 
@@ -342,10 +433,16 @@ const AuthorManager = () => {
               <div>
                 <p className={`text-sm font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Có Tác Phẩm</p>
                 <p className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mt-2`}>
-                  {authors.filter(author => author.novels && author.novels.length > 0).length}
+                  {authors.filter(author => 
+                    author.novels && 
+                    author.novels.filter(novel => novel.delete_at === null || novel.delete_at === undefined).length > 0
+                  ).length}
                 </p>
                 <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} mt-1`}>
-                  {authors.length > 0 ? Math.round((authors.filter(author => author.novels && author.novels.length > 0).length / authors.length) * 100) : 0}% hoạt động
+                  {authors.length > 0 ? Math.round((authors.filter(author => 
+                    author.novels && 
+                    author.novels.filter(novel => novel.delete_at === null || novel.delete_at === undefined).length > 0
+                  ).length / authors.length) * 100) : 0}% hoạt động
                 </p>
               </div>
               <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-gradient-to-br from-emerald-500/20 to-green-600/20 group-hover:from-emerald-500/30 group-hover:to-green-600/30' : 'bg-gradient-to-br from-emerald-100 to-green-100 group-hover:from-emerald-200 group-hover:to-green-200'} transition-all duration-300`}>
@@ -530,9 +627,9 @@ const AuthorManager = () => {
                           onMenuClose={() => console.log('Menu closed')}
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          placeholder={novelOptions.length > 0 ? "Chọn các truyện của tác giả" : "Đang tải danh sách truyện..."}
-                          noOptionsMessage={() => novelOptions.length > 0 ? "Không có tùy chọn" : "Đang tải dữ liệu..."}
-                          isLoading={novelOptions.length === 0}
+                          placeholder={activeNovels.length > 0 ? "Chọn các truyện của tác giả" : "Đang tải danh sách truyện..."}
+                          noOptionsMessage={() => activeNovels.length > 0 ? "Không có tùy chọn" : "Đang tải dữ liệu..."}
+                          isLoading={activeNovels.length === 0}
                           menuPlacement="auto"
                           menuShouldBlockScroll={false}
                           menuShouldScrollIntoView={false}
@@ -654,6 +751,9 @@ const AuthorManager = () => {
                           <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                             Kéo thả hoặc nhấn để chọn ảnh (PNG, JPG, JPEG)
                           </p>
+                          <p className={`text-xs ${isDarkMode ? 'text-gray-600' : 'text-gray-400'} mt-2`}>
+                            Nếu không chọn ảnh, hệ thống sẽ sử dụng ảnh mặc định
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -720,6 +820,28 @@ const AuthorManager = () => {
                 </div>
               </div>
             </div>
+            
+            {/* Search Input */}
+            <div className="mb-6">
+              <div className="relative max-w-md">
+                <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none`}>
+                  <svg className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm theo tên tác giả hoặc quốc tịch..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`block w-full pl-10 pr-3 py-3 rounded-xl border-2 transition-all duration-200 ${
+                    isDarkMode 
+                      ? 'bg-slate-700/50 border-slate-600 text-white placeholder-gray-400 focus:border-orange-400 focus:bg-slate-700'
+                      : 'bg-white border-orange-200 text-gray-900 placeholder-gray-500 focus:border-orange-400 focus:bg-orange-50'
+                  } focus:outline-none focus:ring-4 focus:ring-orange-500/20`}
+                />
+              </div>
+            </div>
 
             <div className="overflow-hidden rounded-2xl border-2 border-orange-200/30 shadow-xl">
               <table className="min-w-full">
@@ -757,9 +879,12 @@ const AuthorManager = () => {
                           <div className="flex items-center space-x-6">
                             <div className="relative group-hover:scale-105 transition-transform duration-300">
                               <img
-                                src={author.imageAuthor}
+                                src={author.imageAuthor || defaultAvatar}
                                 alt={author.nameAuthor}
                                 className="w-16 h-16 rounded-2xl object-cover border-3 border-orange-200 shadow-xl"
+                                onError={(e) => {
+                                  e.target.src = defaultAvatar;
+                                }}
                               />
                               <div className={`absolute inset-0 rounded-2xl ${isDarkMode ? 'bg-orange-500/10' : 'bg-orange-500/5'} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
                             </div>
