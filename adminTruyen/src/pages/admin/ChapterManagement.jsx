@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getAllChapters, createChapter, deleteChapter, updateChapter } from '../../redux/chapterSlice';
 import { PencilLine, Trash, Plus, Eye, BookOpen, Coins, FileText } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { toast } from 'react-toastify';
 
 const ChapterManagement = ({ novel }) => {
   const dispatch = useDispatch();
@@ -53,19 +54,25 @@ const ChapterManagement = ({ novel }) => {
   };
 
   // Hàm xử lý khi nhấn nút Xóa
-  const handleDeleteClick = (chapterId) => {
+  const handleDeleteClick = async (chapterId) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa chương này không?')) {
-      dispatch(deleteChapter(chapterId));
+      try {
+        await dispatch(deleteChapter(chapterId)).unwrap();
+        toast.success('Xóa chương thành công!');
+      } catch (error) {
+        toast.error('Xóa chương thất bại!');
+        console.error('Error deleting chapter:', error);
+      }
     }
   };
   
 
   // Hàm xử lý khi submit form (Cả Tạo Mới và Cập Nhật)
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const chapterTitle = e.target.titleChapter.value;
     if (!chapterTitle || chapterTitle.length < 3 || chapterTitle.length > 50) {
-        alert('Tên chương phải có độ dài từ 3 đến 100 ký tự!');
+        toast.error('Tên chương phải có độ dài từ 3 đến 50 ký tự!');
         return;
     }
     // 1. Tạo object 'request' chứa dữ liệu JSON
@@ -81,20 +88,27 @@ const ChapterManagement = ({ novel }) => {
       dayRentAmount: dayRentAmountValue
     };
 
-    if (isEditing) {
-      // Nếu đang sửa, thêm idChapter vào object request
-      requestData.idChapter = currentChapter.idChapter;
-      dispatch(updateChapter({ 
-        request: requestData, 
-        textFile: file 
-      }));
-    } else {
-      dispatch(createChapter({ 
-        request: requestData, 
-        textFile: file 
-      }));
+    try {
+      if (isEditing) {
+        // Nếu đang sửa, thêm idChapter vào object request
+        requestData.idChapter = currentChapter.idChapter;
+        await dispatch(updateChapter({ 
+          request: requestData, 
+          textFile: file 
+        })).unwrap();
+        toast.success('Cập nhật chương thành công!');
+      } else {
+        await dispatch(createChapter({ 
+          request: requestData, 
+          textFile: file 
+        })).unwrap();
+        toast.success('Tạo chương mới thành công!');
+      }
+      cancelForm(); // Đóng và reset form sau khi hoàn tất
+    } catch (error) {
+      toast.error(isEditing ? 'Cập nhật chương thất bại!' : 'Tạo chương thất bại!');
+      console.error('Error:', error);
     }
-    cancelForm(); // Đóng và reset form sau khi hoàn tất
   };
 
   // Logic phân trang
@@ -377,13 +391,13 @@ const ChapterManagement = ({ novel }) => {
         </div>
       )}
       
-      {error && (
+      {/* {error && (
         <div className="text-center">
           <div className="bg-red-50/80 dark:bg-red-900/20 backdrop-blur-xl rounded-2xl p-8 border border-red-200 dark:border-red-800">
             <p className="text-red-600 dark:text-red-400">Lỗi: {error}</p>
           </div>
         </div>
-      )}
+      )} */}
       
       {!loading && chapters.length === 0 && (
         <div className="text-center">

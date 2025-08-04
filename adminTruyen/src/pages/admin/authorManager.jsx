@@ -6,6 +6,7 @@ import { PencilLine, Trash, Plus, Users, Calendar, Globe, BookOpen, Camera, X } 
 import { createAuthor } from '../../redux/authorSlice';
 import Select from 'react-select';
 import { useTheme } from '../../context/ThemeContext';
+import { toast } from 'react-toastify';
 
 const AuthorManager = () => {
   const dispatch = useDispatch();

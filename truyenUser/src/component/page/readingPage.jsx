@@ -470,7 +470,15 @@ useEffect(() => {
         currentAudioTimeRef.current = 0;
 
         // Tải nội dung chương
-        await dispatch(getChapterContentById({ novelId, chapterId }));
+        const result = await dispatch(getChapterContentById({ novelId, chapterId }));
+        // Nếu lỗi (ví dụ: admin đã xóa chapter), điều hướng về trang truyện
+        if (result?.error) {
+          if (isCurrentRequest) {
+            setChapterContentLoadCompleted(true);
+            navigate(`/novel/${novelId}`, { replace: true });
+          }
+          return;
+        }
 
         // Đánh dấu hoàn thành tải content
         if (isCurrentRequest) {

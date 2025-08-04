@@ -8,6 +8,7 @@ import ChapterManagement from './ChapterManagement';
 import { PencilLine, Trash, Star, BookOpen, UserPlus, Tag, ScanSearch, Plus, Book, Eye, CheckCircle, Clock, Users } from 'lucide-react';
 import Select from 'react-select';
 import { useTheme } from '../../context/ThemeContext';
+import { toast } from 'react-toastify';
 
 
 
@@ -306,25 +307,31 @@ const handleAddCategorySubmit = (categoryId) => {
   };
 
   // Hàm xử lý khi nhấn nút Xóa
-  const handleDeleteNovel = (idNovel) => {
+  const handleDeleteNovel = async (idNovel) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa truyện này? Tất cả các chương liên quan cũng sẽ bị xóa.')) {
-      dispatch(deleteNovel(idNovel));
-      // Nếu truyện đang được chọn bị xóa, hãy bỏ chọn nó để ẩn ChapterManagement
-      if (selectedNovel && selectedNovel.idNovel === idNovel) {
-        setSelectedNovel(null);
+      try {
+        await dispatch(deleteNovel(idNovel)).unwrap();
+        toast.success('Xóa truyện thành công!');
+        // Nếu truyện đang được chọn bị xóa, hãy bỏ chọn nó để ẩn ChapterManagement
+        if (selectedNovel && selectedNovel.idNovel === idNovel) {
+          setSelectedNovel(null);
+        }
+      } catch (error) {
+        toast.error('Xóa truyện thất bại!');
+        console.error('Error deleting novel:', error);
       }
     }
   };
 
   // Hàm xử lý khi submit form (Cả Tạo Mới và Cập Nhật)
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!e.target.nameNovel.value || e.target.nameNovel.value.length < 3 || e.target.nameNovel.value.length > 100) {
-      alert('Tên truyện phải có độ dài từ 3 đến 100 ký tự!');
+      toast.error('Tên truyện phải có độ dài từ 3 đến 100 ký tự!');
       return;
     }
     if (e.target.descriptionNovel.value.length > 2000) {
-      alert('Mô tả có độ dài tối đa 2000 ký tự!');
+      toast.error('Mô tả có độ dài tối đa 2000 ký tự!');
       return;
     }
     // Tạo payload từ các input của form
@@ -345,17 +352,23 @@ const handleAddCategorySubmit = (categoryId) => {
       formData.append("image", image);
     }
 
-    if (isEditing) {
-      // Thêm idNovel vào payload khi cập nhật
-      payload.idNovel = currentNovel.idNovel;
-      // Gửi lại payload đã cập nhật vào FormData
-      formData.set("request", new Blob([JSON.stringify(payload)], { type: "application/json" }));
-      dispatch(updateNovel(formData));
-    } else {
-      dispatch(createNovel(formData));
+    try {
+      if (isEditing) {
+        // Thêm idNovel vào payload khi cập nhật
+        payload.idNovel = currentNovel.idNovel;
+        // Gửi lại payload đã cập nhật vào FormData
+        formData.set("request", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+        await dispatch(updateNovel(formData)).unwrap();
+        toast.success('Cập nhật truyện thành công!');
+      } else {
+        await dispatch(createNovel(formData)).unwrap();
+        toast.success('Tạo truyện mới thành công!');
+      }
+      cancelForm();
+    } catch (error) {
+      toast.error(isEditing ? 'Cập nhật truyện thất bại!' : 'Tạo truyện thất bại!');
+      console.error('Error:', error);
     }
-    
-    cancelForm();
   };
 
   // Hàm xử lý bật/tắt hiển thị component ChapterManagement

@@ -4,6 +4,8 @@ import store from './redux/store';
 import RouterSetup from './routes/RouterSetup';
 // Chỉ cần import action `refreshUserSession`
 import { refreshUserSession } from './redux/userSlice';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 /**
  * Component này có nhiệm vụ gọi action khởi tạo MỘT LẦN DUY NHẤT khi ứng dụng tải lần đầu.
@@ -33,6 +35,18 @@ function App() {
     <Provider store={store}>
       <AppInitializer>
         <RouterSetup />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </AppInitializer>
     </Provider>
   );
